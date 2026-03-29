@@ -1,0 +1,22 @@
+const express = require('express');
+const router = express.Router();
+const shopController = require('../../controllers/shop/shop.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+const { authorize } = require('../../middleware/rbac.middleware');
+
+// @route   GET /api/shops
+router.get('/', authenticate, authorize('view:shops'), shopController.getShops);
+
+// @route   GET /api/shops/:id
+router.get('/:id', authenticate, authorize('view:shops'), shopController.getShopById);
+
+// @route   POST /api/shops
+router.post('/', authenticate, authorize('create:shops'), shopController.createShop);
+
+// @route   PUT /api/shops/:id
+router.put('/:id', authenticate, authorize('edit:shops'), shopController.updateShop);
+
+// @route   DELETE /api/shops/:id
+router.delete('/:id', authenticate, authorize('delete:shops'), shopController.deleteShop);
+
+module.exports = router;

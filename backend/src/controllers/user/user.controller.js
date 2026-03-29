@@ -1,0 +1,207 @@
+const db = require('../../config/db');
+const bcrypt = require('bcryptjs');
+
+// Allowed roles a shop_owner can assign to members of their shop
+const OWNER_ASSIGNABLE_ROLES = ['worker', 'shop_owner'];
+
+// @desc    Get users — SUPERADMIN sees all, shop_owner sees own shop only
+exports.getUsers = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+
+  try {
+    const select = `
+      SELECT 
+        u.id, u.name, u.phone, u.role, 
+        r.name AS role_name, 
+        u.status, u.created_at,
+        s.name AS shop_name,
+        s.location AS shop_location,
+        s.owner_name AS shop_owner_name
+    `;
+    const from = `
+      FROM users u 
+      LEFT JOIN roles r ON u.role = r.slug 
+      LEFT JOIN shops s ON u.shop_id = s.id
+    `;
+
+    if (isSuperAdmin) {
+      // SUPERADMIN: see everyone across all shops
+      const result = await db.query(select + from + 'ORDER BY u.created_at DESC');
+      return res.status(200).json({ success: true, data: result.rows });
+    } else {
+      // shop_owner / worker: scoped to their shop only
+      if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned to your account' });
+      const result = await db.query(
+        select + from + 'WHERE u.shop_id = $1 ORDER BY u.created_at DESC',
+        [shopId]
+      );
+      return res.status(200).json({ success: true, data: result.rows });
+    }
+  } catch (error) {
+    console.error('getUsers Error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+// @desc    Get single user (scoped)
+exports.getUserById = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+  try {
+    const result = await db.query(
+      `SELECT u.id, u.name, u.phone, u.role, r.name AS role_name, u.status, u.created_at, u.shop_id,
+              s.name AS shop_name, s.location AS shop_location
+       FROM users u 
+       LEFT JOIN roles r ON u.role = r.slug 
+       LEFT JOIN shops s ON u.shop_id = s.id
+       WHERE u.id = $1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
+
+    const user = result.rows[0];
+
+    // Scope check: non-superadmin can only view their own shop's users
+    if (!isSuperAdmin && user.shop_id !== shopId) {
+      return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+// @desc    Create user — shop_owner can add worker/shop_owner to their own shop only
+exports.createUser = async (req, res) => {
+  const { role: requesterRole, shopId: requesterShopId } = req.user;
+  const isSuperAdmin = requesterRole === 'super-admin';
+
+  let { name, phone, password, role, status, shop_id } = req.body;
+
+  // Scope enforcement: shop_owner can only create users in their own shop
+  if (!isSuperAdmin) {
+    shop_id = requesterShopId; // Override whatever was sent — lock to their shop
+
+    // shop_owner can only assign worker or shop_owner roles
+    if (!OWNER_ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(403).json({ 
+        success: false, 
+        error: `You can only assign roles: ${OWNER_ASSIGNABLE_ROLES.join(', ')}` 
+      });
+    }
+  }
+
+  try {
+    // Validation
+    const userCheck = await db.query('SELECT id FROM users WHERE phone = $1', [phone]);
+    if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone already registered' });
+
+    if (!password) return res.status(400).json({ success: false, error: 'Password is required' });
+    if (!shop_id) return res.status(400).json({ success: false, error: 'Shop assignment required' });
+
+    // Resolve Role ID from slug
+    const assignedRole = role || 'worker';
+    const roleR = await db.query('SELECT id FROM roles WHERE slug = $1', [assignedRole]);
+    const roleId = roleR.rows.length > 0 ? roleR.rows[0].id : null;
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const result = await db.query(
+      'INSERT INTO users (shop_id, name, phone, password_hash, role, role_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, phone, role, status',
+      [shop_id, name, phone, passwordHash, assignedRole, roleId, status || 'active']
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('createUser Error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+// @desc    Update user — scoped by shop
+exports.updateUser = async (req, res) => {
+  const { role: requesterRole, shopId: requesterShopId } = req.user;
+  const isSuperAdmin = requesterRole === 'super-admin';
+
+  const { name, phone, role, status, password, shop_id } = req.body;
+  try {
+    // Fetch user first to check shop scope
+    const existing = await db.query('SELECT id, shop_id FROM users WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (!isSuperAdmin && existing.rows[0].shop_id !== requesterShopId) {
+      return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
+    }
+
+    // shop_owner cannot escalate roles beyond their allowed set
+    if (!isSuperAdmin && role && !OWNER_ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(403).json({ success: false, error: `Cannot assign role: ${role}` });
+    }
+
+    // Resolve new role_id if role is being changed
+    let roleId = null;
+    if (role) {
+      const roleR = await db.query('SELECT id FROM roles WHERE slug = $1', [role]);
+      roleId = roleR.rows.length > 0 ? roleR.rows[0].id : null;
+    }
+
+    // Password Update Logic (Optional)
+    let passwordFragment = '';
+    const params = [name, phone, role, roleId, status];
+
+    if (password && password.length > 0) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      passwordFragment = ', password_hash = $' + (params.length + 1);
+      params.push(passwordHash);
+    }
+    
+    // Shop Override Logic (SuperAdmin only)
+    let shopFragment = '';
+    if (isSuperAdmin && shop_id) {
+       shopFragment = ', shop_id = $' + (params.length + 1);
+       params.push(shop_id);
+    }
+
+    params.push(req.params.id);
+    const userIdPlaceholder = '$' + params.length;
+
+    const query = `
+      UPDATE users 
+      SET name = $1, phone = $2, role = $3, role_id = $4, status = $5 ${passwordFragment} ${shopFragment}
+      WHERE id = ${userIdPlaceholder} 
+      RETURNING id, name, phone, role, status, shop_id
+    `;
+
+    const result = await db.query(query, params);
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('updateUser Error:', error);
+    res.status(500).json({ success: false, error: 'Server error during update' });
+  }
+};
+
+// @desc    Delete user — scoped by shop
+exports.deleteUser = async (req, res) => {
+  const { role: requesterRole, shopId: requesterShopId } = req.user;
+  const isSuperAdmin = requesterRole === 'super-admin';
+
+  try {
+    const existing = await db.query('SELECT id, shop_id FROM users WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (!isSuperAdmin && existing.rows[0].shop_id !== requesterShopId) {
+      return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
+    }
+
+    await db.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    res.status(200).json({ success: true, message: 'User removed from registry' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};

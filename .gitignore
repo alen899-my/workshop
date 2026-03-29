@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Expo
+.expo/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn

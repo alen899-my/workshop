@@ -1,0 +1,20 @@
+{
+  "users": [
+    "id",
+    "shop_id",
+    "phone",
+    "password_hash",
+    "role",
+    "created_at",
+    "name",
+    "status",
+    "role_id"
+  ],
+  "shops": [
+    "id",
+    "name",
+    "location",
+    "owner_name",
+    "created_at"
+  ]
+}
