@@ -19,7 +19,7 @@ export function ToastProvider({ children }) {
       toValue: Platform.OS === 'ios' ? 60 : 40,
       velocity: 5,
       bounciness: 12,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
 
     if (duration > 0) {
@@ -31,7 +31,7 @@ export function ToastProvider({ children }) {
     Animated.timing(slideAnim, {
       toValue: -150,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start(() => setToastConfig(null));
   };
 
@@ -78,7 +78,22 @@ function ToastContent({ type, title, description, onDismiss }) {
 
 const styles = StyleSheet.create({
   container: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 9999 },
-  toastBox: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 },
+  toastBox: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    padding: 16, 
+    borderRadius: 8, 
+    elevation: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 10px rgba(0,0,0,0.25)' },
+      default: { 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.25, 
+        shadowRadius: 10 
+      }
+    })
+  },
   iconBox: { marginRight: 12, marginTop: 1 },
   iconText: { fontSize: 16, fontWeight: 'bold' },
   textBox: { flex: 1, marginRight: 8 },

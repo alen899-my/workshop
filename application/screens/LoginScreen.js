@@ -5,17 +5,13 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  SafeAreaView,
   StatusBar,
   Image,
-  ImageBackground,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/Colors';
 import { z } from 'zod';
 import { useToast } from '../components/ui/WorkshopToast';
@@ -24,7 +20,6 @@ import { useAuth } from '../lib/auth';
 import { Phone, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
 import { WorkshopButton } from '../components/ui/WorkshopButton';
 
-const { width, height } = Dimensions.get('window');
 const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 const theme = Colors.light;
 
@@ -34,6 +29,7 @@ const loginSchema = z.object({
 });
 
 export default function LoginScreen({ navigation }) {
+  const { width, height } = useWindowDimensions();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +37,11 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const { toast } = useToast();
   const { login } = useAuth();
+
+  // Responsive calculations
+  const isSmallScreen = height < 700;
+  const headerHeight = height * (isSmallScreen ? 0.32 : 0.4);
+  const cardOverlap = isSmallScreen ? -40 : -50;
 
   const handleLogin = async () => {
     const valid = loginSchema.safeParse({ phone, password });
@@ -68,7 +69,6 @@ export default function LoginScreen({ navigation }) {
       await login(data.token, data.data);
       setLoading(false);
       toast({ type: 'success', title: 'Welcome Back!', description: 'Connecting successfully...' });
-      // Navigation is handled automatically by App.js state change
     } catch (err) {
       console.error(err);
       setLoading(false);
@@ -80,8 +80,8 @@ export default function LoginScreen({ navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
-      {/* Decorative Top Shape / Image */}
-      <View style={styles.topShapeArea}>
+      {/* Decorative Top Area */}
+      <View style={[styles.topShapeArea, { height: headerHeight + 60 }]}>
         <Image 
           source={require('../assets/authpageimage1.jpg')}
           style={styles.bgImage}
@@ -100,7 +100,7 @@ export default function LoginScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { height: headerHeight }]}>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Landing')}
               activeOpacity={0.7}
@@ -109,17 +109,17 @@ export default function LoginScreen({ navigation }) {
                 VEH<Text style={{ color: '#63B3ED' }}>REP</Text>
               </Text>
             </TouchableOpacity>
-            <Text style={styles.headerGreeting}>Welcome Back</Text>
-            <Text style={styles.headerSubtitle}>Sign in to manage your workshop</Text>
+            <Text style={[styles.headerGreeting, { fontSize: isSmallScreen ? 28 : 32 }]}>Welcome Back</Text>
+           
           </View>
 
           {/* Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { marginTop: cardOverlap }]}>
             <View style={styles.inputSection}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>PHONE NUMBER</Text>
                 <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-                  <Phone size={20} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Phone size={18} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter phone number"
@@ -137,12 +137,12 @@ export default function LoginScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>PASSWORD</Text>
-                  <TouchableOpacity onPress={() => {/* Forgot Password Logic */}} activeOpacity={0.7}>
+                  <TouchableOpacity activeOpacity={0.7}>
                     <Text style={styles.forgotText}>FORGOT?</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                  <Lock size={20} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Lock size={18} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter password"
@@ -158,9 +158,9 @@ export default function LoginScreen({ navigation }) {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {showPassword ? (
-                      <EyeOff size={20} color="#718096" strokeWidth={2} />
+                      <EyeOff size={18} color="#718096" strokeWidth={2} />
                     ) : (
-                      <Eye size={20} color="#718096" strokeWidth={2} />
+                      <Eye size={18} color="#718096" strokeWidth={2} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -189,7 +189,6 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
           
-          {/* Bottom Decoration */}
           <View style={styles.bottomDecoration}>
             <View style={styles.diamond} />
             <View style={styles.diamondLine} />
@@ -218,7 +217,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.45,
     overflow: 'hidden',
     borderBottomLeftRadius: 60,
     borderBottomRightRadius: 60,
@@ -230,7 +228,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(22, 60, 99, 0.85)', // Using Colors.light.primary with transparency
+    backgroundColor: 'rgba(22, 60, 99, 0.85)',
   },
   scroll: {
     flexGrow: 1,
@@ -238,7 +236,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    height: height * 0.35,
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 40,
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerGreeting: {
-    fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
     fontFamily: FONT,
@@ -267,12 +263,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 32,
     padding: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
     elevation: 8,
-    marginTop: -40,
+    ...Platform.select({
+      web: { boxShadow: '0 10px 20px rgba(0,0,0,0.1)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      }
+    }),
   },
   inputSection: {
     gap: 20,
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 58,
-    backgroundColor: '#F3F4F6', // Slightly darker background to make it visible without border
+    height: 56,
+    backgroundColor: '#F3F4F6',
     borderRadius: 16,
     paddingHorizontal: 16,
   },
@@ -308,10 +308,10 @@ const styles = StyleSheet.create({
     flex: 1,
     color: theme.foreground,
     fontFamily: FONT,
-    fontSize: 16,
+    fontSize: 12,
     height: '100%',
-    outlineWidth: 0, // Web
-    outlineStyle: 'none', // Web
+    outlineWidth: 0,
+    outlineStyle: 'none',
   },
   eyeIcon: {
     marginLeft: 10,
@@ -333,33 +333,6 @@ const styles = StyleSheet.create({
     color: theme.primary,
     letterSpacing: 0.5,
   },
-  button: {
-    height: 60,
-    backgroundColor: theme.primary,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
-    fontFamily: FONT,
-    letterSpacing: 2,
-  },
   footer: {
     marginTop: 24,
     flexDirection: 'row',
@@ -368,12 +341,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: FONT,
     color: '#718096',
   },
   footerLink: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: theme.primary,
     fontFamily: FONT,

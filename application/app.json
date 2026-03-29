@@ -2,6 +2,7 @@
   "expo": {
     "name": "application",
     "slug": "application",
+    "owner": "alen899993",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.workshop.application",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "755deee3-7bf0-4186-9682-93a336e5cbf5"
+      }
     }
   }
 }

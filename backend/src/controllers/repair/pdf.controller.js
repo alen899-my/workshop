@@ -44,16 +44,52 @@ exports.generatePDF = async (req, res) => {
     // Metadata
     const startY = doc.y;
     doc.fontSize(11).font('Helvetica-Bold').text(`Vehicle No: `, 50, startY, { continued: true }).font('Helvetica').text(repair.vehicle_number);
+    if (repair.model_name) {
+      doc.font('Helvetica-Bold').text(`Model: `, 50, doc.y, { continued: true }).font('Helvetica').text(repair.model_name);
+    }
     doc.font('Helvetica-Bold').text(`Owner: `, 50, doc.y, { continued: true }).font('Helvetica').text(repair.owner_name || 'N/A');
     doc.font('Helvetica-Bold').text(`Phone: `, 50, doc.y, { continued: true }).font('Helvetica').text(repair.phone_number || 'N/A');
 
     // Right side metadata
-    doc.font('Helvetica-Bold').text(`Date: `, 300, startY, { continued: true }).font('Helvetica').text(new Date(repair.repair_date).toLocaleDateString());
+    const repairDate = new Date(repair.repair_date);
+    const day = String(repairDate.getDate()).padStart(2, '0');
+    const month = String(repairDate.getMonth() + 1).padStart(2, '0');
+    const year = repairDate.getFullYear();
+    
+    let hours = repairDate.getHours();
+    const minutes = String(repairDate.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedDate = `${day}/${month}/${year} ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+    doc.font('Helvetica-Bold').text(`Date: `, 300, startY, { continued: true }).font('Helvetica').text(formattedDate);
     doc.font('Helvetica-Bold').text(`Status: `, 300, doc.y, { continued: true }).font('Helvetica').text(repair.status.toUpperCase());
     doc.font('Helvetica-Bold').text(`Worker: `, 300, doc.y, { continued: true }).font('Helvetica').text(repair.worker_name || 'Unassigned');
     
     doc.moveDown(2);
-    doc.font('Helvetica-Bold').text('Complaints:', 50, doc.y).font('Helvetica').text(repair.complaints || 'None listed', { indent: 20 });
+    doc.font('Helvetica-Bold').text('Complaints Checklist:', 50, doc.y);
+    doc.font('Helvetica');
+    const complaints = Array.isArray(repair.complaints) ? repair.complaints : [];
+    if (complaints.length > 0) {
+        complaints.forEach(item => {
+            const text = typeof item === 'string' ? item : item.text;
+            const isFixed = item.fixed || false;
+            
+            if (isFixed) {
+                const currentY = doc.y;
+                doc.fillColor('#94A3B8').text(`[x] ${text}`, { indent: 20 });
+                // Simple horizontal line for strike-through
+                const textWidth = doc.widthOfString(`[x] ${text}`);
+                doc.moveTo(70, currentY + 7).lineTo(70 + textWidth, currentY + 7).stroke('#94A3B8');
+                doc.fillColor('black'); // Reset
+            } else {
+                doc.text(`[ ] ${text}`, { indent: 20 });
+            }
+        });
+    } else {
+        doc.text('None listed', { indent: 20 });
+    }
     
     // Bill Section
     doc.moveDown(2);
@@ -80,8 +116,8 @@ exports.generatePDF = async (req, res) => {
             subtotal += lineTotal;
             doc.text(item.name || '-', 50, currentY);
             doc.text(item.qty.toString(), 250, currentY, { width: 50, align: 'center' });
-            doc.text(`Rs. ${item.cost.toFixed(2)}`, 320, currentY, { width: 80, align: 'right' });
-            doc.text(`Rs. ${lineTotal.toFixed(2)}`, 420, currentY, { width: 80, align: 'right' });
+            doc.text(Number(item.cost || 0).toFixed(2), 320, currentY, { width: 80, align: 'right' });
+            doc.text(Number(lineTotal || 0).toFixed(2), 420, currentY, { width: 80, align: 'right' });
             currentY = doc.y + 5;
         });
 
@@ -89,16 +125,16 @@ exports.generatePDF = async (req, res) => {
         
         currentY += 15;
         doc.text('Subtotal:', 320, currentY, { width: 80, align: 'right' });
-        doc.text(`Rs. ${subtotal.toFixed(2)}`, 420, currentY, { width: 80, align: 'right' });
+        doc.text(Number(subtotal || 0).toFixed(2), 420, currentY, { width: 80, align: 'right' });
 
         currentY += 15;
         doc.text('Service Charge:', 320, currentY, { width: 80, align: 'right' });
-        doc.text(`Rs. ${Number(bill.service_charge).toFixed(2)}`, 420, currentY, { width: 80, align: 'right' });
+        doc.text(Number(bill.service_charge || 0).toFixed(2), 420, currentY, { width: 80, align: 'right' });
 
         currentY += 20;
         doc.font('Helvetica-Bold').fontSize(12);
         doc.text('TOTAL AMOUNT:', 250, currentY, { width: 150, align: 'right' });
-        doc.text(`Rs. ${Number(bill.total_amount).toFixed(2)}`, 420, currentY, { width: 80, align: 'right' });
+        doc.text(Number(bill.total_amount || 0).toFixed(2), 420, currentY, { width: 80, align: 'right' });
     }
 
     doc.end();

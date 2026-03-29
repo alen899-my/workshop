@@ -4,11 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { AppInput } from '../../components/ui/AppInput';
 import { AppButton } from '../../components/ui/AppButton';
+import { AppPicker } from '../../components/ui/AppPicker'; // Just in case
 import { roleService, permissionService } from '../../services/management.service';
 import { useToast } from '../../components/ui/WorkshopToast';
-import { T } from '../../constants/Theme';
+import { useTheme } from '../../lib/theme';
 
 export default function CreateRoleScreen({ navigation }) {
+  const T = useTheme();
+  const s = getStyles(T);
   const [form, setForm] = useState({ name: '', slug: '', description: '', status: 'active', permissions: [] });
   const [allPerms, setAllPerms] = useState([]);
   const [loadingPerms, setLoadingPerms] = useState(true);
@@ -22,6 +25,13 @@ export default function CreateRoleScreen({ navigation }) {
       setLoadingPerms(false);
     });
   }, []);
+
+  const groupedPerms = allPerms.reduce((acc, p) => {
+    const mod = p.module_name || 'General';
+    if (!acc[mod]) acc[mod] = [];
+    acc[mod].push(p);
+    return acc;
+  }, {});
 
   const set = (key) => (v) => setForm(f => ({ ...f, [key]: v }));
 
@@ -67,26 +77,37 @@ export default function CreateRoleScreen({ navigation }) {
           <AppInput label="Description" value={form.description} onChangeText={set('description')} placeholder="Optional description..." multiline numberOfLines={3} />
         </View>
 
-        <Text style={s.sectionTitle}>Permission Coverage Grid</Text>
+        <Text style={s.sectionTitle}>Permission Coverage</Text>
         <View style={s.card}>
           {loadingPerms ? (
             <ActivityIndicator color={T.primary} style={{ margin: 10 }} />
           ) : allPerms.length === 0 ? (
             <Text style={{ fontSize: 13, color: T.textMuted, fontFamily: T.font }}>No permissions loaded.</Text>
           ) : (
-            <View style={s.permGrid}>
-              {allPerms.map(p => {
-                const active = form.permissions.includes(p.slug);
-                return (
-                  <TouchableOpacity key={p.id} activeOpacity={0.7} onPress={() => togglePermission(p.slug)}
-                    style={[s.permSelect, active && s.permSelectOn]}>
-                    <View style={[s.checkSq, active && s.checkSqOn]}>
-                      {active && <Check size={10} color="#fff" strokeWidth={3} />}
-                    </View>
-                    <Text style={[s.permSelectTxt, active && s.permSelectTxtOn]} numberOfLines={1}>{p.permission_name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={s.tableGroup}>
+              {Object.entries(groupedPerms).map(([mod, perms]) => (
+                <View key={mod} style={s.tableSection}>
+                  <View style={s.tableHeader}>
+                    <Text style={s.tableHeaderTxt}>{mod}</Text>
+                  </View>
+                  {perms.map((p, idx) => {
+                    const has = form.permissions.includes(p.slug);
+                    return (
+                      <TouchableOpacity 
+                        key={p.slug} 
+                        style={[s.tableRow, idx === perms.length - 1 && s.tableRowLast]} 
+                        onPress={() => togglePermission(p.slug)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={s.tableCellLabel}>{p.permission_name}</Text>
+                        <View style={[s.checkSq, has && s.checkSqOn]}>
+                          {has && <Check size={12} color={T.primaryText || '#fff'} strokeWidth={3} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -102,7 +123,7 @@ export default function CreateRoleScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = (T) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.bg },
   scroll: { padding: 16, paddingBottom: 40, gap: 0 },
   sectionTitle: {
@@ -116,11 +137,13 @@ const s = StyleSheet.create({
   divider: { height: 1, backgroundColor: T.border, marginHorizontal: -14 },
   errorGeneral: { fontSize: 13, color: T.danger, fontFamily: T.font, textAlign: 'center', marginTop: 8 },
   buttons: { flexDirection: 'row', gap: 10, marginTop: 24 },
-  permGrid: { gap: 6 },
-  permSelect: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, borderRadius: T.radiusSm, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border },
-  permSelectOn: { backgroundColor: T.primaryLight, borderColor: '#C3D9F0' },
-  checkSq: { width: 16, height: 16, borderRadius: 4, borderWidth: 1, borderColor: T.textFaint, alignItems: 'center', justifyContent: 'center' },
+  tableGroup: { gap: 16 },
+  tableSection: { borderRadius: 12, borderWidth: 1, borderColor: T.border, overflow: 'hidden', backgroundColor: T.surface },
+  tableHeader: { backgroundColor: T.surfaceAlt, padding: 10, borderBottomWidth: 1, borderBottomColor: T.border },
+  tableHeaderTxt: { fontSize: 12, fontWeight: '800', color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: T.border },
+  tableRowLast: { borderBottomWidth: 0 },
+  tableCellLabel: { fontSize: 13, color: T.text, flex: 1, fontWeight: '500' },
+  checkSq: { width: 18, height: 18, borderRadius: 5, borderWidth: 1, borderColor: T.borderStrong, alignItems: 'center', justifyContent: 'center' },
   checkSqOn: { backgroundColor: T.primary, borderColor: T.primary },
-  permSelectTxt: { fontSize: 12, fontWeight: '600', color: T.textMuted, fontFamily: T.font, flex: 1 },
-  permSelectTxtOn: { color: T.primary },
 });

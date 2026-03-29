@@ -9,8 +9,8 @@ exports.getRepairs = async (req, res) => {
   try {
     const select = `
       SELECT 
-        r.id, r.vehicle_image, r.vehicle_number, r.owner_name, r.phone_number, 
-        r.complaints, r.repair_date, r.status, r.service_type, r.created_at,
+        r.id, r.vehicle_image, r.vehicle_number, r.model_name, r.owner_name, r.phone_number, 
+        r.complaints, r.repair_date, r.status, r.service_type, r.vehicle_type, r.created_at,
         s.name AS shop_name,
         aw.name AS attending_worker_name,
         sb.name AS submitted_by_name
@@ -80,8 +80,22 @@ exports.createRepair = async (req, res) => {
   const { shopId, id: userId } = req.user;
   
   // Data extraction
-  const { vehicle_number, owner_name, phone_number, complaints, repair_date, attending_worker_id, status, service_type } = req.body;
+  const { 
+    vehicle_number, model_name, owner_name, phone_number, complaints, 
+    repair_date, attending_worker_id, status, service_type, vehicle_type 
+  } = req.body;
   let vehicle_image = null;
+
+  // Safe parse complaints (Sent as string via FormData)
+  let parsedComplaints = [];
+  try {
+    if (complaints) {
+      parsedComplaints = typeof complaints === 'string' ? JSON.parse(complaints) : complaints;
+    }
+  } catch (e) {
+    console.error("Complaints parse error:", e);
+    parsedComplaints = [];
+  }
 
   try {
     if (req.file) {
@@ -90,22 +104,24 @@ exports.createRepair = async (req, res) => {
 
     const query = `
       INSERT INTO repairs 
-        (shop_id, vehicle_image, vehicle_number, owner_name, phone_number, complaints, repair_date, attending_worker_id, submitted_by_id, status, service_type)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        (shop_id, vehicle_image, vehicle_number, model_name, owner_name, phone_number, complaints, repair_date, attending_worker_id, submitted_by_id, status, service_type, vehicle_type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
     const params = [
       shopId, 
       vehicle_image, 
       vehicle_number, 
+      model_name,
       owner_name, 
       phone_number, 
-      complaints, 
+      JSON.stringify(parsedComplaints), 
       repair_date || new Date(), 
       attending_worker_id || null, 
       userId, 
       status || 'Pending',
-      service_type || 'Repair'
+      service_type || 'Repair',
+      vehicle_type || 'Car'
     ];
 
     const result = await db.query(query, params);
@@ -121,7 +137,19 @@ exports.createRepair = async (req, res) => {
 exports.updateRepair = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
-  const { vehicle_number, owner_name, phone_number, complaints, repair_date, attending_worker_id, status, service_type } = req.body;
+  const { 
+    vehicle_number, model_name, owner_name, phone_number, complaints, 
+    repair_date, attending_worker_id, status, service_type, vehicle_type 
+  } = req.body;
+
+  let parsedComplaints = [];
+  try {
+    if (complaints) {
+      parsedComplaints = typeof complaints === 'string' ? JSON.parse(complaints) : complaints;
+    }
+  } catch (e) {
+    console.error("Complaints update parse error:", e);
+  }
 
   try {
     const existing = await db.query('SELECT shop_id, vehicle_image FROM repairs WHERE id = $1', [req.params.id]);
@@ -145,28 +173,32 @@ exports.updateRepair = async (req, res) => {
       SET 
         vehicle_image = $1, 
         vehicle_number = $2, 
-        owner_name = $3, 
-        phone_number = $4, 
-        complaints = $5, 
-        repair_date = $6, 
-        attending_worker_id = $7, 
-        status = $8,
-        service_type = $9,
+        model_name = $3,
+        owner_name = $4, 
+        phone_number = $5, 
+        complaints = $6, 
+        repair_date = $7, 
+        attending_worker_id = $8, 
+        status = $9,
+        service_type = $10,
+        vehicle_type = $11,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10
+      WHERE id = $12
       RETURNING *
     `;
     
     const params = [
       vehicle_image,
       vehicle_number,
+      model_name,
       owner_name,
       phone_number,
-      complaints,
+      JSON.stringify(parsedComplaints),
       repair_date,
       attending_worker_id || null,
       status || 'Pending',
       service_type || 'Repair',
+      vehicle_type || 'Car',
       req.params.id
     ];
 

@@ -5,16 +5,13 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  SafeAreaView,
   StatusBar,
   Image,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/Colors';
 import { z } from 'zod';
 import { useToast } from '../components/ui/WorkshopToast';
@@ -22,7 +19,6 @@ import { API_URL } from '../api';
 import { WorkshopButton } from '../components/ui/WorkshopButton';
 import { User, Phone, Lock, Eye, EyeOff, MapPin, Warehouse, ArrowRight } from 'lucide-react-native';
 
-const { width, height } = Dimensions.get('window');
 const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 const theme = Colors.light;
 
@@ -39,11 +35,17 @@ const registerSchema = z.object({
 });
 
 export default function RegisterScreen({ navigation }) {
+  const { width, height } = useWindowDimensions();
   const [form, setForm] = useState({ shopName: '', ownerName: '', location: '', phone: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { toast } = useToast();
+
+  // Responsive calculations
+  const isSmallScreen = height < 700;
+  const headerHeight = height * (isSmallScreen ? 0.25 : 0.3);
+  const cardOverlap = isSmallScreen ? -20 : -30;
 
   function updateForm(key, value) {
     setForm(f => ({ ...f, [key]: value }));
@@ -90,7 +92,7 @@ export default function RegisterScreen({ navigation }) {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
       {/* Decorative Top Area */}
-      <View style={styles.topShapeArea}>
+      <View style={[styles.topShapeArea, { height: headerHeight + 50 }]}>
         <Image 
           source={require('../assets/authpageimage1.jpg')}
           style={styles.bgImage}
@@ -109,24 +111,24 @@ export default function RegisterScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { height: headerHeight }]}>
             <TouchableOpacity onPress={() => navigation.navigate('Landing')} activeOpacity={0.7}>
               <Text style={styles.logoText}>
                 VEH<Text style={{ color: '#63B3ED' }}>REP</Text>
               </Text>
             </TouchableOpacity>
-            <Text style={styles.headerGreeting}>Register Workshop</Text>
+            <Text style={[styles.headerGreeting, { fontSize: isSmallScreen ? 24 : 28 }]}>Register Workshop</Text>
             <Text style={styles.headerSubtitle}>Set up your digital workplace</Text>
           </View>
 
           {/* Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { marginTop: cardOverlap }]}>
             <View style={styles.inputSection}>
               {/* Shop Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>SHOP NAME</Text>
                 <View style={[styles.inputWrapper, errors.shopName && styles.inputError]}>
-                  <Warehouse size={20} color={errors.shopName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Warehouse size={18} color={errors.shopName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. Speed Auto Works"
@@ -143,7 +145,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>OWNER NAME</Text>
                 <View style={[styles.inputWrapper, errors.ownerName && styles.inputError]}>
-                  <User size={20} color={errors.ownerName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <User size={18} color={errors.ownerName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter owner name"
@@ -160,7 +162,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>LOCATION</Text>
                 <View style={[styles.inputWrapper, errors.location && styles.inputError]}>
-                  <MapPin size={20} color={errors.location ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <MapPin size={18} color={errors.location ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. Kochi, Kerala"
@@ -177,7 +179,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>PHONE NUMBER</Text>
                 <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-                  <Phone size={20} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Phone size={18} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="09876543210"
@@ -195,7 +197,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>PASSWORD</Text>
                 <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                  <Lock size={20} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Lock size={18} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Min 6 characters"
@@ -206,7 +208,7 @@ export default function RegisterScreen({ navigation }) {
                     underlineColorAndroid="transparent"
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                    {showPassword ? <EyeOff size={20} color="#718096" /> : <Eye size={20} color="#718096" />}
+                    {showPassword ? <EyeOff size={18} color="#718096" /> : <Eye size={18} color="#718096" />}
                   </TouchableOpacity>
                 </View>
                 {errors.password && <Text style={styles.errorLabel}>{errors.password}</Text>}
@@ -216,7 +218,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>CONFIRM PASSWORD</Text>
                 <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-                  <Lock size={20} color={errors.confirmPassword ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
+                  <Lock size={18} color={errors.confirmPassword ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Repeat password"
@@ -232,7 +234,7 @@ export default function RegisterScreen({ navigation }) {
 
               <WorkshopButton
                 variant="primary"
-                size="lg"
+                size="xl"
                 loading={loading}
                 onPress={handleRegister}
                 fullWidth={true}
@@ -275,7 +277,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.35,
     overflow: 'hidden',
     borderBottomLeftRadius: 60,
     borderBottomRightRadius: 60,
@@ -295,7 +296,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    height: height * 0.28,
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 40,
@@ -309,7 +309,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerGreeting: {
-    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
     fontFamily: FONT,
@@ -324,12 +323,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 32,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
     elevation: 8,
-    marginTop: -20,
+    ...Platform.select({
+      web: { boxShadow: '0 10px 20px rgba(0,0,0,0.1)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      }
+    }),
   },
   inputSection: {
     gap: 16,
@@ -348,8 +351,8 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 54,
-    backgroundColor: '#F3F4F6', // Border removed, background visible
+    height: 52,
+    backgroundColor: '#F3F4F6',
     borderRadius: 14,
     paddingHorizontal: 16,
   },
@@ -360,7 +363,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: theme.foreground,
     fontFamily: FONT,
-    fontSize: 14,
+    fontSize: 12,
     height: '100%',
     outlineWidth: 0,
     outlineStyle: 'none',
@@ -386,12 +389,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: FONT,
     color: '#718096',
   },
   footerLink: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: theme.primary,
     fontFamily: FONT,
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 30,
     gap: 10,
   },
   diamond: {

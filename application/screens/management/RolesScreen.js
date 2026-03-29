@@ -7,14 +7,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search, Plus, SlidersHorizontal, ShieldHalf, KeySquare,
-  X, ChevronRight, CheckCircle2, XCircle, Pencil, Trash2,
+  X, ChevronRight, ChevronLeft, CheckCircle2, XCircle, Pencil, Trash2, Check,
 } from 'lucide-react-native';
 import { AppModal } from '../../components/ui/AppModal';
 import { AppButton } from '../../components/ui/AppButton';
 import { AppInput } from '../../components/ui/AppInput';
+import { AppPicker } from '../../components/ui/AppPicker';
 import { roleService, permissionService } from '../../services/management.service';
 import { useRBAC } from '../../lib/rbac';
 import { useToast } from '../../components/ui/WorkshopToast';
+import { useTheme } from '../../lib/theme';
 
 /* ─── helpers ─── */
 const initials = (name = '') =>
@@ -25,13 +27,20 @@ const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 
 /* ─── Status chip ─── */
 const StatusChip = ({ status }) => {
+  const T = useTheme();
   const active = status === 'active';
   return (
-    <View style={[chip.wrap, active ? chip.activeWrap : chip.inactiveWrap]}>
+    <View style={[
+      chip.wrap, 
+      active ? { backgroundColor: T.isDark ? '#064e3b' : '#ECFDF5' } : { backgroundColor: T.isDark ? '#7f1d1d' : '#FEF2F2' }
+    ]}>
       {active
-        ? <CheckCircle2 size={10} color="#059669" strokeWidth={2.5} />
-        : <XCircle size={10} color="#DC2626" strokeWidth={2.5} />}
-      <Text style={[chip.txt, active ? chip.activeTxt : chip.inactiveTxt]}>
+        ? <CheckCircle2 size={10} color={T.isDark ? '#34d399' : '#059669'} strokeWidth={2.5} />
+        : <XCircle size={10} color={T.isDark ? '#f87171' : '#DC2626'} strokeWidth={2.5} />}
+      <Text style={[
+        chip.txt, 
+        active ? { color: T.isDark ? '#34d399' : '#059669' } : { color: T.isDark ? '#f87171' : '#DC2626' }
+      ]}>
         {active ? 'Active' : 'Inactive'}
       </Text>
     </View>
@@ -39,41 +48,42 @@ const StatusChip = ({ status }) => {
 };
 const chip = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 },
-  activeWrap: { backgroundColor: '#ECFDF5' },
-  inactiveWrap: { backgroundColor: '#FEF2F2' },
   txt: { fontSize: 11, fontWeight: '600' },
-  activeTxt: { color: '#059669' },
-  inactiveTxt: { color: '#DC2626' },
 });
 
 /* ─── Avatar ─── */
-const Avatar = ({ name, id, size = 44 }) => (
-  <View style={[av.circle, { width: size, height: size, borderRadius: size / 3, backgroundColor: avatarColor(id), opacity: 0.95 }]}>
-    <Text style={[av.txt, { fontSize: size * 0.36 }]}>{initials(name)}</Text>
-  </View>
-);
+const Avatar = ({ name, id, size = 44 }) => {
+  const T = useTheme();
+  return (
+    <View style={[av.circle, { width: size, height: size, borderRadius: size / 3, backgroundColor: avatarColor(id), opacity: T.isDark ? 0.75 : 0.95 }]}>
+      <Text style={[av.txt, { fontSize: size * 0.36 }]}>{initials(name)}</Text>
+    </View>
+  );
+};
 const av = StyleSheet.create({
   circle: { alignItems: 'center', justifyContent: 'center' },
   txt: { color: '#fff', fontWeight: '700', letterSpacing: 0.5 },
 });
 
 /* ─── Filter pill ─── */
-const Pill = ({ label, on, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.75}
-    style={[pl.wrap, on && pl.on]}>
-    <Text style={[pl.txt, on && pl.onTxt]}>{label}</Text>
-  </TouchableOpacity>
-);
+const Pill = ({ label, on, onPress }) => {
+  const T = useTheme();
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.75}
+      style={[pl.wrap, { backgroundColor: T.surface, borderColor: T.border }, on && { backgroundColor: T.primary, borderColor: T.primary }]}>
+      <Text style={[pl.txt, { color: T.textMuted }, on && { color: T.primaryText || '#fff' }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
 const pl = StyleSheet.create({
-  wrap: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
-  on: { backgroundColor: '#1C1C1E', borderColor: '#1C1C1E' },
-  txt: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
-  onTxt: { color: '#fff' },
+  wrap: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, borderWidth: 1 },
+  txt: { fontSize: 13, fontWeight: '500' },
 });
 
 
 /* ══════════════════════════════════════════════════════ */
 export default function RolesScreen({ navigation }) {
+  const T = useTheme();
   const [roles, setRoles] = useState([]);
   const [allPerms, setAllPerms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +98,15 @@ export default function RolesScreen({ navigation }) {
 
   const { can } = useRBAC();
   const { toast } = useToast();
+
+  const groupedPerms = useMemo(() => {
+    return allPerms.reduce((acc, p) => {
+      const mod = p.module_name || 'General';
+      if (!acc[mod]) acc[mod] = [];
+      acc[mod].push(p);
+      return acc;
+    }, {});
+  }, [allPerms]);
 
   const baseRoles = useMemo(() => roles.filter(r => r.slug !== 'admin'), [roles]);
 
@@ -166,7 +185,7 @@ export default function RolesScreen({ navigation }) {
   /* ── Row ── */
   const renderItem = ({ item: role }) => (
     <TouchableOpacity
-      style={s.row}
+      style={[s.row, { backgroundColor: T.surface, borderColor: T.border, borderWidth: T.isDark ? 1 : 0, elevation: T.isDark ? 0 : 1 }]}
       activeOpacity={0.7}
       onPress={() => handleView(role)}
     >
@@ -174,83 +193,84 @@ export default function RolesScreen({ navigation }) {
 
       <View style={s.rowBody}>
         <View style={s.rowTop}>
-          <Text style={s.rowName} numberOfLines={1}>{role.name}</Text>
+          <Text style={[s.rowName, { color: T.text }]} numberOfLines={1}>{role.name}</Text>
           <StatusChip status={role.status} />
         </View>
         <View style={s.rowMeta}>
-          <KeySquare size={11} color="#9CA3AF" strokeWidth={2} />
-          <Text style={s.slugTxt} numberOfLines={1}>{role.slug}</Text>
+          <KeySquare size={11} color={T.textMuted} strokeWidth={2} />
+          <Text style={[s.slugTxt, { color: T.textMuted }]} numberOfLines={1}>{role.slug}</Text>
         </View>
       </View>
 
-      <ChevronRight size={15} color="#D1D5DB" strokeWidth={2.5} />
+      <ChevronRight size={15} color={T.borderStrong} strokeWidth={2.5} />
     </TouchableOpacity>
   );
 
-  /* ── Separator ── */
   const Separator = () => <View style={s.sep} />;
 
-  /* ── Empty ── */
   const Empty = () => (
     <View style={s.emptyWrap}>
-      <View style={s.emptyIcon}>
-        <ShieldHalf size={28} color="#9CA3AF" strokeWidth={1.5} />
+      <View style={[s.emptyIcon, { backgroundColor: T.surfaceAlt }]}>
+        <ShieldHalf size={28} color={T.textMuted} strokeWidth={1.5} />
       </View>
-      <Text style={s.emptyTitle}>No roles found</Text>
-      <Text style={s.emptySub}>Try adjusting your search or filters</Text>
+      <Text style={[s.emptyTitle, { color: T.text }]}>No roles found</Text>
+      <Text style={[s.emptySub, { color: T.textMuted }]}>Try adjusting your search or filters</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={s.root} edges={['bottom']}>
+    <SafeAreaView style={[s.root, { backgroundColor: T.bg }]} edges={['top']}>
 
       {/* ── Top bar ── */}
-      <View style={s.topBar}>
+      <View style={[s.topBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[s.backBtn, { backgroundColor: T.surfaceAlt }]} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+          <ChevronLeft size={22} color={T.text} strokeWidth={2.5} />
+        </TouchableOpacity>
         <View style={s.topLeft}>
-          <Text style={s.screenTitle}>Roles</Text>
-          <View style={s.countBadge}>
-            <Text style={s.countTxt}>{displayData.length}</Text>
+          <Text style={[s.screenTitle, { color: T.text }]}>Roles</Text>
+          <View style={[s.countBadge, { backgroundColor: T.surfaceAlt }]}>
+            <Text style={[s.countTxt, { color: T.textMuted }]}>{displayData.length}</Text>
           </View>
         </View>
         {can('roles:write') && (
           <TouchableOpacity
-            style={s.addBtn}
+            style={[s.addBtn, { backgroundColor: T.primary }]}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('CreateRole')}
           >
-            <Plus size={16} color="#fff" strokeWidth={2.5} />
-            <Text style={s.addBtnTxt}>Add</Text>
+            <Plus size={16} color={T.primaryText || '#fff'} strokeWidth={2.5} />
+            <Text style={[s.addBtnTxt, { color: T.primaryText || '#fff' }]}>Add</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* ── Search + filter bar ── */}
-      <View style={s.searchBar}>
-        <View style={s.searchBox}>
-          <Search size={15} color="#9CA3AF" strokeWidth={2} />
+      <View style={[s.searchBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+        <View style={[s.searchBox, { backgroundColor: T.surfaceAlt }]}>
+          <Search size={15} color={T.textMuted} strokeWidth={2} />
           <TextInput
-            style={s.searchInput}
+            style={[s.searchInput, { color: T.text }]}
             placeholder="Search roles or slugs…"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={T.textMuted}
             value={search}
             onChangeText={setSearch}
             returnKeyType="search"
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <X size={14} color="#9CA3AF" strokeWidth={2} />
+              <X size={14} color={T.textMuted} strokeWidth={2} />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={[s.filterBtn, activeFilters > 0 && s.filterBtnOn]}
+          style={[s.filterBtn, { backgroundColor: T.surfaceAlt }, activeFilters > 0 && { backgroundColor: T.primary }]}
           activeOpacity={0.75}
           onPress={() => setShowFilters(v => !v)}
         >
           <SlidersHorizontal size={15}
-            color={activeFilters > 0 ? '#fff' : '#374151'} strokeWidth={2} />
+            color={activeFilters > 0 ? (T.primaryText || '#fff') : T.text} strokeWidth={2} />
           {activeFilters > 0 && (
-            <View style={s.filterDot}>
+            <View style={[s.filterDot, { backgroundColor: T.isDark ? '#60a5fa' : '#2563EB' }]}>
               <Text style={s.filterDotTxt}>{activeFilters}</Text>
             </View>
           )}
@@ -259,9 +279,9 @@ export default function RolesScreen({ navigation }) {
 
       {/* ── Filter pills ── */}
       {showFilters && (
-        <View style={s.filterPanel}>
+        <View style={[s.filterPanel, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
           <View style={s.filterRow}>
-            <Text style={s.filterHeading}>Status</Text>
+            <Text style={[s.filterHeading, { color: T.textMuted }]}>Status</Text>
             <View style={s.pillRow}>
               {['', 'active', 'inactive'].map(v => (
                 <Pill key={v} label={v || 'All'} on={filterStatus === v} onPress={() => setFilterStatus(v)} />
@@ -274,7 +294,7 @@ export default function RolesScreen({ navigation }) {
       {/* ── List ── */}
       {loading ? (
         <View style={s.loadWrap}>
-          <ActivityIndicator size="large" color="#1C1C1E" />
+          <ActivityIndicator size="large" color={T.text} />
         </View>
       ) : (
         <FlatList
@@ -298,34 +318,34 @@ export default function RolesScreen({ navigation }) {
           <View style={s.profileWrap}>
             <View style={s.profileHero}>
               <Avatar name={viewRole.name} id={viewRole.id} size={72} />
-              <Text style={s.profileName}>{viewRole.name}</Text>
-              <Text style={s.heroSlug}>{viewRole.slug}</Text>
+              <Text style={[s.profileName, { color: T.text }]}>{viewRole.name}</Text>
+              <Text style={[s.heroSlug, { color: T.textMuted }]}>{viewRole.slug}</Text>
               <View style={{ marginTop: 6 }}><StatusChip status={viewRole.status} /></View>
             </View>
 
             {viewRole.description && (
-              <Text style={s.descBox}>{viewRole.description}</Text>
+              <Text style={[s.descBox, { backgroundColor: T.bg, borderColor: T.border, color: T.textMuted }]}>{viewRole.description}</Text>
             )}
 
             <View style={s.actionRow}>
               {can('roles:write') && (
                 <TouchableOpacity
-                  style={s.actionBtn}
+                  style={[s.actionBtn, { backgroundColor: T.isDark ? '#1e3a8a' : '#EFF6FF', borderColor: T.isDark ? '#1e3a8a' : '#BFDBFE' }]}
                   activeOpacity={0.75}
                   onPress={() => { setViewRole(null); setTimeout(() => openEdit(viewRole), 350); }}
                 >
-                  <Pencil size={15} color="#2563EB" strokeWidth={2} />
-                  <Text style={[s.actionTxt, { color: '#2563EB' }]}>Edit Role</Text>
+                  <Pencil size={15} color={T.isDark ? '#60a5fa' : '#2563EB'} strokeWidth={2} />
+                  <Text style={[s.actionTxt, { color: T.isDark ? '#60a5fa' : '#2563EB' }]}>Edit Role</Text>
                 </TouchableOpacity>
               )}
               {can('roles:delete') && (
                 <TouchableOpacity
-                  style={[s.actionBtn, s.actionBtnDanger]}
+                  style={[s.actionBtnDanger, { backgroundColor: T.isDark ? '#7f1d1d' : '#FEF2F2', borderColor: T.isDark ? '#7f1d1d' : '#FECACA' }]}
                   activeOpacity={0.75}
                   onPress={() => handleDelete(viewRole)}
                 >
-                  <Trash2 size={15} color="#DC2626" strokeWidth={2} />
-                  <Text style={[s.actionTxt, { color: '#DC2626' }]}>Delete</Text>
+                  <Trash2 size={15} color={T.isDark ? '#f87171' : '#DC2626'} strokeWidth={2} />
+                  <Text style={[s.actionTxt, { color: T.isDark ? '#f87171' : '#DC2626' }]}>Delete</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -358,42 +378,50 @@ export default function RolesScreen({ navigation }) {
             </View>
             
             <View style={s.formGroup}>
-              <Text style={s.formLabel}>Status</Text>
-              <View style={s.pillRow}>
-                {['active', 'inactive'].map(opt => (
-                  <Pill key={opt}
-                    label={opt.charAt(0).toUpperCase() + opt.slice(1)}
-                    on={editForm.status === opt}
-                    onPress={() => setEditForm(f => ({ ...f, status: opt }))} />
-                ))}
-              </View>
+              <AppPicker 
+                label="Status" 
+                value={editForm.status} 
+                onSelect={v => setEditForm(f => ({ ...f, status: v }))} 
+                options={[
+                  { id: 'active', name: 'Active' },
+                  { id: 'inactive', name: 'Inactive' }
+                ]} 
+                placeholder="Select status" 
+              />
             </View>
 
-            <View style={s.divider} />
+            <View style={[s.divider, { backgroundColor: T.surfaceAlt }]} />
 
             <View style={s.formGroup}>
-              <Text style={s.formSection}>Coverage Grid</Text>
-              <Text style={s.coverageSub}>Select all granted capabilities.</Text>
-              <View style={s.permGrid}>
-                {allPerms.map(p => {
-                  const has = editForm.permissions.includes(p.slug);
-                  return (
-                    <TouchableOpacity
-                      key={p.slug}
-                      activeOpacity={0.7}
-                      onPress={() => togglePermission(p.slug)}
-                      style={[s.permTile, has && s.permTileOn]}
-                    >
-                      <View style={[s.permBox, has && s.permBoxOn]}>
-                        {has ? <CheckCircle2 size={12} color="#fff" strokeWidth={3} /> : <View style={s.permEmpty} />}
-                      </View>
-                      <Text style={[s.permTxt, has && s.permTxtOn]}>
-                        {p.permission_name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+              <Text style={[s.formSection, { color: T.text }]}>Coverage Grid</Text>
+              <Text style={[s.coverageSub, { color: T.textFaint }]}>Select all granted capabilities.</Text>
+              
+              <View style={s.tableGroup}>
+                {Object.entries(groupedPerms).map(([mod, perms]) => (
+                  <View key={mod} style={s.tableSection}>
+                    <View style={s.tableHeader}>
+                      <Text style={s.tableHeaderTxt}>{mod}</Text>
+                    </View>
+                    {perms.map((p, idx) => {
+                      const has = editForm.permissions.includes(p.slug);
+                      return (
+                        <TouchableOpacity 
+                          key={p.slug} 
+                          style={[s.tableRow, idx === perms.length - 1 && s.tableRowLast]} 
+                          onPress={() => togglePermission(p.slug)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={s.tableCellLabel}>{p.permission_name}</Text>
+                          <View style={[s.checkSq, has && s.checkSqOn]}>
+                            {has && <Check size={12} color={T.primaryText || '#fff'} strokeWidth={3} />}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
               </View>
+
             </View>
           </View>
         </ScrollView>
@@ -403,134 +431,111 @@ export default function RolesScreen({ navigation }) {
   );
 }
 
-/* ════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F2F2F7' },
-
-  /* top bar */
+  root: { flex: 1 },
   topBar: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, gap: 8,
   },
-  topLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  screenTitle: { fontSize: 26, fontWeight: '800', color: '#1C1C1E', letterSpacing: -0.5 },
-  countBadge: {
-    backgroundColor: '#F3F4F6', borderRadius: 99,
-    paddingHorizontal: 9, paddingVertical: 3,
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', marginRight: 4,
   },
-  countTxt: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  topLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  screenTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  countBadge: { borderRadius: 99, paddingHorizontal: 9, paddingVertical: 3 },
+  countTxt: { fontSize: 13, fontWeight: '600' },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#1C1C1E', borderRadius: 99,
+    flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 99,
     paddingHorizontal: 14, paddingVertical: 9,
   },
-  addBtnTxt: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  addBtnTxt: { fontSize: 13, fontWeight: '600' },
 
-  /* search */
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F3F4F6',
   },
   searchBox: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F3F4F6', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#1C1C1E', padding: 0 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   filterBtn: {
     width: 42, height: 42, borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  filterBtnOn: { backgroundColor: '#1C1C1E' },
   filterDot: {
     position: 'absolute', top: -4, right: -4,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: '#2563EB',
     alignItems: 'center', justifyContent: 'center',
   },
   filterDotTxt: { fontSize: 9, fontWeight: '700', color: '#fff' },
 
-  /* filter panel */
   filterPanel: {
-    backgroundColor: '#fff', paddingHorizontal: 16,
-    paddingTop: 12, paddingBottom: 16, gap: 14,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, gap: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
   },
   filterRow: { gap: 8 },
-  filterHeading: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.8 },
+  filterHeading: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
 
-  /* list */
   flatContent: { paddingTop: 12, paddingHorizontal: 16, paddingBottom: 32 },
   flatEmpty: { flex: 1 },
   loadWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   row: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, gap: 12,
-    shadowColor: '#000',
+    borderRadius: 16, padding: 14, gap: 12,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4,
-    elevation: 1,
   },
   rowBody: { flex: 1 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
-  rowName: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', flex: 1, marginRight: 8 },
+  rowName: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
   rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  slugTxt: { fontSize: 12, color: '#9CA3AF', fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  slugTxt: { fontSize: 12, fontWeight: '500', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   sep: { height: 8 },
 
-  /* empty */
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIcon: {
     width: 64, height: 64, borderRadius: 20,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E', marginBottom: 4 },
-  emptySub: { fontSize: 13, color: '#9CA3AF' },
+  emptyTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  emptySub: { fontSize: 13 },
 
-  /* profile wrap */
   profileWrap: { gap: 16 },
   profileHero: { alignItems: 'center', paddingVertical: 8 },
-  profileName: { fontSize: 20, fontWeight: '800', color: '#1C1C1E', letterSpacing: -0.4, marginTop: 10 },
-  heroSlug: { fontSize: 13, color: '#6B7280', fontWeight: '500', marginTop: 3, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  descBox: { backgroundColor: '#F9FAFB', padding: 14, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E7EB', fontSize: 14, lineHeight: 20, color: '#4B5563' },
+  profileName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4, marginTop: 10 },
+  heroSlug: { fontSize: 13, fontWeight: '500', marginTop: 3, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  descBox: { padding: 14, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, fontSize: 14, lineHeight: 20 },
 
   actionRow: { flexDirection: 'row', gap: 10 },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 13, borderRadius: 14,
-    backgroundColor: '#EFF6FF',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: '#BFDBFE',
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  actionBtnDanger: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  actionBtnDanger: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
+  },
   actionTxt: { fontSize: 14, fontWeight: '600' },
 
-  /* edit form */
   formGroup: { gap: 8, marginTop: 4 },
-  formLabel: { fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.3 },
-  formSection: { fontSize: 15, fontWeight: '800', color: '#1C1C1E' },
-  coverageSub: { fontSize: 12, color: '#9CA3AF', marginBottom: -4 },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12, marginHorizontal: -20 },
+  formLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  formSection: { fontSize: 15, fontWeight: '800' },
+  coverageSub: { fontSize: 12, marginBottom: -4 },
+  divider: { height: 1, marginVertical: 12, marginHorizontal: -20 },
 
-  /* nested perms */
-  permGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  permTile: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
-  permTileOn: { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' },
-  permBox: { width: 16, height: 16, borderRadius: 4, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
-  permBoxOn: { backgroundColor: '#7C3AED' },
-  permEmpty: { width: 16, height: 16 },
-  permTxt: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
-  permTxtOn: { color: '#5B21B6', fontWeight: '600' },
+  tableGroup: { gap: 16, marginTop: 16 },
+  tableSection: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  tableHeader: { padding: 10, borderBottomWidth: 1 },
+  tableHeaderTxt: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  tableRowLast: { borderBottomWidth: 0 },
+  tableCellLabel: { fontSize: 13, flex: 1, fontWeight: '500' },
+  checkSq: { width: 18, height: 18, borderRadius: 5, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  checkSqOn: { borderWidth: 0 },
 });

@@ -5,9 +5,11 @@ import { AppInput } from '../../components/ui/AppInput';
 import { AppButton } from '../../components/ui/AppButton';
 import { shopService } from '../../services/management.service';
 import { useToast } from '../../components/ui/WorkshopToast';
-import { T } from '../../constants/Theme';
+import { useTheme } from '../../lib/theme';
 
 export default function CreateShopScreen({ navigation }) {
+  const T = useTheme();
+  const s = getStyles(T);
   const [form, setForm] = useState({ name: '', location: '', owner_name: '' });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -62,7 +64,7 @@ export default function CreateShopScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = (T) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.bg },
   scroll: { padding: 16, paddingBottom: 40, gap: 0 },
   sectionTitle: {

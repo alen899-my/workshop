@@ -17,6 +17,7 @@ import {
   LayoutGrid,
 } from 'lucide-react-native';
 import { useRBAC } from '../../lib/rbac';
+import { useTheme } from '../../lib/theme';
 
 const MODULES = [
   {
@@ -57,29 +58,35 @@ const MODULES = [
   },
 ];
 
+const getModColor = (base, isDark) => {
+  if (!isDark) return base;
+  if (base === '#2563EB') return '#60a5fa'; // blue
+  if (base === '#059669') return '#34d399'; // green
+  if (base === '#7C3AED') return '#a78bfa'; // purple
+  if (base === '#D97706') return '#fcd34d'; // amber
+  return base;
+};
+
 export default function ManagementHubScreen({ navigation }) {
+  const T = useTheme();
+  const s = getStyles(T);
   const { can, isSuperAdmin } = useRBAC();
   const visible = MODULES.filter((m) => isSuperAdmin || can(m.perm));
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle={T.isDark ? 'light-content' : 'dark-content'} backgroundColor={T.bg} />
 
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-
         {/* ── Header ── */}
         <View style={s.header}>
-          <View style={s.headerIconWrap}>
-            <LayoutGrid size={16} color="#6B7280" strokeWidth={2} />
-          </View>
-          <Text style={s.eyebrow}>Admin Console</Text>
+       
+          <Text style={s.eyebrow}>Admin </Text>
           <Text style={s.pageTitle}>Management</Text>
-          <Text style={s.pageSub}>
-            {visible.length} module{visible.length !== 1 ? 's' : ''} available
-          </Text>
+          
         </View>
 
         {/* ── Cards ── */}
@@ -87,6 +94,8 @@ export default function ManagementHubScreen({ navigation }) {
           {visible.map((mod, index) => {
             const Icon = mod.icon;
             const isFeatured = index === 0;
+            const accentText = getModColor(mod.accent, T.isDark);
+            const accentBgComp = T.isDark ? accentText + '18' : mod.accentBg;
 
             if (isFeatured) {
               /* ── Large hero card ── */
@@ -97,14 +106,13 @@ export default function ManagementHubScreen({ navigation }) {
                   activeOpacity={0.85}
                   onPress={() => navigation.navigate(mod.key)}
                 >
-                  {/* Decorative background circle */}
-                  <View style={[s.featuredOrb, { backgroundColor: mod.accent + '18' }]} />
+                  <View style={[s.featuredOrb, { backgroundColor: accentText + '10' }]} />
 
                   <View style={s.featuredTop}>
-                    <View style={[s.featuredIconWrap, { backgroundColor: mod.accentBg }]}>
-                      <Icon size={26} color={mod.accent} strokeWidth={1.7} />
+                    <View style={[s.featuredIconWrap, { backgroundColor: accentBgComp }]}>
+                      <Icon size={26} color={accentText} strokeWidth={1.7} />
                     </View>
-                    <View style={[s.featuredArrowWrap, { backgroundColor: mod.accent }]}>
+                    <View style={[s.featuredArrowWrap, { backgroundColor: accentText }]}>
                       <ArrowRight size={15} color="#fff" strokeWidth={2.5} />
                     </View>
                   </View>
@@ -112,9 +120,9 @@ export default function ManagementHubScreen({ navigation }) {
                   <Text style={s.featuredTitle}>{mod.title}</Text>
                   <Text style={s.featuredSub}>{mod.sub}</Text>
 
-                  <View style={[s.featuredFooter, { borderTopColor: mod.accent + '20' }]}>
-                    <View style={[s.featuredDot, { backgroundColor: mod.accent }]} />
-                    <Text style={[s.featuredFooterTxt, { color: mod.accent }]}>Tap to manage</Text>
+                  <View style={[s.featuredFooter, { borderTopColor: accentText + '20' }]}>
+                    <View style={[s.featuredDot, { backgroundColor: accentText }]} />
+                    <Text style={[s.featuredFooterTxt, { color: accentText }]}>Tap to manage</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -128,8 +136,8 @@ export default function ManagementHubScreen({ navigation }) {
                 activeOpacity={0.78}
                 onPress={() => navigation.navigate(mod.key)}
               >
-                <View style={[s.rowIconWrap, { backgroundColor: mod.accentBg }]}>
-                  <Icon size={20} color={mod.accent} strokeWidth={1.75} />
+                <View style={[s.rowIconWrap, { backgroundColor: accentBgComp }]}>
+                  <Icon size={20} color={accentText} strokeWidth={1.75} />
                 </View>
 
                 <View style={s.rowBody}>
@@ -137,8 +145,8 @@ export default function ManagementHubScreen({ navigation }) {
                   <Text style={s.rowSub} numberOfLines={1}>{mod.sub}</Text>
                 </View>
 
-                <View style={[s.rowChevron, { backgroundColor: mod.accentBg }]}>
-                  <ArrowRight size={13} color={mod.accent} strokeWidth={2.5} />
+                <View style={[s.rowChevron, { backgroundColor: accentBgComp }]}>
+                  <ArrowRight size={13} color={accentText} strokeWidth={2.5} />
                 </View>
               </TouchableOpacity>
             );
@@ -150,10 +158,10 @@ export default function ManagementHubScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = (T) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: T.bg, // migrated from #FAFAFA
   },
 
   scroll: {
@@ -170,9 +178,9 @@ const s = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E7EB',
+    backgroundColor: T.surfaceAlt,
+    borderWidth: 1,
+    borderColor: T.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -180,7 +188,7 @@ const s = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: T.textMuted,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 4,
@@ -188,13 +196,13 @@ const s = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#111827',
+    color: T.text,
     letterSpacing: -0.8,
     lineHeight: 36,
   },
   pageSub: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: T.textMuted,
     marginTop: 5,
     fontWeight: '400',
   },
@@ -206,17 +214,17 @@ const s = StyleSheet.create({
 
   /* ── Featured card ── */
   featuredCard: {
-    backgroundColor: '#fff',
+    backgroundColor: T.surface,
     borderRadius: 22,
     padding: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: T.border,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: T.isDark ? 0 : 4 },
+    shadowOpacity: T.isDark ? 0 : 0.07,
+    shadowRadius: T.isDark ? 0 : 12,
+    elevation: T.isDark ? 0 : 3,
     marginBottom: 2,
   },
   featuredOrb: {
@@ -250,13 +258,13 @@ const s = StyleSheet.create({
   featuredTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: T.text,
     letterSpacing: -0.5,
     marginBottom: 5,
   },
   featuredSub: {
     fontSize: 13,
-    color: '#6B7280',
+    color: T.textMuted,
     lineHeight: 19,
   },
   featuredFooter: {
@@ -265,7 +273,7 @@ const s = StyleSheet.create({
     gap: 7,
     marginTop: 18,
     paddingTop: 14,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   featuredDot: {
     width: 6,
@@ -281,17 +289,17 @@ const s = StyleSheet.create({
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: T.surface,
     borderRadius: 16,
     padding: 14,
     gap: 13,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: T.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: T.isDark ? 0 : 1 },
+    shadowOpacity: T.isDark ? 0 : 0.04,
+    shadowRadius: T.isDark ? 0 : 4,
+    elevation: T.isDark ? 0 : 1,
   },
   rowIconWrap: {
     width: 46,
@@ -307,12 +315,12 @@ const s = StyleSheet.create({
   rowTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: T.text,
     letterSpacing: -0.2,
   },
   rowSub: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: T.textMuted,
     lineHeight: 16,
   },
   rowChevron: {

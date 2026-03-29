@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { T } from '../../constants/Theme';
+import { useTheme } from '../../lib/theme';
 
 export function AppInput({
   label,
@@ -16,9 +16,11 @@ export function AppInput({
   numberOfLines,
   style,
 }) {
+  const T = useTheme();
+
   return (
     <View style={[s.wrapper, style]}>
-      {label ? <Text style={s.label}>{label}</Text> : null}
+      {label ? <Text style={[s.label, { color: T.textMuted, fontFamily: T.font }]}>{label}</Text> : null}
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -32,12 +34,17 @@ export function AppInput({
         numberOfLines={numberOfLines}
         style={[
           s.input,
-          error && s.inputError,
+          {
+            backgroundColor: editable ? T.surface : T.surfaceAlt,
+            borderColor: error ? T.danger : T.border,
+            color: T.text,
+            fontFamily: T.font,
+          },
           !editable && s.inputDisabled,
           multiline && s.inputMultiline,
         ]}
       />
-      {error ? <Text style={s.errorText}>{error}</Text> : null}
+      {error ? <Text style={[s.errorText, { color: T.danger, fontFamily: T.font }]}>{error}</Text> : null}
     </View>
   );
 }
@@ -47,22 +54,15 @@ const s = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: T.textMuted,
-    fontFamily: T.font,
   },
   input: {
-    backgroundColor: T.surface,
     borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: T.radius,
+    borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 14,
-    color: T.text,
-    fontFamily: T.font,
   },
-  inputError: { borderColor: T.danger },
-  inputDisabled: { opacity: 0.55, backgroundColor: T.surfaceAlt },
+  inputDisabled: { opacity: 0.55 },
   inputMultiline: { textAlignVertical: 'top', minHeight: 90, paddingTop: 12 },
-  errorText: { fontSize: 11, color: T.danger, fontFamily: T.font },
+  errorText: { fontSize: 11 },
 });

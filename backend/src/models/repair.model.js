@@ -15,6 +15,7 @@ const createRepairTable = async () => {
       submitted_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       status VARCHAR(50) DEFAULT 'Pending', -- Pending | Started | In Progress | Completed
       service_type VARCHAR(50) DEFAULT 'Repair', -- Service | Repair | Servicing | Other
+      vehicle_type VARCHAR(50) DEFAULT 'Car', -- Car | Bike | Cycle | Transport
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );

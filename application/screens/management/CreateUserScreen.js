@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppInput } from '../../components/ui/AppInput';
+import { AppPicker } from '../../components/ui/AppPicker';
 import { AppButton } from '../../components/ui/AppButton';
 import { userService, roleService, shopService } from '../../services/management.service';
 import { useRBAC } from '../../lib/rbac';
 import { useToast } from '../../components/ui/WorkshopToast';
-import { T } from '../../constants/Theme';
+import { useTheme } from '../../lib/theme';
 
 export default function CreateUserScreen({ navigation }) {
+  const T = useTheme();
+  const s = getStyles(T);
   const [form, setForm] = useState({ name: '', phone: '', password: '', role: '', shop_id: '', status: 'active' });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -49,7 +50,6 @@ export default function CreateUserScreen({ navigation }) {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    // Submit payload
     const res = await userService.create(form);
     setSaving(false);
     if (res.success) {
@@ -75,56 +75,44 @@ export default function CreateUserScreen({ navigation }) {
 
         <Text style={s.sectionTitle}>Role & Status</Text>
         <View style={s.card}>
-          {/* Role picker */}
-          <Text style={s.fieldLabel}>Role</Text>
           {loading ? (
             <ActivityIndicator color={T.primary} style={{ marginVertical: 8 }} />
           ) : (
-            <View style={s.chipRow}>
-              {roles.map(r => (
-                <TouchableOpacity key={r.id} activeOpacity={0.75}
-                  onPress={() => setForm(f => ({ ...f, role: r.slug }))}
-                  style={[s.chip, form.role === r.slug && s.chipOn]}>
-                  <Text style={[s.chipTxt, form.role === r.slug && s.chipTxtOn]}>
-                    {r.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <AppPicker 
+              label="Role" 
+              value={form.role} 
+              onSelect={set('role')} 
+              options={roles.map(r => ({ id: r.slug, name: r.name }))} 
+              placeholder="Select a role" 
+            />
           )}
 
           <View style={s.divider} />
 
-          {/* Status picker */}
-          <Text style={s.fieldLabel}>Status</Text>
-          <View style={s.chipRow}>
-            {['active', 'inactive'].map(v => (
-              <TouchableOpacity key={v} activeOpacity={0.75}
-                onPress={() => setForm(f => ({ ...f, status: v }))}
-                style={[s.chip, form.status === v && s.chipOn]}>
-                <Text style={[s.chipTxt, form.status === v && s.chipTxtOn]}>
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <AppPicker 
+            label="Status" 
+            value={form.status} 
+            onSelect={set('status')} 
+            options={[
+              { id: 'active', name: 'Active' },
+              { id: 'inactive', name: 'Inactive' }
+            ]} 
+            placeholder="Select status" 
+          />
 
           {isSuperAdmin && shops.length > 0 && (
             <>
-              <View style={[s.divider, { marginTop: 12 }]} />
-              <Text style={s.fieldLabel}>Workshop Assignment</Text>
-              <View style={s.chipRow}>
-                <TouchableOpacity onPress={() => setForm(f => ({ ...f, shop_id: '' }))}
-                  style={[s.chip, !form.shop_id && s.chipOn]}>
-                  <Text style={[s.chipTxt, !form.shop_id && s.chipTxtOn]}>Direct (Global)</Text>
-                </TouchableOpacity>
-                {shops.map(shop => (
-                  <TouchableOpacity key={shop.id} onPress={() => setForm(f => ({ ...f, shop_id: String(shop.id) }))}
-                    style={[s.chip, form.shop_id === String(shop.id) && s.chipOn]}>
-                    <Text style={[s.chipTxt, form.shop_id === String(shop.id) && s.chipTxtOn]}>{shop.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <View style={s.divider} />
+              <AppPicker 
+                label="Workshop Assignment" 
+                value={form.shop_id} 
+                onSelect={set('shop_id')} 
+                options={[
+                  { id: '', name: 'Direct (Global)' },
+                  ...shops.map(shop => ({ id: String(shop.id), name: shop.name }))
+                ]} 
+                placeholder="Select assigned workshop" 
+              />
             </>
           )}
         </View>
@@ -140,7 +128,7 @@ export default function CreateUserScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = (T) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.bg },
   scroll: { padding: 16, gap: 0, paddingBottom: 40 },
   sectionTitle: {
@@ -162,7 +150,7 @@ const s = StyleSheet.create({
   },
   chipOn: { backgroundColor: T.primary, borderColor: T.primary },
   chipTxt: { fontSize: 13, fontWeight: '600', color: T.textMuted, fontFamily: T.font, textTransform: 'capitalize' },
-  chipTxtOn: { color: T.primaryText },
+  chipTxtOn: { color: T.primaryText || '#fff' },
   errorGeneral: { fontSize: 13, color: T.danger, fontFamily: T.font, textAlign: 'center', marginTop: 8 },
   buttons: { flexDirection: 'row', gap: 10, marginTop: 24 },
 });

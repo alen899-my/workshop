@@ -3,12 +3,15 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Shield } from 'lucide-react-native';
 import { AppInput } from '../../components/ui/AppInput';
+import { AppPicker } from '../../components/ui/AppPicker';
 import { AppButton } from '../../components/ui/AppButton';
 import { permissionService } from '../../services/management.service';
 import { useToast } from '../../components/ui/WorkshopToast';
-import { T } from '../../constants/Theme';
+import { useTheme } from '../../lib/theme';
 
 export default function CreatePermissionScreen({ navigation }) {
+  const T = useTheme();
+  const s = getStyles(T);
   const [moduleName, setModuleName] = useState('');
   const [items, setItems] = useState([
     { permission_name: '', slug: '', description: '', status: 'active' }
@@ -50,7 +53,6 @@ export default function CreatePermissionScreen({ navigation }) {
     }
 
     setSaving(true);
-    // Mimic the Next.js bulk array payload structure
     const res = await permissionService.create({
       module_name: moduleName.toUpperCase(),
       items: items
@@ -96,7 +98,7 @@ export default function CreatePermissionScreen({ navigation }) {
               {/* Optional Delete Badge */}
               {items.length > 1 && (
                 <TouchableOpacity style={s.deleteBadge} onPress={() => removeRow(idx)} activeOpacity={0.7}>
-                  <Trash2 size={12} color="#fff" />
+                  <Trash2 size={12} color={T.primaryText || '#fff'} />
                 </TouchableOpacity>
               )}
               
@@ -128,19 +130,16 @@ export default function CreatePermissionScreen({ navigation }) {
               />
               <View style={s.divider} />
               
-              <View style={{ gap: 6 }}>
-                <Text style={s.fieldLabel}>Status</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {['active', 'inactive'].map(opt => (
-                    <TouchableOpacity key={opt} onPress={() => updateItem(idx, 'status', opt)}
-                      style={[s.statusPill, item.status === opt && s.statusPillOn]}>
-                      <Text style={[s.statusPillTxt, item.status === opt && s.statusPillTxtOn]}>
-                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+                <AppPicker 
+                  label="Status" 
+                  value={item.status} 
+                  onSelect={(v) => updateItem(idx, 'status', v)} 
+                  options={[
+                    { id: 'active', name: 'Active' },
+                    { id: 'inactive', name: 'Inactive' }
+                  ]} 
+                  placeholder="Select status" 
+                />
 
             </View>
           ))}
@@ -155,7 +154,7 @@ export default function CreatePermissionScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const getStyles = (T) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: T.bg },
   scroll: { padding: 16, paddingBottom: 40, gap: 0 },
   sectionTitle: {
@@ -169,7 +168,7 @@ const s = StyleSheet.create({
   divider: { height: 1, backgroundColor: T.border, marginHorizontal: -14 },
   
   batchHeaderWrap: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 },
-  addRowBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: T.primaryLight, borderWidth: 1, borderColor: '#C3D9F0' },
+  addRowBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: T.primary + '15', borderWidth: 1, borderColor: T.primary + '40' },
   addRowTxt: { fontSize: 11, fontWeight: '700', color: T.primary, fontFamily: T.font },
   
   itemsStack: { gap: 14, marginTop: 4 },
@@ -184,7 +183,7 @@ const s = StyleSheet.create({
   statusPill: { flex: 1, paddingVertical: 10, borderRadius: T.radius, borderWidth: 1, borderColor: T.border, alignItems: 'center', backgroundColor: T.surface },
   statusPillOn: { backgroundColor: T.primary, borderColor: T.primary },
   statusPillTxt: { fontSize: 13, fontWeight: '600', color: T.textMuted, fontFamily: T.font },
-  statusPillTxtOn: { color: T.primaryText },
+  statusPillTxtOn: { color: T.primaryText || '#FFFFFF' },
   
   buttons: { flexDirection: 'row', gap: 10, marginTop: 32 },
 });

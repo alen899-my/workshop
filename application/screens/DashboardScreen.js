@@ -1,46 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  SafeAreaView, 
   ScrollView, 
   Platform,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../lib/auth';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../lib/theme';
 import DashboardHeader from '../components/DashboardHeader';
 import { 
-  PlusCircle, 
-  Wrench, 
-  Car, 
-  ClipboardList, 
-  Users, 
-  Receipt,
-  BarChart2
+  Plus, 
+  ArrowRight, 
+  Wrench,
 } from 'lucide-react-native';
+import { repairService } from '../services/repair.service';
+import { RepairCard } from '../components/RepairCard';
+import { useFocusEffect } from '@react-navigation/native';
 
 const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
-const QUICK_ACTIONS = [
-  { id: 1, title: 'New Repair', icon: PlusCircle, color: '#63B3ED' },
-  { id: 2, title: 'Repairs',    icon: Wrench,     color: '#FC8181' },
-  { id: 3, title: 'Vehicles',   icon: Car,        color: '#68D391' },
-  { id: 4, title: 'Job Cards',  icon: ClipboardList, color: '#F6AD55' },
-  { id: 5, title: 'Customers',  icon: Users,      color: '#B794F4' },
-  { id: 6, title: 'Invoices',   icon: Receipt,    color: '#4FD1C5' },
-];
-
 export default function DashboardScreen({ navigation }) {
   const { user } = useAuth();
+  const T = useTheme();
+  const [recentRepairs, setRecentRepairs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  }, []);
+
+  const loadRecent = useCallback(async () => {
+    setLoading(true);
+    const res = await repairService.getAll();
+    if (res.success) {
+      setRecentRepairs(res.data?.slice(0, 3) || []);
+    }
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRecent();
+    }, [loadRecent])
+  );
 
   if (!user) return null;
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <View style={[styles.container, { backgroundColor: T.bg }]}>
+      <StatusBar barStyle={T.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
       
       <DashboardHeader />
 
@@ -48,60 +63,58 @@ export default function DashboardScreen({ navigation }) {
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Horizontal Quick Actions */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-        </View>
-
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.quickActionsContainer}
-        >
-          {QUICK_ACTIONS.map((item) => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.actionCard}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (item.title === 'New Repair') navigation.navigate('CreateRepair');
-                else if (item.title === 'Repairs') navigation.navigate('Repairs');
-              }}
-            >
-              <View style={[styles.iconBox, { backgroundColor: item.color + '20' }]}>
-                <item.icon size={22} color={item.color} />
-              </View>
-              <Text style={styles.actionLabel}>{item.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Overview Stats */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Overview</Text>
-        </View>
-
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={styles.statIconHeader}>
-               <BarChart2 size={16} color="rgba(255,255,255,0.4)" />
-               <Text style={styles.cardLabel}>ACTIVE JOBS</Text>
-            </View>
-            <Text style={styles.cardValue}>12</Text>
-            <View style={styles.progressLine} />
+        <View style={styles.topSection}>
+          <View>
+            <Text style={[styles.greeting, { color: T.textMuted }]}>{greeting},</Text>
+            <Text style={[styles.userName, { color: T.text }]}>{user?.ownerName || "Owner"}</Text>
           </View>
 
-          <View style={styles.statCard}>
-            <View style={styles.statIconHeader}>
-               <Receipt size={16} color="rgba(255,255,255,0.4)" />
-               <Text style={styles.cardLabel}>PENDING</Text>
+          <TouchableOpacity 
+            style={styles.newRepairAction} 
+            onPress={() => navigation.navigate('CreateRepair')} 
+            activeOpacity={0.7}
+          >
+            <View style={[styles.plusIconWrap, { backgroundColor: T.primary }]}>
+              <Plus size={24} color={T.primaryText} strokeWidth={3} />
             </View>
-            <Text style={styles.cardValue}>05</Text>
-            <View style={[styles.progressLine, { backgroundColor: '#FC8181' }]} />
-          </View>
+            <Text style={[styles.newRepairText, { color: T.primary }]}>REPAIR</Text>
+          </TouchableOpacity>
         </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: T.text }]}>Recent Repairs</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Repairs')} 
+            hitSlop={{top:10,bottom:10,left:10,right:10}}
+            style={styles.viewAllBtn}
+          >
+             <Text style={[styles.viewAllText, { color: T.primary }]}>View All</Text>
+             <ArrowRight size={14} color={T.primary} strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
+
+        {loading ? (
+          <View style={styles.center}><ActivityIndicator color={T.primary} /></View>
+        ) : recentRepairs.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: T.surfaceAlt, borderColor: T.borderStrong }]}>
+            <Wrench size={32} color={T.borderStrong} />
+            <Text style={[styles.emptyText, { color: T.textFaint }]}>No active jobs recorded.</Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {recentRepairs.map((item) => (
+              <RepairCard 
+                 key={item.id} 
+                 item={item} 
+                 onPress={() => navigation.navigate('Repairs')} 
+              />
+            ))}
+          </View>
+        )}
 
       </ScrollView>
+
+      <View style={[styles.bottomBar, { backgroundColor: T.primary + (T.isDark ? '30' : '15') }]} />
     </View>
   );
 }
@@ -109,94 +122,106 @@ export default function DashboardScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: Colors.dark.background 
   },
   scrollContent: {
+    paddingTop: 30,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  sectionHeader: {
-    paddingHorizontal: 20,
-    marginTop: 30,
-    marginBottom: 16,
-  },
-  sectionTitle: { 
-    color: '#FFF', 
-    fontSize: 14, 
-    fontWeight: '900', 
-    fontFamily: FONT, 
-    textTransform: 'uppercase', 
-    letterSpacing: 3,
-    opacity: 0.8,
-  },
-  quickActionsContainer: {
-    paddingHorizontal: 15,
-    gap: 12,
-  },
-  actionCard: {
-    width: 90,
+  topSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    marginBottom: 45,
   },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
+  greeting: {
+    fontSize: 12,
     fontFamily: FONT,
-    fontWeight: '700',
-    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 4,
   },
-  statsGrid: {
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    gap: 12,
+  userName: {
+    fontSize: 28,
+    fontWeight: '900',
+    fontFamily: FONT,
+    letterSpacing: -0.5,
   },
-  statCard: { 
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)', 
-    padding: 20, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.06)',
-    position: 'relative',
-    overflow: 'hidden'
-  },
-  statIconHeader: {
-    flexDirection: 'row',
+  newRepairAction: {
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
   },
-  cardLabel: { 
-    fontSize: 10, 
-    fontWeight: '900', 
-    color: 'rgba(255,255,255,0.3)', 
-    textTransform: 'uppercase', 
+  plusIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  newRepairText: {
+    fontSize: 9,
+    fontWeight: '900',
+    fontFamily: FONT,
+    letterSpacing: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    fontFamily: FONT,
+    textTransform: 'uppercase',
     letterSpacing: 1.5,
-    fontFamily: FONT 
   },
-  cardValue: { 
-    fontSize: 32, 
-    fontWeight: '900', 
-    color: '#FFF', 
-    fontFamily: FONT 
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  progressLine: {
-    height: 3,
-    width: '60%',
-    backgroundColor: Colors.dark.primary,
-    marginTop: 8,
-    borderRadius: 2,
-    opacity: 0.8,
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: FONT,
+    letterSpacing: -0.2,
+  },
+  list: {
+    gap: 16,
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  center: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyCard: {
+    paddingVertical: 50,
+    alignItems: 'center',
+    borderRadius: 24,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: FONT,
+    marginTop: 12,
+    fontWeight: '600',
+  },
+  bottomBar: {
+    height: 4,
+    width: '30%',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginTop: 20,
+    marginBottom: Platform.OS === 'ios' ? 20 : 10,
   }
 });

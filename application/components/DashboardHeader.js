@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../lib/auth';
+import { useTheme } from '../lib/theme';
 import { AppModal } from '../components/ui/AppModal';
 import { AppButton } from '../components/ui/AppButton';
-import { Colors } from '../constants/Colors';
-import { User, Bell, Search, LogOut, AlertTriangle } from 'lucide-react-native';
+import { User, Search, LogOut, AlertTriangle, Sun, Moon } from 'lucide-react-native';
 
 const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 export default function DashboardHeader() {
   const { user, logout } = useAuth();
+  const T = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-
   const navigation = useNavigation();
 
   const handleLogout = async () => {
@@ -21,93 +21,108 @@ export default function DashboardHeader() {
     await logout();
   };
 
-  const roleLabels = {
-    admin: "Super Admin",
-    shop_owner: "Shop Owner",
-    worker: "Technician",
-    shop: "Shop Manager"
-  };
-
-  const displayRole = user?.role ? (roleLabels[user.role.toLowerCase()] || user.role) : "Owner";
-
   return (
-    <View style={styles.headerContainer}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      {/* Top Identity Row */}
-      <View style={[styles.topRow, { zIndex: 9999 }]}>
-        <View style={styles.brandInfo}>
-          <Text style={styles.shopName}>{(user?.shopName || "Workshop").toUpperCase()}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{displayRole.toUpperCase()}</Text>
+    <View style={[styles.headerOuter, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+      <StatusBar barStyle={T.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={styles.headerContainer}>
+        <View style={styles.topRow}>
+          {/* Brand */}
+          <View style={styles.brandInfo}>
+            <Text style={[styles.shopName, { color: T.text }]}>
+              {(user?.shopName || 'Workshop').toUpperCase()}
+            </Text>
           </View>
-        </View>
 
-        <View style={[styles.rightActions, { zIndex: 9999 }]}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Search size={18} color="rgba(255,255,255,0.6)" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Bell size={18} color="rgba(255,255,255,0.6)" />
-          </TouchableOpacity>
-          <View style={{ position: 'relative', zIndex: 9999, elevation: 20 }}>
-             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowDropdown(!showDropdown)}>
-               <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{(user?.ownerName?.[0] || user?.shopName?.[0] || 'W').toUpperCase()}</Text>
-               </View>
-             </TouchableOpacity>
+          {/* Right actions */}
+          <View style={styles.rightActions}>
 
-             {/* Cross-platform Absolute Dropdown Menu */}
-             {showDropdown && (
-               <View style={styles.dropdown}>
-                 <TouchableOpacity 
-                   style={styles.dropdownItem} 
-                   onPress={() => {
-                     setShowDropdown(false);
-                     setShowLogoutModal(true);
-                   }}
-                 >
-                    <LogOut size={16} color="#DC2626" />
+            {/* 🌙 / ☀ Dark mode toggle */}
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: T.surfaceAlt, borderWidth: 1, borderColor: T.border }]}
+              onPress={T.toggleTheme}
+              activeOpacity={0.7}
+            >
+              {T.isDark
+                ? <Sun size={18} color="#F59E0B" strokeWidth={2} />
+                : <Moon size={18} color={T.textMuted} strokeWidth={2} />
+              }
+            </TouchableOpacity>
+
+            {/* Search */}
+            <TouchableOpacity style={[styles.iconBtn, { backgroundColor: T.surfaceAlt, borderWidth: 1, borderColor: T.border }]}>
+              <Search size={18} color={T.textMuted} />
+            </TouchableOpacity>
+
+            {/* Avatar + dropdown */}
+            <View style={{ position: 'relative', zIndex: 9999 }}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowDropdown(!showDropdown)}>
+                <View style={[styles.avatar, { backgroundColor: T.primary }]}>
+                  <Text style={styles.avatarText}>
+                    {(user?.ownerName?.[0] || user?.shopName?.[0] || 'W').toUpperCase()}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {showDropdown && (
+                <View style={[styles.dropdown, { backgroundColor: T.surface, borderColor: T.border }]}>
+                  {/* Theme toggle in dropdown too */}
+                  <TouchableOpacity
+                    style={[styles.dropdownItem, { marginBottom: 10 }]}
+                    onPress={() => { setShowDropdown(false); T.toggleTheme(); }}
+                  >
+                    {T.isDark
+                      ? <Sun size={15} color="#F59E0B" />
+                      : <Moon size={15} color={T.textMuted} />
+                    }
+                    <Text style={[styles.dropdownMutedText, { color: T.textMuted }]}>
+                      {T.isDark ? 'LIGHT MODE' : 'DARK MODE'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ height: 1, backgroundColor: T.border, marginBottom: 10 }} />
+
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setShowDropdown(false);
+                      setShowLogoutModal(true);
+                    }}
+                  >
+                    <LogOut size={15} color="#DC2626" />
                     <Text style={styles.dropdownText}>SIGN OUT</Text>
-                 </TouchableOpacity>
-               </View>
-             )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </View>
 
-      {/* User greeting */}
-      <View style={[styles.welcomeRow, { zIndex: 1 }]}>
-        <Text style={styles.welcomeText}>Welcome back,</Text>
-        <Text style={styles.userName}>{user?.ownerName || "Administrator"}</Text>
-      </View>
-
-      {/* Logout Confirmation Modal */}
       <AppModal
         visible={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         title="Confirm Sign Out"
       >
         <View style={styles.modalBody}>
-          <View style={styles.modalIconBox}>
-             <AlertTriangle size={32} color="#DC2626" />
+          <View style={[styles.modalIconBox, { backgroundColor: T.dangerBg }]}>
+            <AlertTriangle size={32} color="#DC2626" />
           </View>
-          <Text style={styles.modalText}>
-            Are you sure you want to log out of your account? You will need to sign in again to manage your workshop.
+          <Text style={[styles.modalText, { color: T.textMuted }]}>
+            Are you sure you want to log out? You will need to sign in again to manage your workshop.
           </Text>
-          
+
           <View style={styles.modalActions}>
-            <AppButton 
-              title="Cancel" 
-              variant="outline" 
-              style={{flex: 1}} 
-              onPress={() => setShowLogoutModal(false)} 
+            <AppButton
+              title="Cancel"
+              variant="outline"
+              style={{ flex: 1 }}
+              onPress={() => setShowLogoutModal(false)}
             />
-            <AppButton 
-              title="Log Out" 
-              variant="primary" 
-              style={{flex: 1, backgroundColor: '#DC2626'}} 
-              onPress={handleLogout} 
+            <AppButton
+              title="Log Out"
+              variant="primary"
+              style={{ flex: 1, backgroundColor: '#DC2626' }}
+              onPress={handleLogout}
             />
           </View>
         </View>
@@ -117,126 +132,92 @@ export default function DashboardHeader() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: Colors.dark.background,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+  headerOuter: {
     zIndex: 9999,
-    elevation: 15,
+    elevation: 4,
+    borderBottomWidth: 1,
+  },
+  headerContainer: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
   },
   brandInfo: {
     flex: 1,
   },
   shopName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
-    color: '#FFF',
     fontFamily: FONT,
-    letterSpacing: 2,
-  },
-  roleBadge: {
-    backgroundColor: 'rgba(99, 179, 237, 0.1)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  roleText: {
-    fontSize: 9,
-    color: Colors.dark.primary,
-    fontFamily: FONT,
-    fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarContainer: {
-    marginLeft: 4,
+    marginLeft: 2,
   },
   avatar: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: Colors.dark.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.dark.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 4,
   },
   avatarText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '900',
     fontFamily: FONT,
   },
-  welcomeRow: {
-    marginTop: 5,
-  },
-  welcomeText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    fontFamily: FONT,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFF',
-    fontFamily: FONT,
-    marginTop: 2,
-  },
   dropdown: {
     position: 'absolute',
-    top: 45,
+    top: 46,
     right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     zIndex: 9999,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
-    minWidth: 150,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+    minWidth: 170,
+    borderWidth: 1,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  dropdownMutedText: {
+    fontWeight: '800',
+    fontFamily: FONT,
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
   dropdownText: {
     color: '#DC2626',
     fontWeight: '900',
     fontFamily: FONT,
-    fontSize: 13,
-    letterSpacing: 1.2,
+    fontSize: 11,
+    letterSpacing: 1,
   },
   modalBody: {
     alignItems: 'center',
@@ -246,22 +227,20 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   modalText: {
-    fontSize: 15,
-    color: '#374151',
+    fontSize: 14,
     textAlign: 'center',
     fontFamily: FONT,
-    lineHeight: 22,
-    marginBottom: 30,
+    lineHeight: 20,
+    marginBottom: 24,
   },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
     width: '100%',
-  }
+  },
 });

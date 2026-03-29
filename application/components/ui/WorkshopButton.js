@@ -5,14 +5,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   View,
-  Platform,
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
-
-const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+import { useTheme } from '../../lib/theme';
 
 /**
- * WorkshopButton - Mobile adaptation of the website's WorkshopButton
+ * WorkshopButton - Mobile adaptation
  * Variants: 'primary' | 'outline' | 'ghost' | 'danger' | 'steel'
  * Sizes:    'sm' | 'md' | 'lg' | 'xl'
  */
@@ -29,71 +26,67 @@ export function WorkshopButton({
   style,
   textStyle,
 }) {
-  const theme = Colors.light;
+  const T = useTheme();
 
   const variantStyles = {
     primary: {
       button: {
-        backgroundColor: '#163C63', // oklch(0.38 0.13 248)
+        backgroundColor: T.primary,
         borderWidth: 1,
-        borderColor: '#163C63',
-        shadowColor: '#5B87CD',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        borderColor: T.primary,
       },
-      text: { color: '#F5F8FA' },
+      text: { color: T.primaryText },
     },
     outline: {
       button: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#163C63',
+        borderColor: T.primary,
       },
-      text: { color: '#163C63' },
+      text: { color: T.primary },
     },
     ghost: {
       button: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: '#D8DDE2',
+        borderColor: T.border, // was #D8DDE2
       },
-      text: { color: '#4E88BA' },
+      text: { color: T.primary },
     },
     danger: {
       button: {
-        backgroundColor: '#AF3E1D',
+        backgroundColor: T.danger,
         borderWidth: 1,
-        borderColor: '#AF3E1D',
-        shadowColor: '#AF3E1D',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        borderColor: T.danger,
       },
       text: { color: '#FFFFFF' },
     },
     steel: {
       button: {
-        backgroundColor: '#4E88BA',
+        backgroundColor: T.warning, // mapping steel logic to existing theme colors if applicable, but steel was custom. let's just use T.primary or define steel inline
         borderWidth: 1,
-        borderColor: '#4E88BA',
-        shadowColor: '#4E88BA',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        borderColor: T.warning,
       },
       text: { color: '#F8FAFC' },
     },
+  };
+
+  // Keep steel using original #4E88BA if we don't have secondary accent dynamically defined,
+  // but let's make it respond slightly
+  variantStyles.steel = {
+    button: {
+      backgroundColor: '#4E88BA',
+      borderWidth: 1,
+      borderColor: '#4E88BA',
+    },
+    text: { color: '#FFFFFF' }
   };
 
   const sizeStyles = {
     sm: { paddingVertical: 6, paddingHorizontal: 12, fontSize: 12, gap: 6 },
     md: { paddingVertical: 10, paddingHorizontal: 20, fontSize: 14, gap: 8 },
     lg: { paddingVertical: 14, paddingHorizontal: 28, fontSize: 16, gap: 10 },
-    xl: { paddingVertical: 18, paddingHorizontal: 36, fontSize: 18, gap: 12 },
+    xl: { paddingVertical: 18, paddingHorizontal: 24, fontSize: 16, gap: 8 },
   };
 
   const v = variantStyles[variant] || variantStyles.primary;
@@ -111,6 +104,7 @@ export function WorkshopButton({
           paddingVertical: s.paddingVertical,
           paddingHorizontal: s.paddingHorizontal,
           width: fullWidth ? '100%' : undefined,
+          shadowColor: v.button.backgroundColor,
         },
         disabled && styles.disabled,
         style,
@@ -119,16 +113,18 @@ export function WorkshopButton({
       {loading ? (
         <View style={styles.row}>
           <ActivityIndicator color={v.text.color} size="small" style={{ marginRight: 8 }} />
-          <Text style={[styles.text, { fontSize: s.fontSize, color: v.text.color }]}>Loading...</Text>
+          <Text style={[styles.text, { fontSize: s.fontSize, color: v.text.color, fontFamily: T.font }]}>Loading...</Text>
         </View>
       ) : (
         <View style={[styles.row, { gap: s.gap }]}>
           {icon && iconPosition === 'left' && icon}
           {children && (
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit={true}
               style={[
                 styles.text,
-                { fontSize: s.fontSize, color: v.text.color },
+                { fontSize: s.fontSize, color: v.text.color, fontFamily: T.font },
                 textStyle,
               ]}
             >
@@ -144,7 +140,7 @@ export function WorkshopButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 4,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
@@ -155,7 +151,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontFamily: FONT,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1.5,

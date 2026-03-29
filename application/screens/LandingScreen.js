@@ -1,119 +1,115 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
   StatusBar,
   StyleSheet,
   Text,
   View,
   ImageBackground,
-  Dimensions,
   SafeAreaView,
   Platform,
-  Animated,
   TouchableOpacity,
+  useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { WorkshopButton } from '../components/ui/WorkshopButton';
+import { ArrowRight } from 'lucide-react-native';
 
-const { width, height } = Dimensions.get('window');
-const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+const FONT = Platform.OS === 'ios' ? 'System' : 'sans-serif';
 const theme = Colors.light;
 
 export default function LandingScreen({ navigation }) {
-  const anims = useRef([...Array(3)].map(() => new Animated.Value(0))).current;
+  const { width, height } = useWindowDimensions();
 
-  useEffect(() => {
-    Animated.stagger(
-      150,
-      anims.map((a) =>
-        Animated.timing(a, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        })
-      )
-    ).start();
-  }, []);
-
-  const slideUp = (i) => ({
-    opacity: anims[i],
-    transform: [
-      {
-        translateY: anims[i].interpolate({
-          inputRange: [0, 1],
-          outputRange: [40, 0],
-        }),
-      },
-    ],
-  });
+  // Responsive values
+  const isSmallScreen = height < 700;
+  const logoSize = isSmallScreen ? 14 : 16;
+  const titleSize = width < 360 ? 32 : (isSmallScreen ? 36 : 42);
+  const subtitleSize = isSmallScreen ? 13 : 14;
 
   return (
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      {/* Hero Image taking the top portion of the screen */}
-      <ImageBackground
-        source={require('../assets/workshopmobile-screen.jpg')}
-        style={styles.bg}
-        resizeMode="cover"
+      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 }}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.imageOverlay} />
-        
-        <SafeAreaView style={styles.safeTop}>
-          {/* Logo gracefully positioned at the top */}
-          <Animated.View style={[styles.topBar, slideUp(0)]}>
-            <Text style={styles.logo}>
-              VEH<Text style={{ color: theme.accent }}>REP</Text>
-            </Text>
-          </Animated.View>
-
-          {/* Centralized Headline within the image area */}
-          <View style={styles.heroContent}>
-            <Animated.Text style={[styles.eyebrow, slideUp(1)]}>
-              Workshop Management
-            </Animated.Text>
-            
-            <Animated.Text style={[styles.title, slideUp(1)]}>
-              Your Shop.{'\n'}
-              <Text style={{ color: theme.accent }}>Under Control.</Text>
-            </Animated.Text>
-            
-            <Animated.Text style={[styles.subtitle, slideUp(1)]}>
-              Track every vehicle, repair, and technician from arrival to departure.
-            </Animated.Text>
-          </View>
-        </SafeAreaView>
-      </ImageBackground>
-
-      {/* Bottom Action Sheet (Professional Uber/Lyft design) */}
-      <Animated.View style={[styles.bottomSheet, slideUp(2)]}>
-        <View style={styles.dragHandle} />
-        
-        <Text style={styles.sheetTitle}>Get Started</Text>
-        <Text style={styles.sheetSubtitle}>
-          Join the platform built exclusively for professional auto repair workshops.
-        </Text>
-
-        <View style={styles.actions}>
-          <WorkshopButton
-            variant="primary"
-            size="lg"
-            onPress={() => navigation?.navigate('Register')}
-            fullWidth={true}
-            style={styles.mainButton}
+        {/* Top Hero Section */}
+        <View style={[styles.heroContainer, { height: height * 0.62 }]}>
+          <ImageBackground
+            source={require('../assets/workshopmobile-screen.jpg')}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
           >
-            Create Free Account
-          </WorkshopButton>
+            <View style={styles.imageOverlay} />
+            
+            <SafeAreaView style={styles.safeTop}>
+              {/* Logo */}
+              <View style={styles.topBar}>
+                <Text style={[styles.logo, { fontSize: logoSize }]}>
+                  VEH<Text style={{ color: theme.accent }}>REP</Text>
+                </Text>
+              </View>
 
-          <TouchableOpacity 
-            onPress={() => navigation?.navigate('Login')}
-            style={styles.loginLink}
-          >
-            <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginHighlight}>Log in</Text>
-            </Text>
-          </TouchableOpacity>
+              {/* Centralized Headline */}
+              <View style={styles.heroContent}>
+                <Text style={styles.eyebrow}>
+                  Workshop Management
+                </Text>
+                
+                <Text style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.2 }]}>
+                  Your Shop.{'\n'}
+                  <Text style={{ color: theme.accent }}>Under Control.</Text>
+                </Text>
+                
+                <Text style={[styles.subtitle, { fontSize: subtitleSize }]}>
+                  Track every vehicle, repair, and technician from arrival to departure.
+                </Text>
+              </View>
+            </SafeAreaView>
+          </ImageBackground>
         </View>
-      </Animated.View>
+
+        {/* Bottom Action Section */}
+        <View style={styles.bottomContainer}>
+          <View style={styles.contentWrap}>
+            <View style={styles.dragHandle} />
+            
+            <View style={styles.textContainer}>
+              <Text style={styles.sheetTitle}>Get Started</Text>
+              <Text style={styles.sheetSubtitle}>
+                Join the platform built exclusively for professional auto repair workshops.
+              </Text>
+            </View>
+
+            <View style={styles.actions}>
+              <WorkshopButton
+                variant="primary"
+                size="xl"
+                onPress={() => navigation?.navigate('Register')}
+                fullWidth={true}
+                icon={<ArrowRight size={20} color="#FFF" />}
+                iconPosition="right"
+                style={styles.mainButton}
+              >
+                Create Free Account
+              </WorkshopButton>
+
+              <TouchableOpacity 
+                onPress={() => navigation?.navigate('Login')}
+                style={styles.loginLink}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.loginText}>
+                  Already have an account? <Text style={styles.loginHighlight}>Log in</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -123,14 +119,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  bg: {
+  heroContainer: {
     width: '100%',
-    height: height * 0.68, 
-    justifyContent: 'flex-start',
+    overflow: 'hidden',
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)', // Slightly lighter overlay for the hero image
+    backgroundColor: 'rgba(0,0,0,0.5)', 
   },
   safeTop: {
     flex: 1,
@@ -138,14 +133,13 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingHorizontal: 28,
-    paddingTop: Platform.OS === 'android' ? 50 : 20,
+    paddingTop: Platform.OS === 'android' ? 40 : 10,
     alignItems: 'flex-start',
   },
   logo: {
     color: '#FFF',
-    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: 6,
+    letterSpacing: 4,
     fontFamily: FONT,
   },
   heroContent: {
@@ -158,86 +152,89 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: FONT,
   },
   title: {
     color: '#FFF',
-    fontSize: 42,
     fontWeight: '800',
-    lineHeight: 50,
     letterSpacing: -1,
-    marginBottom: 16,
+    marginBottom: 12,
     fontFamily: FONT,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
     lineHeight: 22,
     fontFamily: FONT,
-    paddingRight: 20,
+    paddingRight: 10,
   },
 
-  // Bottom Sheet
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: height * 0.35, 
+  // Bottom Content Area
+  bottomContainer: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 28,
-    paddingTop: 16,
+    marginTop: -30, // Negative margin to overlap with hero
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     borderTopWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30, 
+  },
+  contentWrap: {
+    paddingHorizontal: 30,
+    paddingTop: 16,
+    flex: 1,
   },
   dragHandle: {
-    width: 36,
-    height: 4,
+    width: 40,
+    height: 5,
     backgroundColor: '#E2E8F0',
-    borderRadius: 2,
+    borderRadius: 2.5,
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+  },
+  textContainer: {
+    marginBottom: 32,
   },
   sheetTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     color: theme.foreground,
-    marginBottom: 6,
+    marginBottom: 8,
     fontFamily: FONT,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   sheetSubtitle: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 28,
+    fontSize: 15,
+    color: '#64748B',
     fontFamily: FONT,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   actions: {
-    gap: 16,
+    gap: 20,
+    width: '100%',
+    alignItems: 'center',
   },
   mainButton: {
-    marginBottom: 4,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+    borderRadius: 16,
   },
   loginLink: {
+    paddingVertical: 8,
+    width: '100%',
     alignItems: 'center',
-    marginTop: 4,
   },
   loginText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: FONT,
-    color: '#718096',
+    color: '#64748B',
   },
   loginHighlight: {
     color: theme.primary,
     fontWeight: 'bold',
-    textDecorationLine: 'underline',
   }
 });

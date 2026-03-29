@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Search, Plus, SlidersHorizontal, MapPin, Building2,
-  X, ChevronRight, User, Pencil, Trash2, Eye,
+  X, ChevronRight, ChevronLeft, User, Pencil, Trash2, Eye,
 } from 'lucide-react-native';
 import { AppModal } from '../../components/ui/AppModal';
 import { AppButton } from '../../components/ui/AppButton';
@@ -15,6 +15,7 @@ import { AppInput } from '../../components/ui/AppInput';
 import { shopService } from '../../services/management.service';
 import { useRBAC } from '../../lib/rbac';
 import { useToast } from '../../components/ui/WorkshopToast';
+import { useTheme } from '../../lib/theme';
 
 /* ─── helpers ─── */
 const initials = (name = '') =>
@@ -24,32 +25,37 @@ const AVATAR_COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#
 const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 
 /* ─── Avatar ─── */
-const Avatar = ({ name, id, size = 44 }) => (
-  <View style={[av.circle, { width: size, height: size, borderRadius: size / 4, backgroundColor: avatarColor(id), opacity: 0.95 }]}>
-    <Text style={[av.txt, { fontSize: size * 0.36 }]}>{initials(name)}</Text>
-  </View>
-);
+const Avatar = ({ name, id, size = 44 }) => {
+  const T = useTheme();
+  return (
+    <View style={[av.circle, { width: size, height: size, borderRadius: size / 4, backgroundColor: avatarColor(id), opacity: T.isDark ? 0.8 : 0.95 }]}>
+      <Text style={[av.txt, { fontSize: size * 0.36 }]}>{initials(name)}</Text>
+    </View>
+  );
+};
 const av = StyleSheet.create({
   circle: { alignItems: 'center', justifyContent: 'center' },
   txt: { color: '#fff', fontWeight: '700', letterSpacing: 0.5 },
 });
 
 /* ─── Filter pill ─── */
-const Pill = ({ label, on, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.75}
-    style={[pl.wrap, on && pl.on]}>
-    <Text style={[pl.txt, on && pl.onTxt]}>{label}</Text>
-  </TouchableOpacity>
-);
+const Pill = ({ label, on, onPress }) => {
+  const T = useTheme();
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.75}
+      style={[pl.wrap, { backgroundColor: T.surface, borderColor: T.border }, on && { backgroundColor: T.primary, borderColor: T.primary }]}>
+      <Text style={[pl.txt, { color: T.textMuted }, on && { color: T.primaryText || '#fff' }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
 const pl = StyleSheet.create({
-  wrap: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#fff' },
-  on: { backgroundColor: '#1C1C1E', borderColor: '#1C1C1E' },
-  txt: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
-  onTxt: { color: '#fff' },
+  wrap: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, borderWidth: 1 },
+  txt: { fontSize: 13, fontWeight: '500' },
 });
 
 /* ══════════════════════════════════════════════════════ */
 export default function ShopsScreen({ navigation }) {
+  const T = useTheme();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -127,7 +133,7 @@ export default function ShopsScreen({ navigation }) {
   /* ── Row ── */
   const renderItem = ({ item: shop }) => (
     <TouchableOpacity
-      style={s.row}
+      style={[s.row, { backgroundColor: T.surface, borderColor: T.border, borderWidth: T.isDark ? 1 : 0, elevation: T.isDark ? 0 : 1 }]}
       activeOpacity={0.7}
       onPress={() => setViewShop(shop)}
     >
@@ -135,16 +141,16 @@ export default function ShopsScreen({ navigation }) {
 
       <View style={s.rowBody}>
         <View style={s.rowTop}>
-          <Text style={s.rowName} numberOfLines={1}>{shop.name || 'Anonymous'}</Text>
+          <Text style={[s.rowName, { color: T.text }]} numberOfLines={1}>{shop.name || 'Anonymous'}</Text>
         </View>
         <View style={s.rowMeta}>
-          <User size={11} color="#9CA3AF" strokeWidth={2} />
-          <Text style={s.rowMetaTxt}>{shop.owner_name || '—'}</Text>
+          <User size={11} color={T.textMuted} strokeWidth={2} />
+          <Text style={[s.rowMetaTxt, { color: T.textMuted }]}>{shop.owner_name || '—'}</Text>
           {shop.location && (
             <>
-              <Text style={s.dot}>·</Text>
-              <MapPin size={11} color="#9CA3AF" strokeWidth={2} />
-              <Text style={s.rowMetaTxt} numberOfLines={1}>
+              <Text style={[s.dot, { color: T.borderStrong }]}>·</Text>
+              <MapPin size={11} color={T.textMuted} strokeWidth={2} />
+              <Text style={[s.rowMetaTxt, { color: T.textMuted }]} numberOfLines={1}>
                 {shop.location}
               </Text>
             </>
@@ -152,74 +158,75 @@ export default function ShopsScreen({ navigation }) {
         </View>
       </View>
 
-      <ChevronRight size={15} color="#D1D5DB" strokeWidth={2.5} />
+      <ChevronRight size={15} color={T.borderStrong} strokeWidth={2.5} />
     </TouchableOpacity>
   );
 
-  /* ── Separator ── */
   const Separator = () => <View style={s.sep} />;
 
-  /* ── Empty ── */
   const Empty = () => (
     <View style={s.emptyWrap}>
-      <View style={s.emptyIcon}>
-        <Building2 size={28} color="#9CA3AF" strokeWidth={1.5} />
+      <View style={[s.emptyIcon, { backgroundColor: T.surfaceAlt }]}>
+        <Building2 size={28} color={T.textMuted} strokeWidth={1.5} />
       </View>
-      <Text style={s.emptyTitle}>No shops registered</Text>
-      <Text style={s.emptySub}>Try adjusting your search or filters</Text>
+      <Text style={[s.emptyTitle, { color: T.text }]}>No shops registered</Text>
+      <Text style={[s.emptySub, { color: T.textMuted }]}>Try adjusting your search or filters</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={s.root} edges={['bottom']}>
+    <SafeAreaView style={[s.root, { backgroundColor: T.bg }]} edges={['top']}>
 
       {/* ── Top bar ── */}
-      <View style={s.topBar}>
+      <View style={[s.topBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[s.backBtn, { backgroundColor: T.surfaceAlt }]} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+          <ChevronLeft size={22} color={T.text} strokeWidth={2.5} />
+        </TouchableOpacity>
         <View style={s.topLeft}>
-          <Text style={s.screenTitle}>Shops</Text>
-          <View style={s.countBadge}>
-            <Text style={s.countTxt}>{displayData.length}</Text>
+          <Text style={[s.screenTitle, { color: T.text }]}>Shops</Text>
+          <View style={[s.countBadge, { backgroundColor: T.surfaceAlt }]}>
+            <Text style={[s.countTxt, { color: T.textMuted }]}>{displayData.length}</Text>
           </View>
         </View>
         {can('shops:write') && (
           <TouchableOpacity
-            style={s.addBtn}
+            style={[s.addBtn, { backgroundColor: T.primary }]}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('CreateShop')}
           >
-            <Plus size={16} color="#fff" strokeWidth={2.5} />
-            <Text style={s.addBtnTxt}>Add</Text>
+            <Plus size={16} color={T.primaryText || '#fff'} strokeWidth={2.5} />
+            <Text style={[s.addBtnTxt, { color: T.primaryText || '#fff' }]}>Add</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* ── Search + filter bar ── */}
-      <View style={s.searchBar}>
-        <View style={s.searchBox}>
-          <Search size={15} color="#9CA3AF" strokeWidth={2} />
+      <View style={[s.searchBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
+        <View style={[s.searchBox, { backgroundColor: T.surfaceAlt }]}>
+          <Search size={15} color={T.textMuted} strokeWidth={2} />
           <TextInput
-            style={s.searchInput}
+            style={[s.searchInput, { color: T.text }]}
             placeholder="Search name, owner or location…"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={T.textMuted}
             value={search}
             onChangeText={setSearch}
             returnKeyType="search"
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <X size={14} color="#9CA3AF" strokeWidth={2} />
+              <X size={14} color={T.textMuted} strokeWidth={2} />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={[s.filterBtn, activeFilters > 0 && s.filterBtnOn]}
+          style={[s.filterBtn, { backgroundColor: T.surfaceAlt }, activeFilters > 0 && { backgroundColor: T.primary }]}
           activeOpacity={0.75}
           onPress={() => setShowFilters(v => !v)}
         >
           <SlidersHorizontal size={15}
-            color={activeFilters > 0 ? '#fff' : '#374151'} strokeWidth={2} />
+            color={activeFilters > 0 ? (T.primaryText || '#fff') : T.text} strokeWidth={2} />
           {activeFilters > 0 && (
-            <View style={s.filterDot}>
+            <View style={[s.filterDot, { backgroundColor: T.isDark ? '#60a5fa' : '#2563EB' }]}>
               <Text style={s.filterDotTxt}>{activeFilters}</Text>
             </View>
           )}
@@ -228,10 +235,10 @@ export default function ShopsScreen({ navigation }) {
 
       {/* ── Filter pills ── */}
       {showFilters && (
-        <View style={s.filterPanel}>
+        <View style={[s.filterPanel, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
           {uniqueLocations.length > 0 && (
             <View style={s.filterRow}>
-              <Text style={s.filterHeading}>Location</Text>
+              <Text style={[s.filterHeading, { color: T.textMuted }]}>Location</Text>
               <View style={s.pillRow}>
                 <Pill label="All" on={!filterLocation} onPress={() => setFilterLocation('')} />
                 {uniqueLocations.map(loc => (
@@ -246,7 +253,7 @@ export default function ShopsScreen({ navigation }) {
       {/* ── List ── */}
       {loading ? (
         <View style={s.loadWrap}>
-          <ActivityIndicator size="large" color="#1C1C1E" />
+          <ActivityIndicator size="large" color={T.text} />
         </View>
       ) : (
         <FlatList
@@ -268,49 +275,46 @@ export default function ShopsScreen({ navigation }) {
       >
         {viewShop && (
           <View style={s.profileWrap}>
-            {/* Avatar hero */}
             <View style={s.profileHero}>
               <Avatar name={viewShop.name} id={viewShop.id} size={72} />
-              <Text style={s.profileName}>{viewShop.name}</Text>
+              <Text style={[s.profileName, { color: T.text }]}>{viewShop.name}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <MapPin size={13} color="#6B7280" />
-                <Text style={{ color: '#6B7280', fontSize: 13, fontWeight: '500' }}>{viewShop.location || 'Unknown location'}</Text>
+                <MapPin size={13} color={T.textMuted} />
+                <Text style={{ color: T.textMuted, fontSize: 13, fontWeight: '500' }}>{viewShop.location || 'Unknown location'}</Text>
               </View>
             </View>
 
-            {/* Detail cards */}
-            <View style={s.detailCard}>
+            <View style={[s.detailCard, { backgroundColor: T.bg, borderColor: T.border }]}>
               <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Owner / Manager</Text>
-                <Text style={s.detailVal}>{viewShop.owner_name || '—'}</Text>
+                <Text style={[s.detailLabel, { color: T.textMuted }]}>Owner / Manager</Text>
+                <Text style={[s.detailVal, { color: T.text }]}>{viewShop.owner_name || '—'}</Text>
               </View>
-              <View style={s.detailDivider} />
+              <View style={[s.detailDivider, { backgroundColor: T.border }]} />
               <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Date Registered</Text>
-                <Text style={s.detailVal}>{fmt(viewShop.created_at)}</Text>
+                <Text style={[s.detailLabel, { color: T.textMuted }]}>Date Registered</Text>
+                <Text style={[s.detailVal, { color: T.text }]}>{fmt(viewShop.created_at)}</Text>
               </View>
             </View>
 
-            {/* Actions */}
             <View style={s.actionRow}>
               {can('shops:write') && (
                 <TouchableOpacity
-                  style={s.actionBtn}
+                  style={[s.actionBtn, { backgroundColor: T.isDark ? '#1e3a8a' : '#EFF6FF', borderColor: T.isDark ? '#1e3a8a' : '#BFDBFE' }]}
                   activeOpacity={0.75}
                   onPress={() => { setViewShop(null); setTimeout(() => openEdit(viewShop), 350); }}
                 >
-                  <Pencil size={15} color="#2563EB" strokeWidth={2} />
-                  <Text style={[s.actionTxt, { color: '#2563EB' }]}>Edit</Text>
+                  <Pencil size={15} color={T.isDark ? '#60a5fa' : '#2563EB'} strokeWidth={2} />
+                  <Text style={[s.actionTxt, { color: T.isDark ? '#60a5fa' : '#2563EB' }]}>Edit</Text>
                 </TouchableOpacity>
               )}
               {can('shops:delete') && (
                 <TouchableOpacity
-                  style={[s.actionBtn, s.actionBtnDanger]}
+                  style={[s.actionBtn, { backgroundColor: T.isDark ? '#7f1d1d' : '#FEF2F2', borderColor: T.isDark ? '#7f1d1d' : '#FECACA' }]}
                   activeOpacity={0.75}
                   onPress={() => handleDelete(viewShop)}
                 >
-                  <Trash2 size={15} color="#DC2626" strokeWidth={2} />
-                  <Text style={[s.actionTxt, { color: '#DC2626' }]}>Delete</Text>
+                  <Trash2 size={15} color={T.isDark ? '#f87171' : '#DC2626'} strokeWidth={2} />
+                  <Text style={[s.actionTxt, { color: T.isDark ? '#f87171' : '#DC2626' }]}>Delete</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -347,131 +351,88 @@ export default function ShopsScreen({ navigation }) {
   );
 }
 
-/* ════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F2F2F7' },
-
-  /* top bar */
+  root: { flex: 1 },
   topBar: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14,
-    backgroundColor: '#fff',
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
+    gap: 8,
   },
-  topLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  screenTitle: { fontSize: 26, fontWeight: '800', color: '#1C1C1E', letterSpacing: -0.5 },
-  countBadge: {
-    backgroundColor: '#F3F4F6', borderRadius: 99,
-    paddingHorizontal: 9, paddingVertical: 3,
+  backBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 4,
   },
-  countTxt: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  topLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  screenTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  countBadge: { borderRadius: 99, paddingHorizontal: 9, paddingVertical: 3 },
+  countTxt: { fontSize: 13, fontWeight: '600' },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#1C1C1E', borderRadius: 99,
+    flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 99,
     paddingHorizontal: 14, paddingVertical: 9,
   },
-  addBtnTxt: { fontSize: 13, fontWeight: '600', color: '#fff' },
-
-  /* search */
+  addBtnTxt: { fontSize: 13, fontWeight: '600' },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   searchBox: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F3F4F6', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#1C1C1E', padding: 0 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   filterBtn: {
     width: 42, height: 42, borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
   },
-  filterBtnOn: { backgroundColor: '#1C1C1E' },
   filterDot: {
-    position: 'absolute', top: -4, right: -4,
-    width: 16, height: 16, borderRadius: 8,
-    backgroundColor: '#2563EB',
+    position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8,
     alignItems: 'center', justifyContent: 'center',
   },
   filterDotTxt: { fontSize: 9, fontWeight: '700', color: '#fff' },
-
-  /* filter panel */
   filterPanel: {
-    backgroundColor: '#fff', paddingHorizontal: 16,
-    paddingTop: 12, paddingBottom: 16, gap: 14,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, gap: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
   },
   filterRow: { gap: 8 },
-  filterHeading: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.8 },
+  filterHeading: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-
-  /* list */
   flatContent: { paddingTop: 12, paddingHorizontal: 16, paddingBottom: 32 },
   flatEmpty: { flex: 1 },
   loadWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   row: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    flexDirection: 'row', alignItems: 'center', borderRadius: 16,
+    padding: 14, gap: 12, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4,
-    elevation: 1,
   },
   rowBody: { flex: 1 },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
-  rowName: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', flex: 1, marginRight: 8 },
+  rowName: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
   rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rowMetaTxt: { fontSize: 12, color: '#9CA3AF', fontWeight: '400', flexShrink: 1 },
-  dot: { fontSize: 12, color: '#D1D5DB' },
+  rowMetaTxt: { fontSize: 12, fontWeight: '400', flexShrink: 1 },
+  dot: { fontSize: 12 },
   sep: { height: 8 },
-
-  /* empty */
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIcon: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E', marginBottom: 4 },
-  emptySub: { fontSize: 13, color: '#9CA3AF' },
-
-  /* profile modal */
+  emptyTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  emptySub: { fontSize: 13 },
   profileWrap: { gap: 16 },
   profileHero: { alignItems: 'center', paddingVertical: 8, gap: 10 },
-  profileName: { fontSize: 20, fontWeight: '800', color: '#1C1C1E', letterSpacing: -0.4 },
-  detailCard: {
-    backgroundColor: '#F9FAFB', borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  detailRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
-  },
-  detailLabel: { fontSize: 14, color: '#6B7280', fontWeight: '400' },
-  detailVal: { fontSize: 14, color: '#1C1C1E', fontWeight: '600' },
-  detailDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB', marginHorizontal: 16 },
+  profileName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  detailCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13 },
+  detailLabel: { fontSize: 14, fontWeight: '400' },
+  detailVal: { fontSize: 14, fontWeight: '600' },
+  detailDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
   actionRow: { flexDirection: 'row', gap: 10 },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 13, borderRadius: 14,
-    backgroundColor: '#EFF6FF',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: '#BFDBFE',
+    gap: 6, paddingVertical: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
   },
-  actionBtnDanger: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
   actionTxt: { fontSize: 14, fontWeight: '600' },
-
-  /* edit form */
   formGroup: { gap: 8, marginTop: 4 },
-  formLabel: { fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.3 },
+  formLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
 });

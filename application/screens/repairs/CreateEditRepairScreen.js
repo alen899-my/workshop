@@ -3,29 +3,51 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, Image as ImageIcon, X, Trash2, Calendar, User, Wrench } from 'lucide-react-native';
+import { 
+  Camera, 
+  Image as ImageIcon, 
+  X, 
+  Trash2, 
+  User, 
+  Wrench, 
+  ShieldCheck, 
+  Plus,
+  Clock
+} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AppInput } from '../../components/ui/AppInput';
 import { AppButton } from '../../components/ui/AppButton';
+import { AppPicker } from '../../components/ui/AppPicker';
 import { repairService } from '../../services/repair.service';
 import { userService } from '../../services/management.service';
 import { useToast } from '../../components/ui/WorkshopToast';
-import { T } from '../../constants/Theme';
+import { VEHICLE_CONFIG, getVehiclesByCategory, VehicleIcon } from '../../constants/Vehicles';
+import { formatDateTime, toUTC } from '../../lib/utils';
+import { useAuth } from '../../lib/auth';
+import { useTheme } from '../../lib/theme';
+
+const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+const MAIN_VEHICLES = ['Car', 'Motorbike', 'Scooter', 'Van', 'Truck'];
 
 export default function CreateEditRepairScreen({ navigation, route }) {
+  const { user } = useAuth();
+  const T = useTheme();
   const repairId = route.params?.id;
   const isEdit = !!repairId;
 
   const [form, setForm] = useState({
     vehicle_number: '',
+    vehicle_type: 'Car',
+    model_name: '',
     owner_name: '',
     phone_number: '',
-    complaints: '',
-    repair_date: new Date().toISOString().substring(0, 10),
-    attending_worker_id: '',
+    complaints: [],
+    repair_date: new Date().toISOString(),
+    attending_worker_id: user?.role === 'worker' ? String(user.id) : '',
     status: 'Pending',
     service_type: 'Repair'
   });
+  const [currentComplaint, setCurrentComplaint] = useState('');
 
   const [image, setImage] = useState(null);
   const [workers, setWorkers] = useState([]);
@@ -49,10 +71,14 @@ export default function CreateEditRepairScreen({ navigation, route }) {
           const d = rRes.data;
           setForm({
             vehicle_number: d.vehicle_number || '',
+            vehicle_type: d.vehicle_type || 'Car',
+            model_name: d.model_name || '',
             owner_name: d.owner_name || '',
             phone_number: d.phone_number || '',
-            complaints: d.complaints || '',
-            repair_date: d.repair_date ? new Date(d.repair_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10),
+            complaints: Array.isArray(d.complaints) 
+              ? d.complaints.map(c => typeof c === 'string' ? { text: c, fixed: false } : c) 
+              : [],
+            repair_date: d.repair_date || new Date().toISOString(),
             attending_worker_id: d.attending_worker_id ? String(d.attending_worker_id) : '',
             status: d.status || 'Pending',
             service_type: d.service_type || 'Repair'
@@ -60,7 +86,7 @@ export default function CreateEditRepairScreen({ navigation, route }) {
           if (d.vehicle_image) setImage(d.vehicle_image);
         }
       } catch (err) {
-        toast({ type: 'error', title: 'Init Failed', description: 'Could not load required data.' });
+        toast({ type: 'error', title: 'Error', description: 'Failed to load details.' });
       } finally {
         setLoading(false);
       }
@@ -72,7 +98,7 @@ export default function CreateEditRepairScreen({ navigation, route }) {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
     });
@@ -82,9 +108,45 @@ export default function CreateEditRepairScreen({ navigation, route }) {
     }
   };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      toast({ type: 'error', title: 'Permission', description: 'Camera permission is required.' });
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const addComplaint = () => {
+    if (currentComplaint.trim()) {
+      setForm(f => ({ 
+        ...f, 
+        complaints: [...f.complaints, { text: currentComplaint.trim(), fixed: false }] 
+      }));
+      setCurrentComplaint('');
+    }
+  };
+
+  const toggleComplaint = (index) => {
+    setForm(f => ({
+      ...f,
+      complaints: f.complaints.map((c, i) => i === index ? { ...c, fixed: !c.fixed } : c)
+    }));
+  };
+
+  const removeComplaint = (index) => {
+    setForm(f => ({ ...f, complaints: f.complaints.filter((_, i) => i !== index) }));
+  };
+
   const validate = () => {
     const e = {};
-    if (!form.vehicle_number.trim()) e.vehicle_number = 'Vehicle number required';
+    if (!form.vehicle_number.trim()) e.vehicle_number = 'Plate number is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -96,7 +158,13 @@ export default function CreateEditRepairScreen({ navigation, route }) {
     try {
       const formData = new FormData();
       Object.keys(form).forEach(key => {
-        if (form[key]) formData.append(key, form[key]);
+        if (key === 'complaints') {
+          formData.append(key, JSON.stringify(form[key]));
+        } else if (key === 'repair_date') {
+          formData.append(key, toUTC(form[key]));
+        } else if (form[key]) {
+          formData.append(key, form[key]);
+        }
       });
 
       if (image && !image.startsWith('http')) {
@@ -113,8 +181,8 @@ export default function CreateEditRepairScreen({ navigation, route }) {
       if (res.success) {
         toast({ 
           type: 'success', 
-          title: isEdit ? 'Repair Updated' : 'Repair Created', 
-          description: `Vehicle ${form.vehicle_number} successfully ${isEdit ? 'updated' : 'added'}.` 
+          title: isEdit ? 'Saved' : 'Started', 
+          description: `success` 
         });
         navigation.goBack();
       } else {
@@ -130,99 +198,213 @@ export default function CreateEditRepairScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={s.loadCenter}>
+      <View style={[s.loadCenter, { backgroundColor: T.bg }]}>
         <ActivityIndicator size="large" color={T.primary} />
-        <Text style={s.loadTxt}>Syncing Data...</Text>
       </View>
     );
   }
 
+  const isMainSelected = MAIN_VEHICLES.includes(form.vehicle_type);
+  const currentOther = !isMainSelected ? VEHICLE_CONFIG.find(v => v.id === form.vehicle_type) : null;
+
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: T.bg }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         
-        {/* Header Summary */}
         <View style={s.header}>
-           <Text style={s.pageTitle}>{isEdit ? 'Update Repair' : 'Log New Repair'}</Text>
-           <Text style={s.pageSubtitle}>Precision tracking for every workshop job.</Text>
+           <Text style={[s.pageTitle, { color: T.text }]}>{isEdit ? 'Edit Repair' : 'Create New Repair'}</Text>
+           <Text style={[s.pageSubtitle, { color: T.textMuted }]}>Enter vehicle and customer details to save.</Text>
         </View>
 
-        <Text style={s.sectionTitle}>Vehicle Identification</Text>
-        <View style={s.card}>
+        <View style={s.sectionHeader}>
+           <Wrench size={16} color={T.textMuted} strokeWidth={2.5} />
+           <Text style={[s.sectionTitle, { color: T.textMuted }]}>SELECT VEHICLE TYPE</Text>
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.typeGrid}>
+           {MAIN_VEHICLES.map(id => {
+             const type = VEHICLE_CONFIG.find(v => v.id === id);
+             const isSelected = form.vehicle_type === id;
+             // Ensure type.color isn't overriding dark mode themes too aggressively, but it's a branded color
+             return (
+               <TouchableOpacity 
+                 key={id} 
+                 style={[s.typeCard, { backgroundColor: T.surface, borderColor: T.border }, isSelected && { borderColor: type.color, backgroundColor: type.color + (T.isDark ? '15' : '05') }]}
+                 onPress={() => set('vehicle_type')(id)}
+               >
+                 <View style={[s.iconBox, { backgroundColor: T.surfaceAlt }, isSelected && { backgroundColor: type.color }]}>
+                   <VehicleIcon typeId={id} size={24} color={isSelected ? '#FFFFFF' : type.color} />
+                 </View>
+                 <Text style={[s.typeLabel, { color: T.textFaint }, isSelected && { color: type.color }]}>{type.label}</Text>
+               </TouchableOpacity>
+             );
+           })}
+
+           {!isMainSelected && currentOther && (
+             <TouchableOpacity 
+               style={[s.typeCard, { backgroundColor: currentOther.color + (T.isDark ? '15' : '05'), borderColor: currentOther.color }]}
+               onPress={() => navigation.navigate('VehicleTypePicker', { 
+                 onSelect: (id) => set('vehicle_type')(id),
+                 selectedId: form.vehicle_type 
+               })}
+             >
+               <View style={[s.iconBox, { backgroundColor: currentOther.color }]}>
+                 <VehicleIcon typeId={currentOther.id} size={24} color="#FFFFFF" />
+               </View>
+               <Text style={[s.typeLabel, { color: currentOther.color }]}>{currentOther.label}</Text>
+             </TouchableOpacity>
+           )}
+
+           <TouchableOpacity 
+             style={[s.typeCard, { borderStyle: 'dashed', backgroundColor: T.surface, borderColor: T.borderStrong }]}
+             onPress={() => navigation.navigate('VehicleTypePicker', { 
+               onSelect: (id) => set('vehicle_type')(id),
+               selectedId: form.vehicle_type 
+             })}
+           >
+             <View style={[s.iconBox, { backgroundColor: T.surfaceAlt }]}>
+               <Plus size={24} color={T.textMuted} strokeWidth={2} />
+             </View>
+             <Text style={[s.typeLabel, { color: T.textFaint }]}>View All</Text>
+           </TouchableOpacity>
+        </ScrollView>
+
+        <View style={s.sectionHeader}>
+           <User size={16} color={T.textMuted} strokeWidth={2.5} />
+           <Text style={[s.sectionTitle, { color: T.textMuted }]}>OWNER & VEHICLE INFO</Text>
+        </View>
+        <View style={[s.card, { backgroundColor: T.surface, borderColor: T.border }]}>
            <AppInput 
-             label="Vehicle Number *" 
+             label="Plate Number (Required)" 
              value={form.vehicle_number} 
              onChangeText={set('vehicle_number')} 
              placeholder="e.g. KL 01 AB 1234" 
              autoCapitalize="characters" 
              error={errors.vehicle_number} 
            />
-           <View style={s.divider} />
-           <View style={s.row}>
-              <View style={{flex: 1}}>
-                <AppInput label="Owner Name" value={form.owner_name} onChangeText={set('owner_name')} placeholder="Full name" autoCapitalize="words" />
-              </View>
-           </View>
-           <View style={s.divider} />
-           <AppInput label="Contact Phone" value={form.phone_number} onChangeText={set('phone_number')} placeholder="Mobile number" keyboardType="phone-pad" />
+           <View style={[s.divider, { backgroundColor: T.border }]} />
+           <AppInput 
+             label="Model Name" 
+             value={form.model_name} 
+             onChangeText={set('model_name')} 
+             placeholder="e.g. MT15, R15, Pulsar" 
+             autoCapitalize="words" 
+           />
+           <View style={[s.divider, { backgroundColor: T.border }]} />
+           <AppInput label="Customer Name" value={form.owner_name} onChangeText={set('owner_name')} placeholder="Full name of owner" autoCapitalize="words" />
+           <View style={[s.divider, { backgroundColor: T.border }]} />
+           <AppInput label="Phone Number" value={form.phone_number} onChangeText={set('phone_number')} placeholder="Mobile number" keyboardType="phone-pad" />
         </View>
 
-        <Text style={s.sectionTitle}>Job Particulars</Text>
-        <View style={s.card}>
-           <AppInput 
-             label="Primary Complaints" 
-             value={form.complaints} 
-             onChangeText={set('complaints')} 
-             placeholder="List all issues reported by the owner..." 
-             multiline 
-             numberOfLines={4} 
+        <View style={s.sectionHeader}>
+           <Wrench size={16} color={T.textMuted} strokeWidth={2.5} />
+           <Text style={[s.sectionTitle, { color: T.textMuted }]}>REPAIR INFORMATION</Text>
+        </View>
+        <View style={[s.card, { backgroundColor: T.surface, borderColor: T.border }]}>
+           <View>
+             <Text style={[s.fieldLabel, { color: T.text }]}>What's wrong? (Complaints)</Text>
+             <View style={s.complaintInputRow}>
+                <AppInput 
+                  placeholder="Type a complaint..." 
+                  value={currentComplaint} 
+                  onChangeText={setCurrentComplaint}
+                  onSubmitEditing={addComplaint}
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+                <TouchableOpacity style={[s.addComplaintBtn, { backgroundColor: T.primary }]} onPress={addComplaint}>
+                   <Plus size={20} color="#FFF" />
+                </TouchableOpacity>
+             </View>
+             
+             <View style={s.complaintList}>
+                {form.complaints.map((c, i) => (
+                   <View key={i} style={[s.complaintItem, { backgroundColor: T.surfaceAlt }]}>
+                      <TouchableOpacity 
+                        style={[s.checkCircle, { borderColor: T.borderStrong }, c.fixed && { backgroundColor: T.success, borderColor: T.success }]} 
+                        onPress={() => toggleComplaint(i)}
+                      >
+                         {c.fixed && <ShieldCheck size={12} color="#FFF" />}
+                      </TouchableOpacity>
+                      <Text style={[s.complaintText, { color: T.text }, c.fixed && { textDecorationLine: 'line-through', color: T.textFaint }]}>{c.text}</Text>
+                      <TouchableOpacity onPress={() => removeComplaint(i)}>
+                         <X size={16} color={T.danger} />
+                      </TouchableOpacity>
+                   </View>
+                ))}
+             </View>
+           </View>
+           
+           <View style={[s.divider, { backgroundColor: T.border }]} />
+           
+           <View>
+             <Text style={[s.fieldLabel, { color: T.text }]}>Repair Time</Text>
+             <View style={[s.timestampBadge, { backgroundColor: T.primary + '15', borderColor: T.primary + '30' }]}>
+                <Clock size={16} color={T.primary} strokeWidth={2.5} />
+                <Text style={[s.timestampTxt, { color: T.primary }]}>{formatDateTime(form.repair_date)}</Text>
+             </View>
+             <Text style={[s.timestampHint, { color: T.textMuted }]}>This timestamp is automatically recorded and saved.</Text>
+           </View>
+           
+           <View style={[s.divider, { backgroundColor: T.border }]} />
+           
+           <AppPicker 
+              label="Repair Type" 
+              value={form.service_type} 
+              onSelect={set('service_type')} 
+              placeholder="Select Service Type"
+              options={[
+                { id: 'Repair', name: 'Repair' },
+                { id: 'Service', name: 'Service' },
+                { id: 'Checkup', name: 'Checkup' },
+                { id: 'Other', name: 'Other' }
+              ]} 
            />
            
-           <View style={s.divider} />
-           
-           <AppInput label="Repair Date" value={form.repair_date} onChangeText={set('repair_date')} placeholder="YYYY-MM-DD" />
-           
-           <View style={s.divider} />
-           
-           <Text style={s.fieldLabel}>Service Category</Text>
-           <View style={s.chipRow}>
-              {['Repair', 'Servicing', 'Inspection', 'Other'].map(type => (
-                <TouchableOpacity key={type} style={[s.chip, form.service_type === type && s.chipOn]} onPress={() => set('service_type')(type)}>
-                   <Text style={[s.chipTxt, form.service_type === type && s.chipTxtOn]}>{type}</Text>
-                </TouchableOpacity>
-              ))}
-           </View>
+           <View style={[s.divider, { backgroundColor: T.border }]} />
         </View>
 
-        <Text style={s.sectionTitle}>Assignment & Progress</Text>
-        <View style={s.card}>
-           <Text style={s.fieldLabel}>Attending Technician</Text>
-           <View style={s.chipRow}>
-              <TouchableOpacity style={[s.chip, !form.attending_worker_id && s.chipOn]} onPress={() => set('attending_worker_id')('')}>
-                 <Text style={[s.chipTxt, !form.attending_worker_id && s.chipTxtOn]}>Unassigned</Text>
-              </TouchableOpacity>
-              {workers.map(w => (
-                <TouchableOpacity key={w.id} style={[s.chip, form.attending_worker_id === String(w.id) && s.chipOn]} onPress={() => set('attending_worker_id')(String(w.id))}>
-                   <Text style={[s.chipTxt, form.attending_worker_id === String(w.id) && s.chipTxtOn]}>{w.name}</Text>
-                </TouchableOpacity>
-              ))}
-           </View>
+        <View style={s.sectionHeader}>
+           <User size={16} color={T.textMuted} strokeWidth={2.5} />
+           <Text style={[s.sectionTitle, { color: T.textMuted }]}>WORK STATUS</Text>
+        </View>
+        <View style={[s.card, { backgroundColor: T.surface, borderColor: T.border }]}>
+           <AppPicker 
+              label="Worker Assigned" 
+              value={form.attending_worker_id} 
+              onSelect={set('attending_worker_id')} 
+              placeholder="Select a worker"
+              disabled={user?.role === 'worker'}
+              options={
+                user?.role === 'worker' 
+                  ? [{ id: String(user.id), name: user.name }]
+                  : [
+                      { id: '', name: 'None / Unassigned' },
+                      ...workers.map(w => ({ id: String(w.id), name: w.name }))
+                    ]
+              } 
+           />
 
-           <View style={s.divider} />
+           <View style={[s.divider, { backgroundColor: T.border }]} />
 
-           <Text style={s.fieldLabel}>Current Status</Text>
-           <View style={s.chipRow}>
-              {['Pending', 'Started', 'In Progress', 'Completed'].map(st => (
-                <TouchableOpacity key={st} style={[s.chip, form.status === st && s.chipOn]} onPress={() => set('status')(st)}>
-                   <Text style={[s.chipTxt, form.status === st && s.chipTxtOn]}>{st}</Text>
-                </TouchableOpacity>
-              ))}
-           </View>
+           {isEdit && (
+             <>
+               <Text style={[s.fieldLabel, { color: T.text }]}>Current Stage</Text>
+               <View style={s.chipRow}>
+                  {['Pending', 'Started', 'In Progress', 'Done'].map(st => (
+                    <TouchableOpacity key={st} style={[s.chip, { backgroundColor: T.surfaceAlt, borderColor: T.border }, form.status === st && { backgroundColor: T.primary, borderColor: T.primary }]} onPress={() => set('status')(st)}>
+                       <Text style={[s.chipTxt, { color: T.textMuted }, form.status === st && { color: T.primaryText }]}>{st}</Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
+             </>
+           )}
         </View>
 
-        <Text style={s.sectionTitle}>Media Assets</Text>
-        <View style={s.card}>
-           <Text style={s.fieldLabel}>Vehicle Condition Photo</Text>
+        <View style={s.sectionHeader}>
+           <Camera size={16} color={T.textMuted} strokeWidth={2.5} />
+           <Text style={[s.sectionTitle, { color: T.textMuted }]}>PHOTOS</Text>
+        </View>
+        <View style={[s.card, { backgroundColor: T.surface, borderColor: T.border }]}>
            <View style={s.imageContainer}>
              {image ? (
                <View style={s.imageWrapper}>
@@ -232,17 +414,23 @@ export default function CreateEditRepairScreen({ navigation, route }) {
                  </TouchableOpacity>
                </View>
              ) : (
-               <TouchableOpacity style={s.imagePlaceholder} onPress={pickImage}>
-                  <Camera size={32} color={T.textFaint} strokeWidth={1.5} />
-                  <Text style={s.placeholderTxt}>Attach Condition Photo</Text>
-               </TouchableOpacity>
+               <View style={{flexDirection: 'row', gap: 12}}>
+                 <TouchableOpacity style={[s.imagePlaceholder, {flex: 1, backgroundColor: T.surfaceAlt, borderColor: T.borderStrong}]} onPress={pickImage}>
+                    <ImageIcon size={32} color={T.textFaint} strokeWidth={1.5} />
+                    <Text style={[s.placeholderTxt, { color: T.textMuted }]}>Gallery</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity style={[s.imagePlaceholder, {flex: 1, backgroundColor: T.surfaceAlt, borderColor: T.borderStrong}]} onPress={takePhoto}>
+                    <Camera size={32} color={T.textFaint} strokeWidth={1.5} />
+                    <Text style={[s.placeholderTxt, { color: T.textMuted }]}>Camera</Text>
+                 </TouchableOpacity>
+               </View>
              )}
            </View>
         </View>
 
         <View style={s.actionRow}>
            <AppButton title="Discard" variant="ghost" style={{ flex: 1 }} onPress={() => navigation.goBack()} />
-           <AppButton title={isEdit ? "Update Job" : "Start Repair"} variant="primary" style={{ flex: 1.5 }} loading={saving} onPress={handleSave} />
+           <AppButton title={isEdit ? "Update Repair" : "Start Repair"} variant="primary" style={{ flex: 1.5 }} loading={saving} onPress={handleSave} />
         </View>
 
       </ScrollView>
@@ -251,38 +439,60 @@ export default function CreateEditRepairScreen({ navigation, route }) {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: T.bg },
-  scroll: { padding: 20, paddingBottom: 60 },
-  loadCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: T.bg },
-  loadTxt: { marginTop: 12, fontSize: 13, color: T.textMuted, fontWeight: '600', letterSpacing: 1 },
-  header: { marginBottom: 24, marginTop: 10 },
-  pageTitle: { fontSize: 26, fontWeight: '800', color: T.text, letterSpacing: -0.5 },
-  pageSubtitle: { fontSize: 13, color: T.textMuted, marginTop: 4, fontFamily: T.font },
+  safe: { flex: 1 },
+  scroll: { paddingVertical: 10, paddingHorizontal: 20, paddingBottom: 60 },
+  loadCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { marginBottom: 30 },
+  pageTitle: { fontSize: 26, fontWeight: '900', fontFamily: FONT, letterSpacing: -0.8 },
+  pageSubtitle: { fontSize: 13, marginTop: 4, lineHeight: 18 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, marginTop: 24, paddingLeft: 4 },
   sectionTitle: {
-    fontSize: 10, fontWeight: '900', color: T.textFaint, fontFamily: T.font,
-    textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10, marginTop: 24, paddingLeft: 4,
+    fontSize: 10, fontWeight: '900', fontFamily: FONT,
+    textTransform: 'uppercase', letterSpacing: 1.5,
+  },
+  typeGrid: {
+    paddingLeft: 4,
+    gap: 12,
+  },
+  typeCard: {
+    width: 90,
+    borderRadius: 18,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    gap: 6,
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  typeLabel: {
+    fontSize: 8,
+    fontWeight: '900',
+    fontFamily: FONT,
+    letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: T.surface, borderRadius: T.radiusLg, borderWidth: 1,
-    borderColor: T.border, padding: 20, gap: 16, ...T.shadowMd,
+    borderRadius: 20, borderWidth: 1,
+    padding: 20, gap: 16,
   },
-  divider: { height: 1, backgroundColor: T.border, marginHorizontal: -20 },
-  row: { flexDirection: 'row', gap: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: T.textMuted, fontFamily: T.font, marginBottom: 4 },
+  divider: { height: 1, marginHorizontal: -20 },
+  fieldLabel: { fontSize: 12, fontWeight: '800', fontFamily: FONT, marginBottom: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
-    borderWidth: 1, borderColor: T.border, backgroundColor: T.bg,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+    borderWidth: 1,
   },
-  chipOn: { backgroundColor: T.primary, borderColor: T.primary },
-  chipTxt: { fontSize: 12, fontWeight: '700', color: T.textMuted, fontFamily: T.font },
-  chipTxtOn: { color: T.primaryText },
-  imageContainer: { marginTop: 6 },
+  chipTxt: { fontSize: 12, fontWeight: '700', fontFamily: FONT },
+  imageContainer: { marginTop: 4 },
   imagePlaceholder: {
-    height: 160, borderRadius: 16, borderWidth: 2, borderColor: T.border,
-    borderStyle: 'dashed', backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center', gap: 10,
+    height: 140, borderRadius: 16, borderWidth: 1,
+    borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 10,
   },
-  placeholderTxt: { fontSize: 12, color: T.textFaint, fontWeight: '600', fontFamily: T.font },
+  placeholderTxt: { fontSize: 12, fontWeight: '700', fontFamily: FONT },
   imageWrapper: { width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', position: 'relative' },
   imagePreview: { width: '100%', height: '100%' },
   removeBtn: {
@@ -290,4 +500,38 @@ const s = StyleSheet.create({
     borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
   },
   actionRow: { flexDirection: 'row', gap: 12, marginTop: 40 },
+  complaintInputRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  addComplaintBtn: { 
+    width: 44, height: 44, borderRadius: 12, 
+    justifyContent: 'center', alignItems: 'center' 
+  },
+  complaintList: { marginTop: 10, gap: 8 },
+  complaintItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  checkCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  complaintText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: FONT,
+  },
+  timestampBadge: { 
+    flexDirection: 'row', alignItems: 'center', gap: 10, 
+    padding: 14, borderRadius: 16, borderWidth: 1 
+  },
+  timestampTxt: { fontSize: 13, fontWeight: '800', fontFamily: FONT },
+  timestampHint: { fontSize: 10, marginTop: 6, opacity: 0.8 },
 });

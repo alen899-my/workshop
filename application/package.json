@@ -16,6 +16,7 @@
     "@react-navigation/native-stack": "^6.11.0",
     "expo": "55.0.10-canary-20260327-0789fbc",
     "expo-constants": "^55.0.10-canary-20260327-0789fbc",
+    "expo-dev-client": "55.0.20-canary-20260327-0789fbc",
     "expo-image-picker": "55.0.15-canary-20260327-0789fbc",
     "expo-status-bar": "55.0.5-canary-20260327-0789fbc",
     "lucide-react-native": "^1.7.0",
@@ -25,6 +26,7 @@
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
     "react-native-svg": "^15.15.3",
+    "react-native-vector-icons": "^10.3.0",
     "react-native-web": "~0.21.0",
     "zod": "^4.3.6"
   },
