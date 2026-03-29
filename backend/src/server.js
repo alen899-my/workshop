@@ -16,7 +16,7 @@ const app = express();
 // Set up CORS explicitly for both Web (Next.js) and Mobile (Expo React Native)
 // React Native uses various internal fetch APIs that require permissible CORS during development
 app.use(cors({
-  origin: '*', // Allows all origins - update for strict production URLs later
+  origin: process.env.ALLOWED_ORIGIN || '*', // Allows all origins - update for strict production URLs later
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
