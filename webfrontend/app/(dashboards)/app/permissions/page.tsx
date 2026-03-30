@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Permission, permissionService } from "@/services/permission.service";
 import PermissionsClient from "./PermissionsClient";
+import Loading from "../loading";
 
 /** Client-Side Authenticated Entry for Permission Management */
 export default function PermissionsPage() {
@@ -21,7 +22,7 @@ export default function PermissionsPage() {
   }, []);
 
   if (loading) {
-     return <div className="p-8 font-mono text-[10px] opacity-40 uppercase tracking-widest">Synchronizing global permission registry...</div>;
+     return <Loading />;
   }
 
   return <PermissionsClient initialData={data} />;

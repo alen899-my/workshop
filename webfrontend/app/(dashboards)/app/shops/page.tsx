@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Shop, shopService } from "@/services/shop.service";
 import ShopsClient from "./ShopsClient";
+import Loading from "../loading";
 
 /** Client-Side Authenticated Entry for Global Shop Registry */
 export default function ShopsPage() {
@@ -21,7 +22,7 @@ export default function ShopsPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-8 font-mono text-[10px] opacity-40 uppercase tracking-widest">Synchronizing global shop registry...</div>;
+    return <Loading />;
   }
 
   return <ShopsClient initialData={data} />;

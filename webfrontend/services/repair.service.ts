@@ -11,9 +11,11 @@ export interface Repair {
   shop_id: number;
   vehicle_image?: string;
   vehicle_number: string;
+  model_name?: string;
+  vehicle_type?: string;
   owner_name?: string;
   phone_number?: string;
-  complaints?: string;
+  complaints?: any; // JSON array of objects
   repair_date?: string;
   attending_worker_id?: number;
   submitted_by_id?: number;

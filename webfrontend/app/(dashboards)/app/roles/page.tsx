@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Role, roleService } from "@/services/role.service";
 import RolesClient from "./RolesClient";
+import Loading from "../loading";
 
 /** Client-Side Authenticated Entry for Role Management */
 export default function RolesPage() {
@@ -21,7 +22,7 @@ export default function RolesPage() {
   }, []);
 
   if (loading) {
-     return <div className="p-8 font-mono text-[10px] opacity-40 uppercase tracking-widest">Synchronizing global role matrix...</div>;
+     return <Loading />;
   }
 
   return <RolesClient initialData={data} />;

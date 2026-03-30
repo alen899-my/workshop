@@ -113,7 +113,7 @@ export function WorkshopTable<T>({
   className,
   rowKey,
   rowClassName,
-  maxHeight = "500px"
+  maxHeight = "500px",
 }: WorkshopTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);

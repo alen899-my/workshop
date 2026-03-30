@@ -4,11 +4,16 @@ import React, { useState, useMemo } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
-import { Hammer, Edit, Trash2, Eye, Wrench, Calendar, FileText, Receipt } from "lucide-react";
+import { 
+  Car, Phone, User as UserIcon, Calendar, Plus, X, ShieldCheck, Tag, Wrench, 
+  Search, ChevronRight, MoreHorizontal, Hammer, Edit, Trash2, Eye, FileText, Receipt
+} from "lucide-react";
 import { Repair, repairService } from "@/services/repair.service";
 import { billService, Bill } from "@/services/bill.service";
+import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRBAC } from "@/lib/rbac";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
@@ -30,6 +35,16 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  // ── Auto-View Sync ─────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    const autoViewId = searchParams.get('view');
+    if (autoViewId && repairs.length > 0) {
+      const rep = repairs.find(r => r.id.toString() === autoViewId);
+      if (rep) handleView(rep);
+    }
+  }, [searchParams, repairs]);
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -72,6 +87,7 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
     {
       key: "date",
       header: "Repair Date",
+      className: "hidden sm:table-cell",
       renderCell: (row) => (
         <div className="flex items-center gap-2 text-muted-foreground">
            <Calendar size={12} className="opacity-60" />
@@ -100,6 +116,7 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
     {
       key: "worker",
       header: "Worker",
+      className: "hidden lg:table-cell",
       renderCell: (row) => (
         <div className="flex items-center gap-2">
            <Wrench size={12} className="text-muted-foreground/40" />
@@ -240,16 +257,16 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
         title="Repair Details"
         subtitle="Viewing detailed information for this repair job."
         footer={
-           <div className="flex justify-between w-full gap-2">
-              <div className="flex gap-2 flex-wrap">
-                 <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleDownloadPdf(selectedRepair.id.toString())} disabled={pdfLoading}>
+           <div className="flex flex-col sm:flex-row justify-between w-full gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                 <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleDownloadPdf(selectedRepair.id.toString())} disabled={pdfLoading} className="w-full sm:w-auto">
                     {pdfLoading ? "Processing..." : "Download PDF"}
                  </WorkshopButton>
-                 <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleShareWhatsApp(selectedRepair.id.toString())} disabled={shareLoading}>
+                 <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleShareWhatsApp(selectedRepair.id.toString())} disabled={shareLoading} className="w-full sm:w-auto">
                     {shareLoading ? "Generating Link..." : "Share via WhatsApp"}
                  </WorkshopButton>
               </div>
-              <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
+              <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
                  Close
               </WorkshopButton>
            </div>
@@ -263,10 +280,26 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle No</p>
                   <p className="text-sm font-bold text-foreground">{selectedRepair.vehicle_number}</p>
+               </div>
+               <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle Type / Model</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const v = VEHICLE_CONFIG.find(vc => vc.id === selectedRepair.vehicle_type);
+                      if (v) {
+                        const Icon = v.icon;
+                        return <div className="w-6 h-6 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: v.color }}><Icon size={14} /></div>;
+                      }
+                      return null;
+                    })()}
+                    <p className="text-sm font-bold text-foreground">
+                       {selectedRepair.vehicle_type || 'Car'} {selectedRepair.model_name ? `- ${selectedRepair.model_name}` : ''}
+                    </p>
+                  </div>
                </div>
                <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Owner Name</p>
@@ -285,13 +318,48 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
             </div>
 
             <div className="bg-muted/30 p-4 border border-border rounded-xl">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 flex items-center"><FileText size={12} className="mr-1" /> Complaints</p>
-               <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-foreground">{selectedRepair.complaints || 'N/A'}</p>
-               </div>
+               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 flex items-center"><FileText size={12} className="mr-1" /> Complaints</p>
+                {(() => {
+                  let parsed: any = selectedRepair.complaints;
+                  if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch(e) { /* ignore */ }
+                  }
+                  
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {parsed.map((c: any, i: number) => {
+                          const isFixed = typeof c === 'object' ? c.fixed : false;
+                          const text = typeof c === 'object' ? c.text : c;
+                          return (
+                            <div key={i} className={cn(
+                              "flex items-center gap-2 p-2 rounded-lg border transition-all",
+                              isFixed ? "bg-green-500/5 border-green-500/20" : "bg-muted/50 border-border"
+                            )}>
+                              {isFixed ? (
+                                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white scale-90">
+                                  <ShieldCheck size={12} strokeWidth={3} />
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 scale-90" />
+                              )}
+                              <span className={cn(
+                                "text-xs font-medium",
+                                isFixed ? "line-through text-muted-foreground/70" : "text-foreground"
+                              )}>
+                                {text}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  return <p className="text-sm text-muted-foreground italic">No complaints logged.</p>;
+                })()}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Repair Status</p>
                   <div className={"text-xs font-bold uppercase"}>

@@ -7,6 +7,8 @@ const permissionRoutes = require('./routes/permission/permission.routes');
 const roleRoutes = require('./routes/role/role.routes');
 const shopRoutes = require('./routes/shop/shop.routes');
 const userRoutes = require('./routes/user/user.routes');
+const customerRoutes = require('./routes/customer/customer.routes');
+const vehicleRoutes = require('./routes/vehicle/vehicle.routes');
 const repairRoutes = require('./routes/repair/repair.routes');
 const billRoutes = require('./routes/bill/bill.routes');
 const db = require('./config/db');
@@ -29,6 +31,8 @@ app.use('/api/permissions', permissionRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/repairs', repairRoutes);
 app.use('/api/bills', billRoutes);
 

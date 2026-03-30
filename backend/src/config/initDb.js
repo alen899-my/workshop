@@ -3,6 +3,8 @@ const { createShopTable } = require('../models/shop.model');
 const { createUserTable } = require('../models/user.model');
 const { createPermissionTable, createRolePermissionTable } = require('../models/permission.model');
 const { createRoleTable } = require('../models/role.model');
+const { createCustomerTable } = require('../models/customer.model');
+const { createVehicleTable } = require('../models/vehicle.model');
 const { createRepairTable } = require('../models/repair.model');
 
 // Execute sequential creation of model tables safely
@@ -14,6 +16,8 @@ const initDatabase = async () => {
     await createPermissionTable();
     await createRoleTable();
     await createRolePermissionTable();
+    await createCustomerTable();
+    await createVehicleTable();
     await createRepairTable();
     
     console.log("🚀 All database tables successfully initialized.");

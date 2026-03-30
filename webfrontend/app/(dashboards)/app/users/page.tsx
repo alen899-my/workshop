@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from "react";
 import { User, userService } from "@/services/user.service";
 import UsersClient from "./UsersClient";
+import Loading from "../loading";
 
 /** Client-Side Authenticated Entry for Team Management */
 export default function UsersPage({ searchParams }: { searchParams: Promise<{ shopId?: string }> }) {
@@ -25,7 +26,7 @@ export default function UsersPage({ searchParams }: { searchParams: Promise<{ sh
   }, [shopId]);
 
   if (loading) {
-     return <div className="p-8 font-mono text-[10px] opacity-40 uppercase tracking-widest">Synchronizing team identities...</div>;
+     return <Loading />;
   }
 
   return <UsersClient initialData={data} shopId={shopId} />;

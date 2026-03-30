@@ -69,7 +69,7 @@ export default function EditUserPage() {
           phone: uRes.data.phone,
           role: uRes.data.role,
           status: uRes.data.status,
-          shop_id: uRes.data.shop_id || "",
+          shop_id: uRes.data.shop_id ? String(uRes.data.shop_id) : "",
           password: "",
           confirmPassword: ""
         });
@@ -93,7 +93,13 @@ export default function EditUserPage() {
 
     const { confirmPassword, ...payload } = form;
     if (!payload.password) delete (payload as any).password;
-    if (payload.shop_id) payload.shop_id = Number(payload.shop_id);
+    
+    // Explicit null sending if Direct Global selected
+    if (payload.shop_id === "") {
+      (payload as any).shop_id = null;
+    } else if (payload.shop_id) {
+      payload.shop_id = Number(payload.shop_id);
+    }
 
     const res = await userService.update(id, payload as any);
     setLoading(false);
@@ -150,14 +156,17 @@ export default function EditUserPage() {
 
         {isSuperAdmin && (
           <div className="flex flex-col gap-2">
-            <WorkshopSearchableSelect
-               label="Workshop Hub Assignment"
-               placeholder="Select shop..."
-               options={shops.map(s => ({ value: s.id, label: s.name, subLabel: s.location }))}
-               value={form.shop_id}
-               onChange={(val) => setForm({ ...form, shop_id: val })}
-               className="group"
-            />
+             <WorkshopSearchableSelect
+                label="Workshop Hub Assignment"
+                placeholder="Select shop..."
+                options={[
+                  { value: "", label: "Direct (Global)" },
+                  ...shops.map(s => ({ value: String(s.id), label: s.name, subLabel: s.location }))
+                ]}
+                value={String(form.shop_id)}
+                onChange={(val) => setForm({ ...form, shop_id: String(val) })}
+                className="group"
+             />
           </div>
         )}
 

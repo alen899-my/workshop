@@ -32,7 +32,7 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-0 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_0_rgb(0,0,0,0.04),0_4px_16px_0_rgb(0,0,0,0.04)] overflow-hidden mb-4">
       {/* ── Top bar ── */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 py-3 border-b border-border/40">
         {/* Search */}
         <div
           className={cn(
