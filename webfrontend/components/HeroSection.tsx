@@ -63,14 +63,14 @@ export function HeroSection() {
       <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 min-h-screen flex flex-col justify-center pt-28 pb-16">
 
         {/* Eyebrow */}
-        <p className="h-a1 font-mono text-xs tracking-[0.25em] uppercase text-[oklch(0.62_0.12_235)] mb-5">
+        <p className="h-a1 font-mono text-xs tracking-[0.25em] uppercase text-accent mb-5">
           Vehicle Repair Shop Management
         </p>
 
         {/* Main headline — plain, direct, no fluff */}
         <h1 className="h-a2 font-mono font-bold text-white leading-[1.08] tracking-tight mb-6 text-4xl sm:text-5xl lg:text-6xl max-w-2xl">
           Keep Track of Every{" "}
-          <span className="text-[oklch(0.62_0.12_235)]">Repair</span>{" "}
+          <span className="text-accent">Repair</span>{" "}
           Coming Into Your Shop.
         </h1>
 
@@ -83,10 +83,10 @@ export function HeroSection() {
         {/* CTAs */}
         <div className="h-a4 flex flex-wrap items-center gap-4 mb-16">
           <Link
-            href="/register"
-            className="inline-flex items-center gap-2 px-7 py-3 font-mono text-sm tracking-widest uppercase font-semibold bg-[oklch(0.38_0.13_248)] hover:bg-[oklch(0.48_0.15_248)] text-white rounded-sm transition-all duration-200 hover:shadow-[0_0_20px_oklch(0.58_0.175_248/0.45)]"
+            href="/signup"
+            className="inline-flex items-center gap-2 px-7 py-3 font-mono text-sm tracking-widest uppercase font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-sm transition-all duration-200 hover:shadow-[0_0_20px_var(--primary)/0.45]"
           >
-            Start for Free
+            Create for Free
             <ArrowRight className="w-4 h-4" />
           </Link>
 

@@ -30,7 +30,7 @@ export interface ActionButton<T> {
   label: string;
   icon?: React.ElementType;
   onClick: (row: T) => void;
-  variant?: "default" | "danger" | "success";
+  variant?: "default" | "primary" | "info" | "success" | "warning" | "danger" | "secondary";
   hidden?: (row: T) => boolean;
 }
 
@@ -76,24 +76,32 @@ const ALIGN_CLASS = {
 
 const ACTION_VARIANT = {
   default:
-    "text-primary hover:bg-primary/10 hover:text-primary border-primary/20 hover:border-primary/40",
-  danger:
-    "text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20 hover:border-destructive/40",
+    "bg-[oklch(0.45_0.15_240)] text-white border-[oklch(0.40_0.13_240)] shadow-sm hover:bg-[oklch(0.40_0.15_240)]",
+  primary:
+    "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90",
+  info:
+    "bg-accent text-accent-foreground border-accent shadow-sm hover:bg-accent/90",
   success:
-    "text-green-600 dark:text-green-400 hover:bg-green-500/10 border-green-500/20 hover:border-green-500/40",
+    "bg-green-600 text-white border-green-700 shadow-sm hover:bg-green-700",
+  warning:
+    "bg-[oklch(0.65_0.18_50)] text-white border-[oklch(0.60_0.16_50)] shadow-sm hover:bg-[oklch(0.60_0.18_50)]",
+  danger:
+    "bg-[oklch(0.45_0.18_25)] text-white border-[oklch(0.40_0.16_25)] shadow-sm hover:bg-[oklch(0.40_0.18_25)]",
+  secondary:
+    "bg-secondary text-secondary-foreground border-secondary shadow-sm hover:bg-secondary/90",
 } as const;
 
 // ─── Sort icon ────────────────────────────────────────────────────────────────
 
 function SortIcon({ direction }: { direction: SortDirection }) {
   if (direction === "asc")
-    return <ChevronUp size={11} className="text-primary shrink-0" />;
+    return <ChevronUp size={11} className="text-primary-foreground shrink-0" />;
   if (direction === "desc")
-    return <ChevronDown size={11} className="text-primary shrink-0" />;
+    return <ChevronDown size={11} className="text-primary-foreground shrink-0" />;
   return (
     <ChevronsUpDown
       size={11}
-      className="text-muted-foreground/30 shrink-0 group-hover:text-muted-foreground/60 transition-colors"
+      className="text-primary-foreground/30 shrink-0 group-hover:text-primary-foreground/60 transition-colors"
     />
   );
 }
@@ -163,23 +171,23 @@ export function WorkshopTable<T>({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-2xl border border-border/60 bg-card overflow-hidden",
-        "shadow-[0_1px_3px_0_rgb(0,0,0,0.04),0_4px_16px_0_rgb(0,0,0,0.04)]",
+        "flex flex-col rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300",
+        "shadow-sm hover:shadow-md hover:border-border",
         className
       )}
     >
 
       {/* ── Table scroll wrapper ── */}
-      <div 
+      <div
         className="overflow-x-auto overflow-y-auto custom-scrollbar"
         style={{ maxHeight: pagination ? maxHeight : 'none' }}
       >
         <table className="w-full min-w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-card">
-            <tr className="border-b border-border/50 bg-muted/30">
+          <thead className="sticky top-0 z-10 bg-primary">
+            <tr className="border-b-2 border-primary/20">
               {showIndex && (
-                <th className="w-12 px-5 py-3.5 text-left">
-                  <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/40 select-none">
+                <th className="w-12 px-5 py-4 text-left border-r border-white/10">
+                  <span className="font-mono text-[11px] font-bold tracking-widest uppercase text-primary-foreground/70 select-none">
                     #
                   </span>
                 </th>
@@ -188,7 +196,7 @@ export function WorkshopTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-5 py-3.5 whitespace-nowrap",
+                    "px-5 py-4 whitespace-nowrap border-r border-white/5 last:border-r-0",
                     ALIGN_CLASS[col.align ?? "left"],
                     col.className
                   )}
@@ -200,10 +208,10 @@ export function WorkshopTable<T>({
                     >
                       <span
                         className={cn(
-                          "text-[10px] font-semibold tracking-widest uppercase transition-colors",
+                          "font-mono text-[11px] font-bold tracking-widest uppercase transition-colors",
                           sortKey === col.key
-                            ? "text-primary"
-                            : "text-muted-foreground/50 group-hover:text-muted-foreground/80"
+                            ? "text-primary-foreground"
+                            : "text-primary-foreground/70 group-hover:text-primary-foreground/90"
                         )}
                       >
                         {col.header}
@@ -213,15 +221,15 @@ export function WorkshopTable<T>({
                       />
                     </button>
                   ) : (
-                    <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/40 select-none">
+                    <span className="font-mono text-[11px] font-bold tracking-widest uppercase text-primary-foreground/70 select-none">
                       {col.header}
                     </span>
                   )}
                 </th>
               ))}
               {hasActions && (
-                <th className="px-5 py-3.5 text-right">
-                  <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground/40 select-none">
+                <th className="px-5 py-4 text-right">
+                  <span className="font-mono text-[11px] font-bold tracking-widest uppercase text-primary-foreground/70 select-none">
                     Actions
                   </span>
                 </th>
@@ -259,14 +267,14 @@ export function WorkshopTable<T>({
                   <tr
                     key={rowKey ? rowKey(row, globalIdx) : globalIdx}
                     className={cn(
-                      "transition-colors duration-100 group",
-                      "hover:bg-accent/[0.04]",
+                      "transition-all duration-200 group border-b border-border/40 last:border-0",
+                      "hover:bg-accent/10 hover:shadow-inner",
                       rowClassName?.(row, globalIdx)
                     )}
                   >
                     {showIndex && (
-                      <td className="px-5 py-3.5 w-12">
-                        <span className="text-[11px] tabular-nums text-muted-foreground/30 font-medium">
+                      <td className="px-5 py-4 w-12 border-r border-border/30">
+                        <span className="font-mono text-[11px] tabular-nums text-muted-foreground/40 font-bold">
                           {globalIdx + 1}
                         </span>
                       </td>
@@ -275,7 +283,7 @@ export function WorkshopTable<T>({
                       <td
                         key={col.key}
                         className={cn(
-                          "px-5 py-3.5 text-[13px] text-foreground/75 whitespace-nowrap",
+                          "px-5 py-4 text-[13px] text-foreground font-medium tracking-tight whitespace-nowrap border-r border-border/20 last:border-r-0",
                           ALIGN_CLASS[col.align ?? "left"],
                           col.className
                         )}
@@ -286,8 +294,8 @@ export function WorkshopTable<T>({
                       </td>
                     ))}
                     {hasActions && (
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
                           {actions!.map((action) => {
                             if (action.hidden?.(row)) return null;
                             const Icon = action.icon;
@@ -297,9 +305,8 @@ export function WorkshopTable<T>({
                                 onClick={() => action.onClick(row)}
                                 title={action.label}
                                 className={cn(
-                                  "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
-                                  "text-[11.5px] font-medium border transition-all duration-150",
-                                  "opacity-70 group-hover:opacity-100",
+                                  "flex items-center gap-1.5 rounded-lg px-3 py-2",
+                                  "text-[12px] font-bold border transition-all duration-200 active:scale-95 shadow-sm",
                                   ACTION_VARIANT[action.variant ?? "default"]
                                 )}
                               >
@@ -330,9 +337,9 @@ export function WorkshopTable<T>({
               {sorted.length === 0
                 ? "No records"
                 : `${(safePage - 1) * pageSize + 1}–${Math.min(
-                    safePage * pageSize,
-                    sorted.length
-                  )} of ${sorted.length} rows`}
+                  safePage * pageSize,
+                  sorted.length
+                )} of ${sorted.length} rows`}
             </span>
 
             <div className="h-3.5 w-px bg-border/50" />
@@ -377,7 +384,7 @@ export function WorkshopTable<T>({
               <ChevronLeft size={13} />
             </PaginationBtn>
 
-            <div className="flex items-center gap-0.5 mx-1">
+            <div className="flex items-center gap-1.5 mx-1.5">
               {getPageNumbers(safePage, totalPages).map((p, i) =>
                 p === "…" ? (
                   <span
@@ -391,10 +398,10 @@ export function WorkshopTable<T>({
                     key={p}
                     onClick={() => setPage(Number(p))}
                     className={cn(
-                      "min-w-[32px] h-8 rounded-lg text-[12px] font-medium transition-all duration-150",
+                      "min-w-[34px] h-8.5 rounded-lg text-[12px] font-mono font-black transition-all duration-200 active:scale-90",
                       p === safePage
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground/60 hover:bg-accent/10 hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 border border-primary"
+                        : "text-foreground bg-muted/30 hover:bg-muted hover:text-primary border border-border/80"
                     )}
                   >
                     {p}

@@ -27,30 +27,30 @@ function AuthFormWrapper({
       <div className="flex flex-col gap-3">
         {badge && (
           <div className="flex items-center gap-3 mb-1">
-            <span className="w-6 h-px bg-[oklch(0.38_0.13_248)]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[oklch(0.38_0.13_248)]">
+            <span className="w-6 h-px bg-primary" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               {badge}
             </span>
           </div>
         )}
-        <h1 className="font-bold text-3xl sm:text-4xl tracking-tight leading-tight text-[oklch(0.15_0.025_240)] uppercase">
+        <h1 className="font-bold text-3xl sm:text-4xl tracking-tight leading-tight text-foreground uppercase">
           {title}
         </h1>
-        <p className="text-[oklch(0.48_0.04_240)] font-medium text-sm leading-relaxed">
+        <p className="text-muted-foreground font-medium text-sm leading-relaxed">
           {subtitle}
         </p>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-[oklch(0.82_0.022_235)]" />
-        <div className="w-2 h-2 bg-[oklch(0.38_0.13_248)] rotate-45 flex-shrink-0" />
-        <div className="flex-1 h-px bg-[oklch(0.82_0.022_235)]" />
+        <div className="flex-1 h-px bg-border" />
+        <div className="w-2 h-2 bg-primary rotate-45 flex-shrink-0" />
+        <div className="flex-1 h-px bg-border" />
       </div>
 
       <div className="w-full">{children}</div>
 
       {footer && (
-        <div className="text-center text-sm font-medium text-[oklch(0.48_0.04_240)] mt-2">
+        <div className="text-center text-sm font-medium text-muted-foreground mt-2">
           {footer}
         </div>
       )}
@@ -132,15 +132,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen flex bg-white font-mono overflow-hidden">
+    <div className="h-screen flex bg-background font-mono overflow-hidden">
       {/* ── LEFT: Form panel ── */}
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-6 sm:px-12 py-12 relative z-10 overflow-y-auto h-full no-scrollbar">
         
         {/* Brand Header */}
         <div className="absolute top-8 left-8 sm:top-12 sm:left-12">
           <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="font-mono font-bold text-xl tracking-[0.2em] text-[oklch(0.15_0.025_240)] uppercase">
-              Veh<span className="text-[oklch(0.38_0.13_248)]">Rep</span>
+            <span className="font-mono font-bold text-xl tracking-[0.2em] text-foreground uppercase">
+              Veh<span className="text-primary">Rep</span>
             </span>
           </Link>
         </div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
                 Don&apos;t have an account?{" "}
                 <Link
                   href="/signup"
-                  className="font-bold text-[oklch(0.38_0.13_248)] underline underline-offset-4 hover:text-[oklch(0.45_0.15_248)] transition-colors"
+                  className="font-bold text-primary underline underline-offset-4 hover:opacity-80 transition-colors"
                 >
                   Register your shop
                 </Link>
@@ -185,7 +185,7 @@ export default function LoginPage() {
                 />
                 <Link
                   href="/forgot-password"
-                  className="text-[11px] font-bold uppercase tracking-widest text-[oklch(0.48_0.04_240)] hover:text-[oklch(0.38_0.13_248)] transition-colors"
+                  className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
                   tabIndex={-1}
                 >
                   Forgot password?
@@ -209,7 +209,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── RIGHT: Image panel ── */}
-      <div className="hidden lg:flex flex-1 relative bg-[oklch(0.96_0.008_240)]">
+      <div className="hidden lg:flex flex-1 relative bg-muted">
         <Image
           src="/images/auth/authpageimage1.jpg"
           alt="Vehicle repair workshop"
@@ -220,7 +220,7 @@ export default function LoginPage() {
         />
         
         {/* Subtle bottom gradient just to ground elements slightly */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.13_0.03_248/0.25)] to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--foreground)/0.2] to-transparent pointer-events-none" />
         
         {/* Floating Review Card */}
         <div className="absolute bottom-16 right-16 z-20">
@@ -228,16 +228,16 @@ export default function LoginPage() {
             <div className="flex gap-1 mb-3 text-yellow-500 text-sm">
               ★★★★★
             </div>
-            <p className="text-[oklch(0.15_0.025_240)] font-medium leading-relaxed italic text-sm">
+            <p className="text-foreground font-medium leading-relaxed italic text-sm">
               &quot;VehRep completely transformed our repair bay. No more lost job cards and instant billing directly from my phone.&quot;
             </p>
             <div className="mt-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[oklch(0.38_0.13_248)] flex items-center justify-center font-bold text-white uppercase text-xs">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-bold text-primary-foreground uppercase text-xs">
                 MD
               </div>
               <div>
-                <p className="font-bold text-sm text-[oklch(0.15_0.025_240)]">Michael Davis</p>
-                <p className="text-xs text-[oklch(0.48_0.04_240)]">Owner, Davis Auto Works</p>
+                <p className="font-bold text-sm text-foreground">Michael Davis</p>
+                <p className="text-xs text-muted-foreground">Owner, Davis Auto Works</p>
               </div>
             </div>
           </div>

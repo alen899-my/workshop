@@ -214,8 +214,8 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
           columns={columns}
           data={filtered}
           actions={[
-             { label: "View", icon: Eye, onClick: handleView },
-             { label: "Edit", icon: Edit, onClick: handleOpenForm },
+             { label: "View", icon: Eye, variant: "default", onClick: handleView },
+             { label: "Edit", icon: Edit, variant: "warning", onClick: handleOpenForm },
              { label: "Delete", icon: Trash2, variant: "danger", onClick: handleDelete }
           ]}
         />

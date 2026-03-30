@@ -1,4 +1,3 @@
-
 /* Fira Mono Font */
 @import url('https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&display=swap');
 
@@ -27,120 +26,130 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* 
-  🔧 WORKSHOP BLUE THEME
-  Inspired by mechanic workwear — navy coveralls, steel blue panels,
-  grease-worn denim, oil-stained concrete floors, and chrome highlights.
+/*
+  🔧 WORKSHOP GARAGE THEME
+  Colors sourced directly from two workshop illustrations:
+
+  Image 1 (large): teal steel facade, sandy beige walls, deep garage
+  interior, signal red roller doors, amber hydraulic lift posts,
+  concrete floor, oil drum red.
+
+  Image 2 (mobile): soft sage-mint painted walls, sky-blue roller door,
+  dark brick cornice, fire-engine red truck, hazard orange crate,
+  slate tool cabinet, cream paper notices, red utility pipe.
+
+  Mood: functional, grounded, SaaS-minimal — clean surfaces with
+  just enough warmth to feel like somewhere real work happens.
 */
 
 :root {
-    /* Base — light concrete / workshop floor */
-    --background: oklch(0.96 0.008 240);           /* cool off-white, like pale concrete */
-    --foreground: oklch(0.15 0.025 240);            /* deep navy text */
+    /* Base — snow-white clean surfaces */
+    --background: oklch(0.99 0.003 248);           /* snow-white, crisp and cool */
+    --foreground: oklch(0.14 0.025 168);            /* deep garage teal-black text */
 
-    /* Cards — steel panel surface */
-    --card: oklch(0.98 0.005 235);
-    --card-foreground: oklch(0.15 0.025 240);
+    /* Cards — clean plaster surface */
+    --card: oklch(1.00 0.000 0);
+    --card-foreground: oklch(0.14 0.025 168);
 
     /* Popover */
-    --popover: oklch(0.98 0.005 235);
-    --popover-foreground: oklch(0.15 0.025 240);
+    --popover: oklch(1.00 0.000 0);
+    --popover-foreground: oklch(0.14 0.025 168);
 
-    /* Primary — classic mechanic workwear blue */
-    --primary: oklch(0.38 0.13 248);               /* deep navy/royal blue — coverall color */
-    --primary-foreground: oklch(0.97 0.008 220);   /* crisp white-blue */
+    /* Primary — teal steel facade (dominant building color, image 1) */
+    --primary: oklch(0.48 0.072 188);               /* ~#3d7a78 — teal workshop facade */
+    --primary-foreground: oklch(0.96 0.014 188);    /* pale teal-white */
 
-    /* Secondary — faded denim / worn uniform */
-    --secondary: oklch(0.88 0.025 235);
-    --secondary-foreground: oklch(0.22 0.04 245);
+    /* Secondary — sage-mint painted wall (dominant wall color, image 2) */
+    --secondary: oklch(0.74 0.058 162);             /* ~#8fb8a8 — sage green wall */
+    --secondary-foreground: oklch(0.14 0.025 168);
 
-    /* Muted — concrete dust grey-blue */
-    --muted: oklch(0.91 0.015 230);
-    --muted-foreground: oklch(0.48 0.04 240);
+    /* Muted — clean asphalt mist / cool grey */
+    --muted: oklch(0.94 0.008 248);                 /* cool-toned light grey */
+    --muted-foreground: oklch(0.52 0.030 168);      /* shifted from warm to cool-teal grey */
 
-    /* Accent — steel blue highlight / chrome reflection */
-    --accent: oklch(0.62 0.12 235);                /* steel blue */
-    --accent-foreground: oklch(0.98 0.005 220);
+    /* Accent — sky blue roller door (image 2) */
+    --accent: oklch(0.72 0.075 218);                /* ~#7ab4cc — sky blue door */
+    --accent-foreground: oklch(0.14 0.025 168);
 
-    /* Destructive — warning orange (safety color) */
-    --destructive: oklch(0.60 0.19 42);
+    /* Destructive — signal red roller doors / fire extinguisher (both images) */
+    --destructive: oklch(0.44 0.175 22);            /* ~#c0272d — workshop signal red */
 
-    /* Borders — metal panel seams */
-    --border: oklch(0.82 0.022 235);
-    --input: oklch(0.85 0.018 235);
-    --ring: oklch(0.50 0.10 245);
+    /* Borders — clean metal seam */
+    --border: oklch(0.88 0.012 248);
+    --input: oklch(0.91 0.010 248);
+    --ring: oklch(0.52 0.065 185);
 
-    /* Charts — grease, oil, metal shades */
-    --chart-1: oklch(0.38 0.13 248);              /* deep coverall blue */
-    --chart-2: oklch(0.52 0.11 235);              /* steel blue */
-    --chart-3: oklch(0.65 0.09 225);              /* sky chrome */
-    --chart-4: oklch(0.75 0.06 230);              /* pale steel */
-    --chart-5: oklch(0.86 0.03 235);              /* light mist */
+    /* Charts — teal → sage → sky blue → amber post → hazard orange */
+    --chart-1: oklch(0.48 0.072 188);              /* teal facade */
+    --chart-2: oklch(0.74 0.058 162);              /* sage wall */
+    --chart-3: oklch(0.72 0.075 218);              /* sky door blue */
+    --chart-4: oklch(0.68 0.130 80);               /* amber lift post ~#d4a017 */
+    --chart-5: oklch(0.60 0.145 44);               /* hazard orange ~#d4622a */
 
-    --radius: 0.375rem;                            /* slightly sharper corners — industrial feel */
+    --radius: 0.3125rem;                            /* 5px — clean SaaS geometry */
 
-    /* Sidebar — darker navy panel */
-    --sidebar: oklch(0.22 0.045 248);
-    --sidebar-foreground: oklch(0.92 0.012 230);
-    --sidebar-primary: oklch(0.55 0.14 240);
-    --sidebar-primary-foreground: oklch(0.97 0.008 220);
-    --sidebar-accent: oklch(0.30 0.055 248);
-    --sidebar-accent-foreground: oklch(0.92 0.012 230);
-    --sidebar-border: oklch(0.28 0.04 248);
-    --sidebar-ring: oklch(0.50 0.10 245);
+    /* Sidebar — clean teal-white panel (matching primary facade) */
+    --sidebar: oklch(0.985 0.008 188);
+    --sidebar-foreground: oklch(0.18 0.030 168);
+    --sidebar-primary: oklch(0.48 0.072 188);
+    --sidebar-primary-foreground: oklch(0.99 0.003 188);
+    --sidebar-accent: oklch(0.95 0.015 188);
+    --sidebar-accent-foreground: oklch(0.14 0.040 188);
+    --sidebar-border: oklch(0.93 0.010 188);
+    --sidebar-ring: oklch(0.52 0.065 185);
 }
 
 .dark {
-    /* Dark mode — night shift in the garage, fluorescent lights */
-    --background: oklch(0.13 0.03 248);            /* deep navy-black */
-    --foreground: oklch(0.93 0.012 225);           /* cool white */
+    /* Dark mode — deep garage interior at night (image 1, inner bay ~#1e3a38) */
+    --background: oklch(0.18 0.040 184);            /* deep teal-black garage interior */
+    --foreground: oklch(0.92 0.018 160);            /* pale sage chalk text */
 
-    --card: oklch(0.18 0.035 248);
-    --card-foreground: oklch(0.93 0.012 225);
+    --card: oklch(0.22 0.044 184);
+    --card-foreground: oklch(0.92 0.018 160);
 
-    --popover: oklch(0.18 0.035 248);
-    --popover-foreground: oklch(0.93 0.012 225);
+    --popover: oklch(0.22 0.044 184);
+    --popover-foreground: oklch(0.92 0.018 160);
 
-    /* Primary — bright electric blue (power tool indicator) */
-    --primary: oklch(0.58 0.175 248);
-    --primary-foreground: oklch(0.97 0.008 220);
+    /* Primary — bright teal under fluorescent light */
+    --primary: oklch(0.58 0.090 188);
+    --primary-foreground: oklch(0.96 0.014 188);
 
-    /* Secondary — dark worn denim */
-    --secondary: oklch(0.22 0.04 248);
-    --secondary-foreground: oklch(0.93 0.012 225);
+    /* Secondary — dark bay wall panel */
+    --secondary: oklch(0.26 0.048 184);
+    --secondary-foreground: oklch(0.88 0.020 165);
 
-    /* Muted — dim concrete */
-    --muted: oklch(0.22 0.04 248);
-    --muted-foreground: oklch(0.60 0.06 235);
+    /* Muted — oil-stained shadow */
+    --muted: oklch(0.24 0.038 184);
+    --muted-foreground: oklch(0.56 0.050 175);
 
-    /* Accent — chrome/steel highlight under fluorescent */
-    --accent: oklch(0.50 0.13 240);
-    --accent-foreground: oklch(0.97 0.008 220);
+    /* Accent — sky blue door under garage light */
+    --accent: oklch(0.62 0.088 218);
+    --accent-foreground: oklch(0.96 0.014 188);
 
-    /* Destructive — hazard warning */
-    --destructive: oklch(0.65 0.20 38);
+    /* Destructive — signal red in the dark */
+    --destructive: oklch(0.52 0.190 20);
 
-    /* Borders — dark metal seam */
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 14%);
-    --ring: oklch(0.55 0.12 245);
+    /* Borders — dark corrugated panel seam */
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 13%);
+    --ring: oklch(0.58 0.075 188);
 
     /* Charts */
-    --chart-1: oklch(0.70 0.15 248);
-    --chart-2: oklch(0.58 0.12 235);
-    --chart-3: oklch(0.48 0.10 225);
-    --chart-4: oklch(0.38 0.08 240);
-    --chart-5: oklch(0.28 0.05 248);
+    --chart-1: oklch(0.62 0.082 188);              /* teal lit */
+    --chart-2: oklch(0.66 0.065 162);              /* sage mid */
+    --chart-3: oklch(0.62 0.088 218);              /* sky blue */
+    --chart-4: oklch(0.68 0.130 80);               /* amber post */
+    --chart-5: oklch(0.60 0.145 44);               /* hazard orange */
 
-    /* Sidebar — deepest navy panel */
-    --sidebar: oklch(0.16 0.035 250);
-    --sidebar-foreground: oklch(0.93 0.012 225);
-    --sidebar-primary: oklch(0.58 0.175 248);
-    --sidebar-primary-foreground: oklch(0.97 0.008 220);
-    --sidebar-accent: oklch(0.22 0.04 248);
-    --sidebar-accent-foreground: oklch(0.93 0.012 225);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.55 0.12 245);
+    /* Sidebar — night garage, deepest corner (~#0e2422) */
+    --sidebar: oklch(0.12 0.034 184);
+    --sidebar-foreground: oklch(0.88 0.020 165);
+    --sidebar-primary: oklch(0.58 0.090 188);
+    --sidebar-primary-foreground: oklch(0.96 0.014 188);
+    --sidebar-accent: oklch(0.20 0.042 184);
+    --sidebar-accent-foreground: oklch(0.88 0.020 165);
+    --sidebar-border: oklch(1 0 0 / 9%);
+    --sidebar-ring: oklch(0.58 0.075 188);
 }
 
 @theme inline {

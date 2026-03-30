@@ -69,29 +69,33 @@ export function AppHeader() {
   const displayRole = user?.role ? (roleLabels[user.role.toLowerCase()] || user.role) : "Administrator";
 
   return (
-    <header className="h-14 shrink-0 z-30 flex items-center justify-between border-b border-border bg-card/70 backdrop-blur-xl px-4 sm:px-6">
+    <header className="h-14 shrink-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 sm:px-6 sticky top-0 transition-all">
 
       {/* ── Left: mobile spacer (hamburger is absolute-positioned in sidebar) ── */}
       <div className="flex items-center gap-3">
         <div className="w-8 md:hidden" />
 
         {/* Date + Time — hidden on small screens */}
-        <div className="hidden sm:flex items-center gap-3 px-1">
+        <div className="hidden sm:flex items-center gap-4 px-1">
           {/* Date */}
-          <div className="flex items-center gap-1.5">
-            <CalendarDays size={12} className="text-primary/70 shrink-0" />
-            <span className="font-mono text-[11px] font-bold tracking-wide text-foreground/60 uppercase">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded-md bg-primary/10">
+              <CalendarDays size={13} className="text-primary" />
+            </div>
+            <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-foreground/50 uppercase">
               {dateStr}
             </span>
           </div>
 
           {/* Divider */}
-          <div className="h-3 w-px bg-border/80" />
+          <div className="h-4 w-px bg-border/60" />
 
           {/* Time with seconds */}
-          <div className="flex items-center gap-1.5">
-            <Clock size={12} className="text-primary/70 shrink-0" />
-            <span className="font-mono text-[13px] font-bold tabular-nums tracking-widest text-foreground/80">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded-md bg-accent/10">
+              <Clock size={13} className="text-accent-foreground" />
+            </div>
+            <span className="font-mono text-[15px] font-black tabular-nums tracking-tighter text-foreground/90">
               {timeStr}
             </span>
           </div>
@@ -124,19 +128,19 @@ export function AppHeader() {
           onClick={() => setDropdownOpen(v => !v)}
           aria-label="Account menu"
           className={cn(
-            "flex items-center gap-1.5 rounded-xl border-2 p-1 transition-all duration-200",
+            "flex items-center gap-2 rounded-xl border border-border/50 bg-background/50 p-1 pr-2 transition-all duration-200 active:scale-95",
             dropdownOpen
-              ? "border-primary/50 bg-primary/8 shadow-inner"
-              : "border-transparent hover:border-border hover:bg-accent/10"
+              ? "border-primary/50 bg-primary/5 shadow-inner"
+              : "hover:border-primary/30 hover:bg-white"
           )}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[13px] font-black text-primary-foreground shadow-md shadow-primary/20 transition-transform duration-150 hover:scale-105 active:scale-95">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[11px] font-black tracking-tighter text-primary-foreground shadow-md shadow-primary/25">
             {initials}
           </div>
           <ChevronDown
-            size={13}
+            size={12}
             className={cn(
-              "text-muted-foreground transition-transform duration-200",
+              "text-muted-foreground transition-transform duration-300",
               dropdownOpen && "rotate-180"
             )}
           />
@@ -147,15 +151,18 @@ export function AppHeader() {
           <div className="absolute right-4 top-[calc(3.5rem+8px)] sm:right-6 w-52 rounded-2xl border border-border bg-card shadow-[0_16px_48px_rgba(0,0,0,0.12)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
 
             {/* User info header */}
-            <div className="border-b border-border bg-sidebar/30 px-4 py-3.5">
-              <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                Signed in as
+            <div className="border-b border-border bg-muted/20 px-4 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-primary">
+                  Operator Panel
+                </p>
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              </div>
+              <p className="font-mono text-[14px] font-black text-foreground truncate leading-none">
+                {(user?.shopName || "Workshop").toUpperCase()}
               </p>
-              <p className="font-mono text-[13px] font-bold text-foreground truncate leading-tight">
-                {user?.shopName || "Workshop"}
-              </p>
-              <p className="font-mono text-[10px] text-muted-foreground truncate mt-0.5">
-                {user?.ownerName || "Administrator"}
+              <p className="font-mono text-[10px] font-bold text-muted-foreground tracking-tight truncate mt-1.5">
+                SECURE SESSION ACTIVE
               </p>
             </div>
 

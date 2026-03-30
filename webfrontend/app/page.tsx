@@ -16,7 +16,7 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-[oklch(0.13_0.03_248)] font-mono">
+    <main className="min-h-screen bg-background font-mono">
       <NavbarWhite  />
       <HeroSection />
     </main>

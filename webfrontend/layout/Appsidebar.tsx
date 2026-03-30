@@ -75,11 +75,11 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
       href={href}
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-all duration-150",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-all duration-200 ease-out",
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
         active
-          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
-          : "text-sidebar-foreground/70"
+          ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-md shadow-sidebar-primary/10"
+          : "text-sidebar-foreground/60"
       )}
     >
       {/* Active left bar */}
@@ -223,22 +223,7 @@ export function AppSidebar() {
           ))}
         </div>
 
-        {/* User chip */}
-        {!isCollapsed && (
-          <div className="mt-3 flex items-center gap-2.5 rounded-[var(--radius)] bg-sidebar-accent/50 px-3 py-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">
-              WS
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-medium text-sidebar-foreground">
-                Workshop
-              </p>
-              <p className="truncate text-[10px] text-sidebar-foreground/45 tracking-wide">
-                Admin
-              </p>
-            </div>
-          </div>
-        )}
+      
         {isCollapsed && (
           <div className="mt-2 flex justify-center">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">

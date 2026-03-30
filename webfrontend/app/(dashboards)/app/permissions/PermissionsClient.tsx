@@ -172,11 +172,11 @@ export default function PermissionsClient({ initialData }: PermissionsClientProp
       <WorkshopTable
         data={filtered}
         columns={columns}
-        actions={([
-          { label: "View", icon: Eye, onClick: handleView },
-          { label: "Edit", icon: Edit, onClick: handleEdit, hidden: () => !can("edit:permissions") },
+        actions={[
+          { label: "View", icon: Eye, variant: "default", onClick: handleView },
+          { label: "Edit", icon: Edit, variant: "warning", onClick: handleEdit, hidden: () => !can("edit:permissions") },
           { label: "Delete", icon: Trash2, variant: "danger", onClick: handleDelete, hidden: () => !can("delete:permission") }
-        ] as any[]).filter(Boolean)}
+        ]}
       />
 
       {/* View Modal */}

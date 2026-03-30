@@ -138,8 +138,8 @@ export default function RolesClient({ initialData }: RolesClientProps) {
         data={filtered}
         columns={columns}
         actions={[
-          { label: "View", icon: Eye, onClick: handleView },
-          { label: "Edit", icon: Edit, onClick: handleEdit },
+          { label: "View", icon: Eye, variant: "default", onClick: handleView },
+          { label: "Edit", icon: Edit, variant: "warning", onClick: handleEdit },
           { label: "Delete", icon: Trash2, variant: "danger", onClick: handleDelete }
         ]}
       />

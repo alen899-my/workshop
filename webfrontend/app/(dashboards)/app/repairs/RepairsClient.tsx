@@ -244,9 +244,9 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
         data={filtered}
         columns={columns}
         actions={[
-          { label: "Bill", icon: Receipt, onClick: handleBill },
-          { label: "View", icon: Eye, onClick: handleView },
-          { label: "Edit", icon: Edit, onClick: handleEdit },
+          { label: "Bill", icon: Receipt, variant: "success", onClick: handleBill },
+          { label: "View", icon: Eye, variant: "default", onClick: handleView },
+          { label: "Edit", icon: Edit, variant: "warning", onClick: handleEdit },
           { label: "Delete", icon: Trash2, variant: "danger", onClick: handleDelete }
         ]}
       />
