@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
-import { FilterBar, FilterSelect } from \"@/components/common/FilterBar\";\nimport { ConfirmationModal } from \"@/components/common/ConfirmationModal\";
+import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { Shield, Edit, Trash2, Eye } from "lucide-react";
 import { Permission, permissionService } from "@/services/permission.service";
 import { cn } from "@/lib/utils";
