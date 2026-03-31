@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
-import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
+import { FilterBar, FilterSelect } from \"@/components/common/FilterBar\";\nimport { ConfirmationModal } from \"@/components/common/ConfirmationModal\";
 import { Shield, Edit, Trash2, Eye } from "lucide-react";
 import { Permission, permissionService } from "@/services/permission.service";
 import { cn } from "@/lib/utils";
@@ -25,12 +25,14 @@ export default function PermissionsClient({ initialData }: PermissionsClientProp
   const [permissions, setPermissions] = useState<Permission[]>(initialData);
   const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
+  const pendingDeleteRef = useRef<Permission | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Page level guard
   React.useEffect(() => {
     if (!can("view:permission")) {
-       router.push("/app/forbidden");
+      router.push("/app/forbidden");
     }
   }, [can, router]);
 
@@ -77,8 +79,8 @@ export default function PermissionsClient({ initialData }: PermissionsClientProp
       className: "font-semibold text-foreground",
       renderCell: (row) => (
         <div className="flex items-center gap-2">
-           <Shield size={14} className="text-primary opacity-60" />
-           <span className="capitalize">{row.module_name}</span>
+          <Shield size={14} className="text-primary opacity-60" />
+          <span className="capitalize">{row.module_name}</span>
         </div>
       )
     },
@@ -186,54 +188,66 @@ export default function PermissionsClient({ initialData }: PermissionsClientProp
         title="Permission Details"
         subtitle="Viewing system permission details."
         footer={
-           <div className="flex justify-end">
-              <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
-                 Close
-              </WorkshopButton>
-           </div>
+          <div className="flex justify-end">
+            <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
+              Close
+            </WorkshopButton>
+          </div>
         }
       >
         {selectedPermission && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Module</p>
-                  <p className="text-sm font-bold text-foreground capitalize">{selectedPermission.module_name}</p>
-               </div>
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
-                  <p className={cn(
-                    "text-sm font-bold uppercase",
-                    selectedPermission.status === 'active' ? 'text-green-500' : 'text-red-500'
-                  )}>{selectedPermission.status}</p>
-               </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Module</p>
+                <p className="text-sm font-bold text-foreground capitalize">{selectedPermission.module_name}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
+                <p className={cn(
+                  "text-sm font-bold uppercase",
+                  selectedPermission.status === 'active' ? 'text-green-500' : 'text-red-500'
+                )}>{selectedPermission.status}</p>
+              </div>
             </div>
 
             <div>
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Permission Name</p>
-               <p className="text-sm font-semibold text-foreground">{selectedPermission.permission_name}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Permission Name</p>
+              <p className="text-sm font-semibold text-foreground">{selectedPermission.permission_name}</p>
             </div>
 
             <div className="bg-muted/30 p-4 border border-border rounded-xl">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Slug</p>
-               <code className="text-[13px] text-primary font-bold">
-                 {selectedPermission.slug}
-               </code>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Slug</p>
+              <code className="text-[13px] text-primary font-bold">
+                {selectedPermission.slug}
+              </code>
             </div>
 
             <div>
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Description</p>
-               <p className="text-[12px] leading-relaxed text-foreground/70">
-                 {selectedPermission.description || "No description provided."}
-               </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Description</p>
+              <p className="text-[12px] leading-relaxed text-foreground/70">
+                {selectedPermission.description || "No description provided."}
+              </p>
             </div>
 
             <div className="pt-4 border-t border-border/50 text-[9px] text-muted-foreground/40 italic flex justify-end">
-               <span>Created: {new Date(selectedPermission.created_at).toLocaleDateString()}</span>
+              <span>Created: {new Date(selectedPermission.created_at).toLocaleDateString()}</span>
             </div>
           </div>
         )}
       </WorkshopModal>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </ModuleLayout>
   );
 }

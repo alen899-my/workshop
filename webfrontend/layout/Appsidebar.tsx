@@ -75,8 +75,8 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
       href={href}
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-all duration-200 ease-out",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
+        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm",
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active
           ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-md shadow-sidebar-primary/10"
           : "text-sidebar-foreground/60"
@@ -90,7 +90,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
       <Icon
         size={16}
         className={cn(
-          "shrink-0 transition-colors",
+          "shrink-0",
           active ? "opacity-100" : "opacity-60 group-hover:opacity-90"
         )}
       />
@@ -103,7 +103,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
 
       {/* Tooltip when collapsed */}
       {collapsed && (
-        <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-[var(--radius)] bg-foreground px-2.5 py-1.5 text-xs text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+        <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-[var(--radius)] bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg group-hover:opacity-100">
           {title}
         </span>
       )}
@@ -126,7 +126,7 @@ export function AppSidebar() {
   const SidebarContent = ({ isCollapsed, onItemClick }: { isCollapsed: boolean, onItemClick?: () => void }) => (
     <div
       className={cn(
-        "flex h-full flex-col bg-sidebar text-sidebar-foreground transition-all duration-200",
+        "flex h-full flex-col bg-sidebar text-sidebar-foreground",
         isCollapsed ? "w-[60px]" : "w-[220px]"
       )}
     >
@@ -153,7 +153,7 @@ export function AppSidebar() {
           <button
             onClick={() => setCollapsed(v => !v)}
             className={cn(
-              "hidden rounded-[var(--radius)] p-1 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground md:flex",
+              "hidden rounded-[var(--radius)] p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground md:flex",
               isCollapsed && "mx-auto"
             )}
             aria-label="Toggle sidebar"
@@ -262,7 +262,7 @@ export function AppSidebar() {
       {/* ── Mobile drawer ── */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-[220px] shadow-xl transition-transform duration-200 md:hidden",
+          "fixed left-0 top-0 z-50 h-full w-[220px] shadow-xl md:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

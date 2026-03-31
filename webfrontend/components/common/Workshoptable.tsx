@@ -101,7 +101,7 @@ function SortIcon({ direction }: { direction: SortDirection }) {
   return (
     <ChevronsUpDown
       size={11}
-      className="text-primary-foreground/30 shrink-0 group-hover:text-primary-foreground/60 transition-colors"
+      className="text-primary-foreground/30 shrink-0 group-hover:text-primary-foreground/60"
     />
   );
 }
@@ -171,8 +171,8 @@ export function WorkshopTable<T>({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300",
-        "shadow-sm hover:shadow-md hover:border-border",
+        "flex flex-col rounded-xl border border-border/50 bg-card overflow-hidden",
+        "shadow-sm border-border",
         className
       )}
     >
@@ -204,11 +204,11 @@ export function WorkshopTable<T>({
                   {col.sortable ? (
                     <button
                       onClick={() => handleSort(col.key)}
-                      className="inline-flex items-center gap-1.5 group rounded-md -ml-1 px-1 py-0.5 hover:bg-accent/10 transition-colors"
+                      className="inline-flex items-center gap-1.5 group rounded-md -ml-1 px-1 py-0.5 hover:bg-accent/10"
                     >
                       <span
                         className={cn(
-                          "font-mono text-[11px] font-bold tracking-widest uppercase transition-colors",
+                          "font-mono text-[11px] font-bold tracking-widest uppercase",
                           sortKey === col.key
                             ? "text-primary-foreground"
                             : "text-primary-foreground/70 group-hover:text-primary-foreground/90"
@@ -267,8 +267,8 @@ export function WorkshopTable<T>({
                   <tr
                     key={rowKey ? rowKey(row, globalIdx) : globalIdx}
                     className={cn(
-                      "transition-all duration-200 group border-b border-border/40 last:border-0",
-                      "hover:bg-accent/10 hover:shadow-inner",
+                      "group border-b border-border/40 last:border-0",
+                      "hover:bg-accent/10",
                       rowClassName?.(row, globalIdx)
                     )}
                   >
@@ -306,7 +306,7 @@ export function WorkshopTable<T>({
                                 title={action.label}
                                 className={cn(
                                   "flex items-center gap-1.5 rounded-lg px-3 py-2",
-                                  "text-[12px] font-bold border transition-all duration-200 active:scale-95 shadow-sm",
+                                  "text-[12px] font-bold border shadow-sm",
                                   ACTION_VARIANT[action.variant ?? "default"]
                                 )}
                               >
@@ -355,7 +355,7 @@ export function WorkshopTable<T>({
                   "rounded-lg border border-border/60 bg-background/80 px-2 py-1",
                   "text-[11.5px] font-medium text-foreground outline-none",
                   "focus:border-primary/40 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]",
-                  "transition-all duration-150 cursor-pointer"
+                  "transition-none cursor-pointer"
                 )}
               >
                 {pageSizeOptions.map((s) => (
@@ -398,7 +398,7 @@ export function WorkshopTable<T>({
                     key={p}
                     onClick={() => setPage(Number(p))}
                     className={cn(
-                      "min-w-[34px] h-8.5 rounded-lg text-[12px] font-mono font-black transition-all duration-200 active:scale-90",
+                      "min-w-[34px] h-8.5 rounded-lg text-[12px] font-mono font-black",
                       p === safePage
                         ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 border border-primary"
                         : "text-foreground bg-muted/30 hover:bg-muted hover:text-primary border border-border/80"
@@ -450,7 +450,7 @@ function PaginationBtn({
       disabled={disabled}
       aria-label={aria}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150",
+        "flex h-8 w-8 items-center justify-center rounded-lg",
         disabled
           ? "text-muted-foreground/20 cursor-not-allowed"
           : "text-muted-foreground/50 hover:bg-accent/10 hover:text-foreground"

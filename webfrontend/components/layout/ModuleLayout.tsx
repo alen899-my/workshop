@@ -21,7 +21,7 @@ export function ModuleLayout({
   children,
 }: ModuleLayoutProps) {
   return (
-    <div className="flex flex-col gap-8 p-1 sm:p-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="flex flex-col gap-8 p-1 sm:p-2">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
@@ -38,7 +38,7 @@ export function ModuleLayout({
             onClick={onButtonClick}
             variant="primary"
             size="md"
-            className="w-full sm:w-auto font-medium transition-all"
+            className="w-full sm:w-auto font-medium"
             icon={<Plus size={16} />}
           >
             {buttonLabel}

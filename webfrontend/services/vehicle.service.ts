@@ -39,6 +39,15 @@ export const vehicleService = {
       return { success: false, error: "Connection failed" };
     }
   },
+  
+  async getByNumber(vNumber: string): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/number/${encodeURIComponent(vNumber)}`, { headers: getAuth(), cache: 'no-store' });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: "Connection failed" };
+    }
+  },
 
   async create(data: Partial<Vehicle>): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
     try {

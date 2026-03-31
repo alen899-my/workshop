@@ -41,16 +41,16 @@ export default function CreateUserPage() {
     let checkSuper = false;
     const saved = localStorage.getItem("workshop_user");
     if (saved) {
-      try { 
+      try {
         const user = JSON.parse(saved);
-        setSessionUser(user); 
+        setSessionUser(user);
         checkSuper = user.role === "super-admin";
-      } catch {}
+      } catch { }
     }
 
     const fetchData = async () => {
       const [rRes, sRes] = await Promise.all([
-        roleService.getAll(),
+        roleService.getOptions(),
         checkSuper ? shopService.getAll() : Promise.resolve({ success: false, data: [] })
       ]);
       if (rRes.success && rRes.data) setAllRoles(rRes.data);
@@ -78,18 +78,18 @@ export default function CreateUserPage() {
     setPasswordError("");
 
     setLoading(true);
-    
+
     // Process payload
     const { confirmPassword, ...payload } = form;
     const finalPayload: any = { ...payload };
 
     // Explicit shop_id handling
     if (!finalPayload.shop_id || finalPayload.shop_id === "") {
-        delete finalPayload.shop_id;
+      delete finalPayload.shop_id;
     } else {
-        finalPayload.shop_id = Number(finalPayload.shop_id);
+      finalPayload.shop_id = Number(finalPayload.shop_id);
     }
-    
+
     const res = await userService.create(finalPayload);
     setLoading(false);
 
@@ -151,20 +151,20 @@ export default function CreateUserPage() {
         />
 
         <div className="flex flex-col gap-2">
-           <WorkshopSearchableSelect
-              label="Role"
-              placeholder="Select a role..."
-              options={
-                availableRoles.length > 0
-                  ? availableRoles.map(r => ({ value: r.slug, label: r.name, subLabel: r.slug }))
-                  : [
-                      { value: "worker", label: "Worker", subLabel: "Technician" },
-                      { value: "shop_owner", label: "Shop Owner", subLabel: "Manager" }
-                    ]
-              }
-              value={form.role}
-              onChange={(val) => setForm({ ...form, role: String(val) })}
-           />
+          <WorkshopSearchableSelect
+            label="Role"
+            placeholder="Select a role..."
+            options={
+              availableRoles.length > 0
+                ? availableRoles.filter(r => isSuperAdmin || (r.slug !== 'super-admin' && r.slug !== 'admin')).map(r => ({ value: r.slug, label: r.name, subLabel: r.slug }))
+                : [
+                  { value: "worker", label: "Worker", subLabel: "Technician" },
+                  { value: "shop_owner", label: "Shop Owner", subLabel: "Manager" }
+                ]
+            }
+            value={form.role}
+            onChange={(val) => setForm({ ...form, role: String(val) })}
+          />
           {!isSuperAdmin && (
             <p className="text-[10px] text-muted-foreground mt-1">
               Shop owners can only assign: Worker or Shop Owner
@@ -188,26 +188,26 @@ export default function CreateUserPage() {
 
         {isSuperAdmin && shops.length > 0 && (
           <div className="flex flex-col gap-2 md:col-span-2">
-             <WorkshopSearchableSelect
-                label="Workshop Assignment"
-                placeholder="Select assigned workshop..."
-                options={[
-                  { value: "", label: "Direct (Global)" },
-                  ...shops.map(shop => ({ value: String(shop.id), label: shop.name, subLabel: shop.location }))
-                ]}
-                value={form.shop_id}
-                onChange={(val) => setForm({ ...form, shop_id: String(val) })}
-             />
+            <WorkshopSearchableSelect
+              label="Workshop Assignment"
+              placeholder="Select assigned workshop..."
+              options={[
+                { value: "", label: "Direct (Global)" },
+                ...shops.map(shop => ({ value: String(shop.id), label: shop.name, subLabel: shop.location }))
+              ]}
+              value={form.shop_id}
+              onChange={(val) => setForm({ ...form, shop_id: String(val) })}
+            />
           </div>
         )}
 
         <div className="md:col-span-2 p-5 rounded-xl bg-primary/5 border border-primary/10 mt-2 flex items-center gap-4">
-            <Shield size={18} className="shrink-0 text-primary/40" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
+          <Shield size={18} className="shrink-0 text-primary/40" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {isSuperAdmin
-                ? "You have full access to assign any role across all workshops."
-                : "New users will be automatically assigned to your workshop."}
-            </p>
+              ? "You have full access to assign any role across all workshops."
+              : "New users will be automatically assigned to your workshop."}
+          </p>
         </div>
       </div>
     </ModuleForm>

@@ -10,6 +10,16 @@ exports.getRoles = async (req, res) => {
   }
 };
 
+// @desc    Get role options (minimal data for forms)
+exports.getRoleOptions = async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, name, slug FROM roles WHERE status = $1 ORDER BY name ASC', ['active']);
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
 // @desc    Get single role with its permissions (slugs)
 exports.getRoleById = async (req, res) => {
   try {

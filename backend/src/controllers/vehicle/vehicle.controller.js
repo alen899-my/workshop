@@ -105,6 +105,43 @@ exports.updateVehicle = async (req, res) => {
   }
 };
 
+// @desc    Get vehicle by its registration number (scoped)
+exports.getVehicleByNumber = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+  const { vNumber } = req.params;
+
+  try {
+    const select = `
+      SELECT v.*, c.name as owner_name, c.phone as owner_phone, s.name as shop_name
+      FROM vehicles v
+      LEFT JOIN customers c ON v.customer_id = c.id
+      LEFT JOIN shops s ON v.shop_id = s.id
+      WHERE REPLACE(v.vehicle_number, ' ', '') = REPLACE($1, ' ', '')
+    `;
+    
+    let query = select;
+    let params = [vNumber];
+
+    if (!isSuperAdmin) {
+       query += ' AND v.shop_id = $2';
+       params.push(shopId);
+    }
+
+    const result = await db.query(query, params);
+
+    // Always 200 for a successful lookup request, even if no data found
+    if (result.rows.length === 0) {
+      return res.status(200).json({ success: true, data: null, message: 'No history for this vehicle' });
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('getVehicleByNumber Error:', error);
+    res.status(500).json({ success: false, error: 'Server error check history' });
+  }
+};
+
 // @desc    Delete vehicle
 exports.deleteVehicle = async (req, res) => {
   try {

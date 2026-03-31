@@ -40,18 +40,18 @@ export default function EditUserPage() {
     const saved = localStorage.getItem("workshop_user");
     let currentUser: any = null;
     if (saved) {
-      try { 
+      try {
         currentUser = JSON.parse(saved);
-        setSessionUser(currentUser); 
-      } catch {}
+        setSessionUser(currentUser);
+      } catch { }
     }
 
     const fetchData = async () => {
       if (!id) return;
-      
+
       const promises: any[] = [
         userService.getById(id),
-        roleService.getAll()
+        roleService.getOptions()
       ];
 
       if (currentUser?.role === 'super-admin') {
@@ -62,7 +62,7 @@ export default function EditUserPage() {
 
       if (rRes.success && rRes.data) setRoles(rRes.data);
       if (sRes?.success && sRes.data) setShops(sRes.data);
-      
+
       if (uRes.success && uRes.data) {
         setForm({
           name: uRes.data.name || "",
@@ -93,7 +93,7 @@ export default function EditUserPage() {
 
     const { confirmPassword, ...payload } = form;
     if (!payload.password) delete (payload as any).password;
-    
+
     // Explicit null sending if Direct Global selected
     if (payload.shop_id === "") {
       (payload as any).shop_id = null;
@@ -116,6 +116,9 @@ export default function EditUserPage() {
 
   const isSuperAdmin = sessionUser?.role === 'super-admin';
 
+  // Filter roles based on requester's level
+  const displayedRoles = isSuperAdmin ? roles : roles.filter(r => r.slug !== 'super-admin' && r.slug !== 'admin');
+
   return (
     <ModuleForm
       title="Edit User"
@@ -126,13 +129,13 @@ export default function EditUserPage() {
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:col-span-2">
         <div className="md:col-span-2">
-           <AuthFormField
-             label="Full Name"
-             placeholder="e.g. Alen John"
-             value={form.name}
-             onChange={(e) => setForm({ ...form, name: e.target.value })}
-             icon={<UserIcon size={16} />}
-           />
+          <AuthFormField
+            label="Full Name"
+            placeholder="e.g. Alen John"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            icon={<UserIcon size={16} />}
+          />
         </div>
 
         <AuthFormField
@@ -142,53 +145,60 @@ export default function EditUserPage() {
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
           icon={<Phone size={16} />}
         />
-        
+
         <div className="flex flex-col gap-2">
-           <WorkshopSearchableSelect
-              label="Role"
-              placeholder="Select a role..."
-              options={roles.map(r => ({ value: r.slug, label: r.name, subLabel: r.slug }))}
-              value={form.role}
-              onChange={(val) => setForm({ ...form, role: String(val) })}
-              className="group"
-           />
+          <WorkshopSearchableSelect
+            label="Role"
+            placeholder="Select a role..."
+            options={
+              displayedRoles.length > 0
+                ? displayedRoles.map(r => ({ value: r.slug, label: r.name, subLabel: r.slug }))
+                : [
+                  { value: "worker", label: "Worker", subLabel: "Technician" },
+                  { value: "shop_owner", label: "Shop Owner", subLabel: "Manager" }
+                ].filter(r => isSuperAdmin || (r.value !== 'super-admin' && r.value !== 'admin'))
+            }
+            value={form.role}
+            onChange={(val) => setForm({ ...form, role: String(val) })}
+            className="group"
+          />
         </div>
 
         {isSuperAdmin && (
           <div className="flex flex-col gap-2">
-             <WorkshopSearchableSelect
-                label="Workshop Hub Assignment"
-                placeholder="Select shop..."
-                options={[
-                  { value: "", label: "Direct (Global)" },
-                  ...shops.map(s => ({ value: String(s.id), label: s.name, subLabel: s.location }))
-                ]}
-                value={String(form.shop_id)}
-                onChange={(val) => setForm({ ...form, shop_id: String(val) })}
-                className="group"
-             />
+            <WorkshopSearchableSelect
+              label="Workshop Hub Assignment"
+              placeholder="Select shop..."
+              options={[
+                { value: "", label: "Direct (Global)" },
+                ...shops.map(s => ({ value: String(s.id), label: s.name, subLabel: s.location }))
+              ]}
+              value={String(form.shop_id)}
+              onChange={(val) => setForm({ ...form, shop_id: String(val) })}
+              className="group"
+            />
           </div>
         )}
 
         <div className="flex flex-col gap-2">
-           <label className="text-xs font-semibold text-muted-foreground ml-0.5">
-              Status
-           </label>
-           <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-              className="w-full bg-card border border-border text-sm rounded-md px-4 py-2.5 focus:outline-none focus:border-primary/50 transition-all font-medium"
-           >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-           </select>
+          <label className="text-xs font-semibold text-muted-foreground ml-0.5">
+            Status
+          </label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+            className="w-full bg-card border border-border text-sm rounded-md px-4 py-2.5 focus:outline-none focus:border-primary/50 transition-all font-medium"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
 
         <div className="md:col-span-2 mt-4">
-           <div className="h-px bg-border/40 w-full mb-8" />
-           <p className="text-sm font-bold text-foreground mb-4">
-              Security Reset (Optional)
-           </p>
+          <div className="h-px bg-border/40 w-full mb-8" />
+          <p className="text-sm font-bold text-foreground mb-4">
+            Security Reset (Optional)
+          </p>
         </div>
 
         <AuthFormField

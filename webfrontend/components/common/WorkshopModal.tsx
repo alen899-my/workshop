@@ -53,17 +53,17 @@ export function WorkshopModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] grid place-items-center p-4 overflow-y-auto no-scrollbar outline-none focus:outline-none animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[1000] grid place-items-center p-4 overflow-y-auto no-scrollbar outline-none focus:outline-none">
       {/* Fixed Backdrop - Fully transparent with no blur */}
       <div
-        className="fixed inset-0 bg-background/20 transition-opacity cursor-pointer z-[-1]"
+        className="fixed inset-0 bg-background/20 cursor-pointer z-[-1]"
         onClick={onClose}
       />
 
       {/* Modal Content container - Center aligned in the grid */}
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-2xl border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 m-auto pointer-events-auto",
+          "relative w-full overflow-hidden rounded-2xl border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] m-auto pointer-events-auto",
           widthClasses[width]
         )}
       >
@@ -83,7 +83,7 @@ export function WorkshopModal({
           </div>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground/50 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 transition-all active:scale-90"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground/50 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20"
           >
             <X size={16} />
           </button>

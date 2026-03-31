@@ -39,7 +39,7 @@ export default function DashboardLayout({
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground/50">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+          <div className="h-8 w-8 rounded-full border-2 border-border border-t-primary" />
           <p className="text-xs font-medium tracking-widest uppercase">Loading...</p>
         </div>
       </div>

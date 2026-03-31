@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ModuleForm } from "@/components/forms/ModuleForm";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { repairService } from "@/services/repair.service";
+import { vehicleService } from "@/services/vehicle.service";
 import { User } from "@/services/user.service";
 import {
   Car, Phone, User as UserIcon, Calendar, Plus, X, ShieldCheck, Tag, Wrench,
-  Search, ChevronRight, MoreHorizontal
+  Search, ChevronRight, MoreHorizontal, Loader2
 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
@@ -20,6 +21,10 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [searchingVehicle, setSearchingVehicle] = useState(false);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const selectedFromRegistry = React.useRef(false);
 
   const [form, setForm] = useState({
     vehicle_number: "",
@@ -33,6 +38,85 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
     status: "Pending",
     service_type: "Repair"
   });
+
+  // Fetch all vehicles for suggestions
+  React.useEffect(() => {
+    const fetchVehicles = async () => {
+      const res = await vehicleService.getAll();
+      if (res.success && res.data) {
+        setAllVehicles(res.data);
+      }
+    };
+    fetchVehicles();
+  }, []);
+
+  // Filtered suggestions
+  const suggestions = useMemo(() => {
+    const q = form.vehicle_number.trim().toUpperCase();
+    if (q.length < 2) return [];
+    return allVehicles.filter(v => 
+      v.vehicle_number.toUpperCase().replace(/\s+/g, '').includes(q.replace(/\s+/g, ''))
+    ).slice(0, 10); // Limit to 10 suggestions
+  }, [form.vehicle_number, allVehicles]);
+
+  // Auto-populate logic Improved 
+  React.useEffect(() => {
+    const vNum = form.vehicle_number.trim();
+    
+    if (vNum.length === 0) {
+      setForm(prev => ({ 
+        ...prev, 
+        owner_name: "", 
+        phone_number: "", 
+        model_name: "", 
+        vehicle_type: "Car" 
+      }));
+      selectedFromRegistry.current = false;
+      return;
+    }
+
+    if (selectedFromRegistry.current) {
+        selectedFromRegistry.current = false;
+        return;
+    }
+
+    if (vNum.length < 2) return; // Search starts from 2 chars
+
+    const timeoutId = setTimeout(async () => {
+      setSearchingVehicle(true);
+      try {
+        const res = await vehicleService.getByNumber(vNum);
+        if (res.success && res.data) {
+          const v = res.data;
+          setForm(prev => ({
+            ...prev,
+            owner_name: v.owner_name || prev.owner_name,
+            phone_number: v.owner_phone || prev.phone_number,
+            model_name: v.model_name || prev.model_name,
+            vehicle_type: v.vehicle_type || prev.vehicle_type,
+          }));
+          toast({ 
+            type: "success", 
+            title: "Registry Match", 
+            description: `History found for ${vNum}.` 
+          });
+        } else {
+          setForm(prev => ({ 
+            ...prev, 
+            owner_name: "", 
+            phone_number: "", 
+            model_name: "" 
+          }));
+        }
+      } catch (err) {
+        console.error("Auto-population failed:", err);
+      } finally {
+        setSearchingVehicle(false);
+      }
+    }, 450); // Faster debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [form.vehicle_number, toast]); // Restored toast to maintain constant dependency array size
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [currentComplaint, setCurrentComplaint] = useState("");
@@ -117,14 +201,69 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
       loading={loading}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:col-span-2">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 relative group">
           <AuthFormField
             label="Vehicle Number *"
             placeholder="e.g. KL 01 AB 1234"
             value={form.vehicle_number}
-            onChange={(e) => setForm({ ...form, vehicle_number: e.target.value })}
-            icon={<Car size={16} />}
+            onChange={(e) => {
+              setForm({ ...form, vehicle_number: e.target.value.toUpperCase() });
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            icon={searchingVehicle ? <Loader2 size={16} className="animate-spin text-primary" /> : <Car size={16} />}
           />
+
+          {/* Suggestions Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-card border border-border rounded-xl shadow-xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+               <div className="p-2 border-b border-border bg-muted/20">
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-primary px-2">Matched Registry</p>
+               </div>
+               <div className="max-h-[240px] overflow-y-auto p-1.5 flex flex-col gap-0.5">
+                  {suggestions.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        // Prevent the input's onBlur from firing immediately and hiding suggestions
+                        e.preventDefault();
+                        
+                        selectedFromRegistry.current = true;
+                        const targetVehicle = {
+                          vehicle_number: v.vehicle_number,
+                          owner_name: v.owner_name || v.c_name || form.owner_name,
+                          phone_number: v.owner_phone || v.c_phone || form.phone_number,
+                          model_name: v.model_name || form.model_name,
+                          vehicle_type: v.vehicle_type || form.vehicle_type || "Car"
+                        };
+
+                        setForm(f => ({
+                          ...f,
+                          ...targetVehicle,
+                          complaints: f.complaints // Preserve complaints
+                        }));
+                        
+                        setShowSuggestions(false);
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-lg text-left hover:bg-primary/5 group/opt border border-transparent hover:border-primary/20 transition-all"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary group-hover/opt:bg-primary group-hover/opt:text-white transition-colors">
+                         <Car size={18} />
+                      </div>
+                      <div className="flex flex-col flex-1 overflow-hidden">
+                        <span className="text-sm font-bold text-foreground">{v.vehicle_number}</span>
+                        <span className="text-[10px] text-muted-foreground truncate uppercase tracking-tight">
+                           {v.owner_name || v.c_name || "Unknown"} • {v.model_name || "Unknown Model"}
+                        </span>
+                      </div>
+                      <ChevronRight size={14} className="text-muted-foreground/30 group-hover/opt:text-primary transition-colors" />
+                    </button>
+                  ))}
+               </div>
+            </div>
+          )}
         </div>
 
         <AuthFormField

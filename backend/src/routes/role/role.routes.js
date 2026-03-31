@@ -7,6 +7,9 @@ const { authorize } = require('../../middleware/rbac.middleware');
 // @route   GET /api/roles
 router.get('/', authenticate, authorize('view:role'), roleController.getRoles);
 
+// @route   GET /api/roles/options (For form population, less restricted)
+router.get('/options', authenticate, roleController.getRoleOptions);
+
 // @route   GET /api/roles/:id
 router.get('/:id', roleController.getRoleById);
 

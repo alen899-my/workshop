@@ -19,7 +19,7 @@ interface WorkshopButtonProps
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
     "bg-primary text-primary-foreground border border-primary " +
-    "hover:opacity-90 transition-opacity",
+    "hover:ring-1 hover:ring-primary/20",
 
   outline:
     "bg-transparent text-foreground border border-border " +
@@ -31,11 +31,11 @@ const variantStyles: Record<ButtonVariant, string> = {
 
   danger:
     "bg-destructive text-destructive-foreground border border-destructive " +
-    "hover:opacity-90 transition-opacity",
+    "hover:ring-1 hover:ring-destructive/20",
 
   steel:
     "bg-slate-700 text-white border border-slate-700 " +
-    "hover:bg-slate-800 transition-colors",
+    "hover:bg-slate-800",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -64,7 +64,7 @@ export function WorkshopButton({
         // base
         "inline-flex items-center justify-center",
         "font-semibold rounded-md",
-        "transition-all duration-200 ease-out cursor-pointer",
+        "cursor-pointer",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         // variant + size
         variantStyles[variant],
@@ -76,7 +76,7 @@ export function WorkshopButton({
     >
       {loading ? (
         <div className="flex items-center gap-2">
-          <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
           <span>Loading...</span>
         </div>
       ) : (

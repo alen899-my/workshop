@@ -30,6 +30,19 @@ export const roleService = {
     }
   },
 
+  /** Fetch role options for dropdowns (less Restricted) */
+  async getOptions(): Promise<{ success: boolean; data: Role[]; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/options`, { 
+        cache: 'no-store',
+        headers: getAuth()
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, data: [], error: "Connection error" };
+    }
+  },
+
   /** Fetch single role with permissions */
   async getById(id: string | number): Promise<{ success: boolean; data?: Role; error?: string }> {
     try {

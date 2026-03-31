@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { ShieldHalf, Edit, Trash2, Eye } from "lucide-react";
 import { Role, roleService } from "@/services/role.service";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,8 @@ export default function RolesClient({ initialData }: RolesClientProps) {
   const [roles, setRoles] = useState<Role[]>(initialData);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
+  const pendingDeleteRef = useRef<Role | null>(null);
   const [loadingView, setLoadingView] = useState(false);
 
   // ── Filters ────────────────────────────────────────────────────────────────
@@ -58,8 +61,8 @@ export default function RolesClient({ initialData }: RolesClientProps) {
       className: "font-semibold text-foreground tracking-tight",
       renderCell: (row) => (
         <div className="flex items-center gap-2">
-           <ShieldHalf size={14} className="text-primary opacity-60" />
-           <span>{row.name}</span>
+          <ShieldHalf size={14} className="text-primary opacity-60" />
+          <span>{row.name}</span>
         </div>
       )
     },
@@ -89,13 +92,25 @@ export default function RolesClient({ initialData }: RolesClientProps) {
   const handleCreate = () => router.push("/app/roles/create");
   const handleEdit = (row: Role) => router.push(`/app/roles/edit/${row.id}`);
 
-  const handleDelete = async (row: Role) => {
-    if (!confirm(`Are you sure you want to delete role: ${row.name}?`)) return;
-    const res = await roleService.delete(row.id);
-    if (res.success) {
-      setRoles(prev => prev.filter(r => r.id !== row.id));
-      toast({ type: "success", title: "Deleted", description: "Role deleted successfully." });
-    }
+  const handleDelete = (row: Role) => {
+    pendingDeleteRef.current = row;
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Role",
+      message: `Are you sure you want to delete role: ${row.name}?`,
+      onConfirm: async () => {
+        if (!pendingDeleteRef.current) return;
+        const res = await roleService.delete(pendingDeleteRef.current.id);
+        if (res.success) {
+          setRoles(prev => prev.filter(r => r.id !== pendingDeleteRef.current!.id));
+          toast({ type: "success", title: "Deleted", description: "Role deleted successfully." });
+        } else {
+          toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });
+        }
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        pendingDeleteRef.current = null;
+      }
+    });
   };
 
   const handleView = async (row: Role) => {
@@ -152,55 +167,67 @@ export default function RolesClient({ initialData }: RolesClientProps) {
         subtitle={`Viewing details for role: ${selectedRole?.name}`}
         width="lg"
         footer={
-           <div className="flex justify-end gap-3">
-              <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
-                 Close
-              </WorkshopButton>
-           </div>
+          <div className="flex justify-end gap-3">
+            <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
+              Close
+            </WorkshopButton>
+          </div>
         }
       >
         {selectedRole && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Name</p>
-                  <p className="text-sm font-bold text-foreground">{selectedRole.name}</p>
-               </div>
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
-                  <p className="text-sm font-bold uppercase text-primary">{selectedRole.status}</p>
-               </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Name</p>
+                <p className="text-sm font-bold text-foreground">{selectedRole.name}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
+                <p className="text-sm font-bold uppercase text-primary">{selectedRole.status}</p>
+              </div>
             </div>
 
             <div className="bg-muted/30 p-4 border border-border rounded-xl">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Slug</p>
-               <code className="text-[13px] text-primary font-bold">{selectedRole.slug}</code>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Slug</p>
+              <code className="text-[13px] text-primary font-bold">{selectedRole.slug}</code>
             </div>
 
             <div>
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Permissions</p>
-               {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
-                 <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedRole.permissions.map(p => (
-                      <span key={p} className="px-2 py-1 rounded-lg bg-primary/5 border border-primary/20 text-[10px] text-primary font-bold uppercase">
-                         {p}
-                      </span>
-                    ))}
-                 </div>
-               ) : (
-                 <p className="text-xs text-muted-foreground">No permissions assigned.</p>
-               )}
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Permissions</p>
+              {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedRole.permissions.map(p => (
+                    <span key={p} className="px-2 py-1 rounded-lg bg-primary/5 border border-primary/20 text-[10px] text-primary font-bold uppercase">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No permissions assigned.</p>
+              )}
             </div>
 
             <div>
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Description</p>
-               <p className="text-[12px] leading-relaxed text-foreground/70">
-                 {selectedRole.description || "No description provided."}
-               </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Description</p>
+              <p className="text-[12px] leading-relaxed text-foreground/70">
+                {selectedRole.description || "No description provided."}
+              </p>
             </div>
           </div>
         )}
       </WorkshopModal>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </ModuleLayout>
   );
 }

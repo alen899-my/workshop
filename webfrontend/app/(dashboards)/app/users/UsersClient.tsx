@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { Building2, Edit, Trash2, Shield, Phone, Eye } from "lucide-react";
 import { User, userService } from "@/services/user.service";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
   const [users, setUsers] = useState<User[]>(initialData);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
+  const pendingDeleteRef = useRef<User | null>(null);
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -36,7 +39,7 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
     const seen = new Set<string>();
     return users
       .map((u) => ({ value: u.role, label: (u as any).role_name || u.role?.replace("_", " ") || u.role }))
-      .filter((r) => r.value && !seen.has(r.value) && seen.add(r.value));
+      .filter((r) => r.value && r.value !== 'admin' && !seen.has(r.value) && seen.add(r.value));
   }, [users]);
 
   const filtered = useMemo(() => {
@@ -66,17 +69,17 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       className: "font-semibold text-foreground tracking-tight",
       renderCell: (row) => (
         <div className="flex flex-col">
-           <span className="font-bold text-foreground">
-             {row.name || "Anonymous User"}
-           </span>
-           <span className={cn(
-             "text-[10px] px-1.5 py-0.5 rounded-sm border inline-block w-fit mt-1",
-             row.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-             row.role === 'shop_owner' ? 'bg-primary/10 text-primary border-primary/20' :
-             'bg-muted/30 text-muted-foreground border-border'
-           )}>
-             {(row as any).role_name || (row.role ? row.role.replace('_', ' ') : 'Unassigned')}
-           </span>
+          <span className="font-bold text-foreground">
+            {row.name || "Anonymous User"}
+          </span>
+          <span className={cn(
+            "text-[10px] px-1.5 py-0.5 rounded-sm border inline-block w-fit mt-1",
+            row.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+              row.role === 'shop_owner' ? 'bg-primary/10 text-primary border-primary/20' :
+                'bg-muted/30 text-muted-foreground border-border'
+          )}>
+            {(row as any).role_name || (row.role ? row.role.replace('_', ' ') : 'Unassigned')}
+          </span>
         </div>
       )
     },
@@ -85,8 +88,8 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       header: "Contact",
       renderCell: (row) => (
         <div className="flex items-center gap-2 text-muted-foreground">
-           <Phone size={12} className="opacity-60" />
-           <span className="text-sm">{row.phone}</span>
+          <Phone size={12} className="opacity-60" />
+          <span className="text-sm">{row.phone}</span>
         </div>
       )
     },
@@ -110,10 +113,10 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       header: "Shop",
       renderCell: (row) => (
         <div className="flex items-center gap-2">
-           <Building2 size={12} className="text-muted-foreground/40" />
-           <span className="text-sm text-muted-foreground">
-              {(row as any).shop_name || "Direct"}
-           </span>
+          <Building2 size={12} className="text-muted-foreground/40" />
+          <span className="text-sm text-muted-foreground">
+            {(row as any).shop_name || "Direct"}
+          </span>
         </div>
       )
     }
@@ -123,13 +126,25 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
   const handleEdit = (row: User) => router.push(`/app/users/edit/${row.id}`);
   const handleView = (row: User) => { setSelectedUser(row); setIsViewModalOpen(true); };
 
-  const handleDelete = async (row: User) => {
-    if (!confirm(`Are you sure you want to delete user: ${row.name}?`)) return;
-    const res = await userService.delete(row.id);
-    if (res.success) {
-      setUsers(prev => prev.filter(u => u.id !== row.id));
-      toast({ type: "success", title: "Deleted", description: "User deleted successfully." });
-    }
+  const handleDelete = (row: User) => {
+    pendingDeleteRef.current = row;
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete User",
+      message: `Are you sure you want to delete user: ${row.name}?`,
+      onConfirm: async () => {
+        if (!pendingDeleteRef.current) return;
+        const res = await userService.delete(pendingDeleteRef.current.id);
+        if (res.success) {
+          setUsers(prev => prev.filter(u => u.id !== pendingDeleteRef.current!.id));
+          toast({ type: "success", title: "Deleted", description: "User deleted successfully." });
+        } else {
+          toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });
+        }
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        pendingDeleteRef.current = null;
+      }
+    });
   };
 
   return (
@@ -181,56 +196,68 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
         title="User Details"
         subtitle="Viewing registration details for this team member."
         footer={
-           <div className="flex justify-end">
-              <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
-                 Close
-              </WorkshopButton>
-           </div>
+          <div className="flex justify-end">
+            <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)}>
+              Close
+            </WorkshopButton>
+          </div>
         }
       >
         {selectedUser && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-4">
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Full Name</p>
-                  <p className="text-sm font-bold text-foreground">{selectedUser.name}</p>
-               </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Full Name</p>
+                <p className="text-sm font-bold text-foreground">{selectedUser.name}</p>
+              </div>
             </div>
 
             <div className="bg-muted/30 p-4 border border-border rounded-xl">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Role / Access Level</p>
-               <div className="flex items-center gap-2 mt-1">
-                  <Shield size={14} className="text-primary" />
-                  <p className="text-sm font-semibold">{(selectedUser as any).role_name || selectedUser.role}</p>
-               </div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Role / Access Level</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Shield size={14} className="text-primary" />
+                <p className="text-sm font-semibold">{(selectedUser as any).role_name || selectedUser.role}</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Contact Number</p>
-                  <p className="text-sm font-medium">{selectedUser.phone}</p>
-               </div>
-               <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Account Status</p>
-                  <div className={cn(
-                    "text-xs font-bold uppercase",
-                    selectedUser.status === "active" ? "text-green-500" : "text-red-500"
-                  )}>
-                    {selectedUser.status}
-                  </div>
-               </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Contact Number</p>
+                <p className="text-sm font-medium">{selectedUser.phone}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Account Status</p>
+                <div className={cn(
+                  "text-xs font-bold uppercase",
+                  selectedUser.status === "active" ? "text-green-500" : "text-red-500"
+                )}>
+                  {selectedUser.status}
+                </div>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-border">
-               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Assigned Workshop</p>
-               <div className="flex items-center gap-2 mt-1">
-                  <Building2 size={14} className="text-muted-foreground/60" />
-                  <p className="text-sm font-medium">{(selectedUser as any).shop_name || "Direct / Unassigned"}</p>
-               </div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Assigned Workshop</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Building2 size={14} className="text-muted-foreground/60" />
+                <p className="text-sm font-medium">{(selectedUser as any).shop_name || "Direct / Unassigned"}</p>
+              </div>
             </div>
           </div>
         )}
       </WorkshopModal>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </ModuleLayout>
   );
 }
