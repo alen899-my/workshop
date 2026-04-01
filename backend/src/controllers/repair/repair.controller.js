@@ -11,7 +11,7 @@ exports.getRepairs = async (req, res) => {
       SELECT 
         r.id, r.vehicle_number, r.model_name, r.owner_name, r.phone_number, 
         r.complaints, r.repair_date, r.status, r.service_type, r.vehicle_type, r.created_at,
-        v.vehicle_image,
+        COALESCE(r.vehicle_image, v.vehicle_image) as vehicle_image,
         v.id AS vehicle_id,
         c.id AS customer_id,
         COALESCE(c.name, r.owner_name) as owner_name,
@@ -59,7 +59,8 @@ exports.getRepairById = async (req, res) => {
     const select = `
       SELECT 
         r.*, 
-        v.vehicle_image, v.vehicle_number AS v_num, v.model_name AS v_mod, v.vehicle_type AS v_type,
+        COALESCE(r.vehicle_image, v.vehicle_image) as vehicle_image,
+        v.vehicle_number AS v_num, v.model_name AS v_mod, v.vehicle_type AS v_type,
         c.name AS c_name, c.phone AS c_phone,
         s.name AS shop_name,
         aw.name AS attending_worker_name,
@@ -104,9 +105,9 @@ exports.createRepair = async (req, res) => {
   // Data extraction
   const { 
     vehicle_number, model_name, owner_name, phone_number, complaints, 
-    repair_date, attending_worker_id, status, service_type, vehicle_type 
+    repair_date, attending_worker_id, status, service_type, vehicle_type, prefilled_image
   } = req.body;
-  let vehicle_image = null;
+  let vehicle_image = prefilled_image || null;
 
   // Safe parse complaints (Sent as string via FormData)
   let parsedComplaints = [];
@@ -165,8 +166,8 @@ exports.createRepair = async (req, res) => {
 
     const query = `
       INSERT INTO repairs 
-        (shop_id, vehicle_id, vehicle_number, model_name, owner_name, phone_number, complaints, repair_date, attending_worker_id, submitted_by_id, status, service_type, vehicle_type)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        (shop_id, vehicle_id, vehicle_number, model_name, owner_name, phone_number, complaints, repair_date, attending_worker_id, submitted_by_id, status, service_type, vehicle_type, vehicle_image)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
     const params = [
@@ -182,7 +183,8 @@ exports.createRepair = async (req, res) => {
       userId, 
       status || 'Pending',
       service_type || 'Repair',
-      vehicle_type || 'Car'
+      vehicle_type || 'Car',
+      vehicle_image
     ];
 
     const result = await db.query(query, params);
@@ -279,8 +281,9 @@ exports.updateRepair = async (req, res) => {
         status = $9,
         service_type = $10,
         vehicle_type = $11,
+        vehicle_image = $12,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $12
+      WHERE id = $13
       RETURNING *
     `;
     
@@ -296,6 +299,7 @@ exports.updateRepair = async (req, res) => {
       status || 'Pending',
       service_type || 'Repair',
       vehicle_type || 'Car',
+      vehicle_image,
       req.params.id
     ];
 

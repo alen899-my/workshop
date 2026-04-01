@@ -62,13 +62,26 @@ exports.getUserById = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Scope check: non-superadmin can only view their own shop's users
+    // Scope check
     if (!isSuperAdmin && user.shop_id !== shopId) {
-      return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
+
+    // Fetch past repairs for this user (if technician)
+    const repairs = await db.query(`
+      SELECT r.*, v.model_name as vehicle_model 
+      FROM repairs r 
+      JOIN vehicles v ON r.vehicle_id = v.id
+      WHERE r.attending_worker_id = $1 
+      ORDER BY r.repair_date DESC 
+      LIMIT 10
+    `, [user.id]);
+    
+    user.past_repairs = repairs.rows;
 
     res.status(200).json({ success: true, data: user });
   } catch (error) {
+    console.error('getUserById Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };

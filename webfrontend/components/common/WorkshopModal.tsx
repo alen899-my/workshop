@@ -70,7 +70,7 @@ export function WorkshopModal({
         {/* Decorative Top Bar */}
         <div className="h-1 bg-primary w-full" />
         {/* Header Section */}
-        <div className="flex items-center justify-between border-b border-border bg-muted/10 px-5 py-5 sm:px-8">
+        <div className="flex items-center justify-between border-b border-border bg-muted/10 px-4 py-4 sm:px-8 sm:py-5">
           <div className="flex flex-col gap-1.5">
             <h2 className="font-mono text-[13px] font-black uppercase tracking-[0.25em] text-foreground leading-none">
               {title}
@@ -90,13 +90,13 @@ export function WorkshopModal({
         </div>
 
         {/* Modal Body - Maximum visibility scrollable area */}
-        <div className="max-h-[75vh] overflow-y-auto px-6 py-8 sm:px-8 no-scrollbar text-foreground/90">
+        <div className="max-h-[75vh] overflow-y-auto px-4 py-6 sm:px-8 sm:py-8 no-scrollbar text-foreground/90">
           {children}
         </div>
 
         {/* Footer actions area */}
         {footer && (
-          <div className="border-t border-border bg-muted/20 px-5 py-4 sm:px-8">
+          <div className="border-t border-border bg-muted/20 px-4 py-4 sm:px-8">
             {footer}
           </div>
         )}

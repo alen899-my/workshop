@@ -13,11 +13,23 @@ export interface BillItem {
   qty: number;
 }
 
+export interface TaxSnapshotItem {
+  id: number;
+  name: string;
+  rate: number;
+  amount: number;
+  is_inclusive: boolean;
+  applies_to: string;
+}
+
 export interface Bill {
   id?: number;
   repair_id: number;
   items: BillItem[];
   service_charge: number;
+  tax_snapshot?: TaxSnapshotItem[];
+  tax_total?: number;
+  subtotal_before_tax?: number;
   total_amount: number;
 }
 
@@ -35,8 +47,13 @@ export const billService = {
     }
   },
 
-  /** Save or update a repair bill */
-  async saveBill(repairId: string | number, data: { items: BillItem[], service_charge: number }): Promise<{ success: boolean; data?: Bill; error?: string }> {
+  /** Save or update a repair bill (with optional tax data) */
+  async saveBill(repairId: string | number, data: { 
+    items: BillItem[]; 
+    service_charge: number;
+    tax_snapshot?: TaxSnapshotItem[];
+    tax_total?: number;
+  }): Promise<{ success: boolean; data?: Bill; error?: string }> {
     try {
       const res = await fetch(`${API_URL}/repair/${repairId}`, {
         method: "POST",

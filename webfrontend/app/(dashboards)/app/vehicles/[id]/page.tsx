@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Phone, Calendar, Wrench, Eye, Trash2, Clock, AlertCircle, CheckCircle2, ShieldCheck, FileText, Receipt } from "lucide-react";
+import { ArrowLeft, Phone, Calendar, Wrench, Eye, Trash2, Clock, AlertCircle, CheckCircle2, ShieldCheck, FileText, Receipt, Plus } from "lucide-react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef, ActionButton } from "@/components/common/Workshoptable";
 import { FilterBar } from "@/components/common/FilterBar";
@@ -251,14 +251,117 @@ export default function VehicleDetailPage() {
                 {/* Back Button */}
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-fit"
+                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-fit group"
                 >
-                    <ArrowLeft size={16} />
-                    Back
+                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                    Back to Registry
                 </button>
 
+                {/* Combined Vehicle Information Card */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Side - Image and Basic Stats */}
+                    <div className="lg:col-span-4 flex flex-col gap-4">
+                        <div className="relative w-full aspect-square sm:aspect-video lg:aspect-square rounded-3xl overflow-hidden border border-border bg-muted/20 shadow-xl group">
+                            {vehicle.vehicle_image ? (
+                                <Image 
+                                    src={vehicle.vehicle_image} 
+                                    alt={vehicle.model_name} 
+                                    fill 
+                                    className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                                />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-muted/50 to-muted/20">
+                                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-primary/20" style={{ backgroundColor: config.color }}>
+                                        <Icon size={40} />
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">No vehicle image</p>
+                                </div>
+                            )}
+                            <div className="absolute top-4 left-4">
+                                <div className="px-3 py-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: config.color }} />
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-white">{vehicle.vehicle_type}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Side - Detailed Metadata */}
+                    <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Profile Info */}
+                        <div className="p-6 rounded-3xl border border-border bg-card shadow-sm flex flex-col justify-between min-h-[160px]">
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Vehicle specs</p>
+                                <h2 className="text-2xl font-black text-foreground tracking-tight">{vehicle.vehicle_number}</h2>
+                                <p className="text-sm font-bold text-muted-foreground">{vehicle.model_name}</p>
+                            </div>
+                            <div className="flex items-center gap-4 pt-4 border-t border-border/50">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Total Repairs</span>
+                                    <span className="text-lg font-black text-foreground">{repairs.length}</span>
+                                </div>
+                                <div className="w-px h-8 bg-border" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Status</span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 font-bold uppercase border border-green-500/20 w-fit mt-1">Active Registry</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Owner Info */}
+                        <div className="p-6 rounded-3xl border border-border bg-card shadow-sm flex flex-col gap-4 min-h-[160px]">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Owner profile</p>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-foreground border border-border">
+                                    <Eye size={20} className="text-muted-foreground/40" />
+                                </div>
+                                <div className="flex flex-col overflow-hidden">
+                                    <span className="text-base font-black text-foreground tracking-tight truncate">{vehicle.owner_name}</span>
+                                    <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                                        <Phone size={12} className="text-primary" />
+                                        {vehicle.owner_phone}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="mt-auto flex items-center gap-2 text-xs font-medium text-muted-foreground pt-4 border-t border-border/50">
+                                <Calendar size={14} className="text-primary/60" />
+                                Member Since: {new Date(vehicle.created_at).toLocaleDateString()}
+                            </div>
+                        </div>
+
+                        {/* Location/Workshop info */}
+                        <div className="md:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center text-primary shadow-sm">
+                                    <Wrench size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Registered At</span>
+                                    <span className="text-sm font-black text-foreground uppercase tracking-tight">{vehicle.shop_name}</span>
+                                </div>
+                            </div>
+                            <WorkshopButton
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.push('/app/repairs/create?vehicle=' + vehicle.vehicle_number)}
+                            >
+                                <Plus size={14} className="mr-2" /> New Repair
+                            </WorkshopButton>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="w-full h-px bg-border my-2" />
+
                 {/* Repairs Section */}
-                <div>
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <h3 className="text-base font-black tracking-tight text-foreground uppercase">Service history</h3>
+                            <p className="text-xs text-muted-foreground font-medium">Timeline of all maintenance for this vehicle</p>
+                        </div>
+                    </div>
+
                     <FilterBar
                         searchPlaceholder="Search by service type, status or worker..."
                         search={search}
@@ -413,8 +516,24 @@ export default function VehicleDetailPage() {
                                     <span className="font-mono">₹{Number(selectedBill.service_charge || 0).toFixed(2)}</span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border/50 mt-2">
-                                    <span>Total Amount</span>
+                                {selectedBill.tax_snapshot && Array.isArray(selectedBill.tax_snapshot) && selectedBill.tax_snapshot.length > 0 && (
+                                  <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-border/50">
+                                    {selectedBill.tax_snapshot.map((t: any, i: number) => (
+                                      <div key={i} className="flex justify-between items-center text-[10px] font-bold text-emerald-600">
+                                        <span className="uppercase tracking-widest">{t.name} ({t.rate}%){t.is_inclusive ? ' [Incl.]' : ''}</span>
+                                        <span className="font-mono">₹{Number(t.amount).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border mt-2">
+                                    <div className="flex flex-col">
+                                        <span>Total Amount</span>
+                                        {(selectedBill.tax_total || 0) > 0 && (
+                                            <span className="text-[9px] font-medium text-emerald-600/80">Incl. ₹{Number(selectedBill.tax_total).toFixed(2)} tax</span>
+                                        )}
+                                    </div>
                                     <span className="font-mono">₹{Number(selectedBill.total_amount || 0).toFixed(2)}</span>
                                 </div>
                             </div>

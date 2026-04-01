@@ -61,36 +61,94 @@ exports.getCustomerById = async (req, res) => {
   }
 };
 
-// @desc    Create customer
+// @desc    Create customer with assigned vehicles (new or existing)
 exports.createCustomer = async (req, res) => {
   const { shopId } = req.user;
-  const { name, phone, shop_id } = req.body;
+  const { name, phone, shop_id, vehicles } = req.body;
   const targetShopId = req.user.role === 'super-admin' ? shop_id : shopId;
 
+  const client = await db.getClient();
   try {
-    const result = await db.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       'INSERT INTO customers (shop_id, name, phone) VALUES ($1, $2, $3) RETURNING *',
       [targetShopId, name, phone]
     );
-    res.status(201).json({ success: true, data: result.rows[0] });
+    const customer = result.rows[0];
+
+    if (vehicles && Array.isArray(vehicles)) {
+      for (const v of vehicles) {
+        if (v.id) {
+           // Assign existing vehicle
+           await client.query(
+             'UPDATE vehicles SET customer_id = $1 WHERE id = $2 AND shop_id = $3',
+             [customer.id, v.id, targetShopId]
+           );
+        } else if (v.vehicle_number) {
+           // Create new vehicle
+           await client.query(
+             'INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type) VALUES ($1, $2, $3, $4, $5)',
+             [customer.id, targetShopId, v.vehicle_number, v.model_name, v.vehicle_type || 'Car']
+           );
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ success: true, data: customer });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('createCustomer Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 
-// @desc    Update customer
+// @desc    Update customer and manage vehicles
 exports.updateCustomer = async (req, res) => {
-  const { name, phone } = req.body;
+  const { name, phone, vehicles } = req.body;
+  const { shopId } = req.user;
+
+  const client = await db.getClient();
   try {
-    const result = await db.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       'UPDATE customers SET name = $1, phone = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
       [name, phone, req.params.id]
     );
-    res.status(200).json({ success: true, data: result.rows[0] });
+    const customer = result.rows[0];
+
+    // Manage vehicles
+    if (vehicles && Array.isArray(vehicles)) {
+      for (const v of vehicles) {
+        if (v.id) {
+           // Re-assign or update existing? 
+           // In this context, mostly reassignment of unassigned or change owner.
+           await client.query(
+             'UPDATE vehicles SET customer_id = $1 WHERE id = $2',
+             [customer.id, v.id]
+           );
+        } else if (v.vehicle_number) {
+           // Create new
+           await client.query(
+             'INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type) VALUES ($1, $2, $3, $4, $5)',
+             [customer.id, customer.shop_id || shopId, v.vehicle_number, v.model_name, v.vehicle_type || 'Car']
+           );
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json({ success: true, data: customer });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('updateCustomer Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 

@@ -31,7 +31,7 @@ exports.saveBill = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
   const repairId = req.params.repairId;
-  const { items, service_charge } = req.body;
+  const { items, service_charge, tax_snapshot = [], tax_total = 0 } = req.body;
 
   try {
     // Check repair access
@@ -39,19 +39,24 @@ exports.saveBill = async (req, res) => {
     if (repairRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Repair not found' });
     if (!isSuperAdmin && repairRes.rows[0].shop_id !== shopId) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    // Calculate total amount
+    // Calculate total amount (items + service + taxes)
     const parsedItems = Array.isArray(items) ? items : [];
     const itemsTotal = parsedItems.reduce((acc, current) => acc + (Number(current.cost) * Number(current.qty)), 0);
-    const totalAmount = itemsTotal + Number(service_charge || 0);
+    const parsedTaxTotal = Number(tax_total || 0);
+    const subtotalBeforeTax = itemsTotal + Number(service_charge || 0);
+    const totalAmount = subtotalBeforeTax + parsedTaxTotal;
 
     const query = `
-      INSERT INTO repair_bills (repair_id, items, service_charge, total_amount)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (repair_id) DO UPDATE 
-      SET items = EXCLUDED.items, service_charge = EXCLUDED.service_charge, total_amount = EXCLUDED.total_amount, updated_at = CURRENT_TIMESTAMP
+      SET items = EXCLUDED.items, service_charge = EXCLUDED.service_charge, 
+          tax_snapshot = EXCLUDED.tax_snapshot, tax_total = EXCLUDED.tax_total,
+          subtotal_before_tax = EXCLUDED.subtotal_before_tax,
+          total_amount = EXCLUDED.total_amount, updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
-    const params = [repairId, JSON.stringify(parsedItems), service_charge || 0, totalAmount];
+    const params = [repairId, JSON.stringify(parsedItems), service_charge || 0, JSON.stringify(tax_snapshot), parsedTaxTotal, subtotalBeforeTax, totalAmount];
 
     const result = await db.query(query, params);
 

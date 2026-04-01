@@ -32,22 +32,23 @@ const NAV_MAIN = [
     label: "WORKSPACE",
     items: [
       { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
-      { href: "/app/repairs/create",  icon: PlusCircle,    title: "New Repair", permission: "create:repair"  },
-      { href: "/app/repairs",     icon: Wrench,         title: "Repairs", permission: "view:repairs"     },
-      { href: "/app/vehicles",    icon: Car,            title: "Vehicles"    },
-      { href: "/app/jobs",        icon: ClipboardList,  title: "Job Cards"   },
+      { href: "/app/repairs/create", icon: PlusCircle, title: "New Repair", permission: "create:repair" },
+      { href: "/app/repairs", icon: Wrench, title: "Repairs", permission: "view:repairs" },
+      { href: "/app/vehicles", icon: Car, title: "Vehicles" },
+      { href: "/app/jobs", icon: ClipboardList, title: "Job Cards" },
     ],
   },
   {
     label: "MANAGEMENT",
     items: [
-      { href: "/app/users",       icon: UsersRound,   title: "Users",       permission: "view:users" },
-      { href: "/app/customers",   icon: Users,        title: "Customers",   permission: "view:customers" },
-      { href: "/app/shops",       icon: Building2,    title: "Shops",       permission: "view:shops" },
-      { href: "/app/roles",       icon: ShieldHalf,   title: "Roles",       permission: "view:role" },
-      { href: "/app/permissions", icon: ShieldCheck,  title: "Permissions", permission: "view:permission" },
-      { href: "/app/invoices",    icon: Receipt,      title: "Invoices",    permission: "view:invoices" },
-      { href: "/app/reports",     icon: BarChart2,    title: "Reports",     permission: "view:reports" },
+      { href: "/app/users", icon: UsersRound, title: "Users", permission: "view:users" },
+      { href: "/app/customers", icon: Users, title: "Customers", permission: "view:customers" },
+      { href: "/app/shops", icon: Building2, title: "Shops", permission: "view:shops" },
+      { href: "/app/roles", icon: ShieldHalf, title: "Roles", permission: "view:role" },
+      { href: "/app/permissions", icon: ShieldCheck, title: "Permissions", permission: "view:permission" },
+      { href: "/app/invoices", icon: Receipt, title: "Invoices", permission: "view:invoices" },
+      { href: "/app/reports", icon: BarChart2, title: "Reports", permission: "view:reports" },
+      { href: "/app/settings", icon: Settings, title: "Settings" },
     ],
   },
 ];
@@ -169,7 +170,7 @@ export function AppSidebar() {
           const visibleItems = group.items.filter(item => {
             // 1. If no permission required, show it
             if (!("permission" in item)) return true;
-            
+
             // 2. Otherwise check explicit permission mapping
             return item.permission && can(item.permission as string);
           });
@@ -223,7 +224,7 @@ export function AppSidebar() {
           ))}
         </div>
 
-      
+
         {isCollapsed && (
           <div className="mt-2 flex justify-center">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">

@@ -5,10 +5,11 @@ import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
-import { Building2, Edit, Trash2, Shield, Phone, Eye } from "lucide-react";
+import { Building2, Edit, Trash2, Shield, Phone, Eye, Wrench } from "lucide-react";
 import { User, userService } from "@/services/user.service";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useRBAC } from "@/lib/rbac";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
@@ -124,7 +125,15 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
 
   const handleCreate = () => router.push("/app/users/create");
   const handleEdit = (row: User) => router.push(`/app/users/edit/${row.id}`);
-  const handleView = (row: User) => { setSelectedUser(row); setIsViewModalOpen(true); };
+  const handleView = async (row: User) => {
+    setIsViewModalOpen(true);
+    const res = await userService.getById(row.id);
+    if (res.success && res.data) {
+      setSelectedUser(res.data);
+    } else {
+      setSelectedUser(row);
+    }
+  };
 
   const handleDelete = (row: User) => {
     pendingDeleteRef.current = row;
@@ -243,6 +252,44 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
                 <p className="text-sm font-medium">{(selectedUser as any).shop_name || "Direct / Unassigned"}</p>
               </div>
             </div>
+
+            {/* Past Repairs Section */}
+            {(selectedUser as any).past_repairs && (selectedUser as any).past_repairs.length > 0 && (
+              <div className="pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                   <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">Recent Assignments</p>
+                   <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Latest 10 Jobs</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {(selectedUser as any).past_repairs.map((r: any) => (
+                    <Link 
+                      key={r.id} 
+                      href={`/app/repairs/${r.id}`}
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border group hover:border-primary/30 transition-all cursor-pointer hover:bg-primary/[0.02]"
+                    >
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors border border-border/50">
+                            <Wrench size={14} />
+                         </div>
+                         <div className="flex flex-col">
+                            <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">#{r.vehicle_number}</span>
+                            <span className="text-[10px] text-muted-foreground">{r.vehicle_model}</span>
+                         </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                         <span className={cn(
+                           "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border",
+                           r.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                         )}>
+                           {r.status}
+                         </span>
+                         <span className="text-[9px] text-muted-foreground font-medium">{new Date(r.repair_date).toLocaleDateString()}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </WorkshopModal>

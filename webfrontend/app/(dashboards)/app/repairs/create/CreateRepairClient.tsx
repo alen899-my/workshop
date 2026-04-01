@@ -16,6 +16,7 @@ import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSele
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { VEHICLE_CONFIG, MAIN_VEHICLES } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export default function CreateRepairClient({ workers }: { workers: User[] }) {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
         model_name: "", 
         vehicle_type: "Car" 
       }));
+      setPrefilledImage(null);
       selectedFromRegistry.current = false;
       return;
     }
@@ -95,6 +97,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
             model_name: v.model_name || prev.model_name,
             vehicle_type: v.vehicle_type || prev.vehicle_type,
           }));
+          setPrefilledImage(v.vehicle_image || null);
           toast({ 
             type: "success", 
             title: "Registry Match", 
@@ -107,6 +110,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
             phone_number: "", 
             model_name: "" 
           }));
+          setPrefilledImage(null);
         }
       } catch (err) {
         console.error("Auto-population failed:", err);
@@ -121,6 +125,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [currentComplaint, setCurrentComplaint] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [prefilledImage, setPrefilledImage] = useState<string | null>(null);
 
   const filteredVehicles = VEHICLE_CONFIG.filter(v =>
     v.label.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
@@ -179,6 +184,8 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
 
     if (file) {
       formData.append("vehicle_image", file);
+    } else if (prefilledImage) {
+      formData.append("prefilled_image", prefilledImage);
     }
 
     const res = await repairService.create(formData);
@@ -244,6 +251,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
                           ...targetVehicle,
                           complaints: f.complaints // Preserve complaints
                         }));
+                        setPrefilledImage(v.vehicle_image || null);
                         
                         setShowSuggestions(false);
                       }}
@@ -371,7 +379,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {filteredVehicles.map(v => (
                 <button
                   key={v.id}
@@ -384,7 +392,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
                     form.vehicle_type === v.id ? "bg-primary/5 border-primary shadow-sm" : "bg-card border-border hover:border-primary/40"
                   )}
                 >
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted/50 group-hover:bg-primary/10 transition-colors" style={form.vehicle_type === v.id ? { backgroundColor: v.color + '20' } : {}}>
+                  <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted/50 group-hover:bg-primary/10 transition-colors" style={form.vehicle_type === v.id ? { backgroundColor: v.color + '20' } : {}}>
                     <v.icon size={18} style={{ color: v.color }} />
                   </div>
                   <div className="flex flex-col overflow-hidden">
@@ -490,7 +498,10 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
           <WorkshopSearchableSelect
             label="Attending Worker"
             placeholder="Assign a worker..."
-            options={workers.map((w) => ({ value: w.id.toString(), label: w.name, subLabel: w.role }))}
+            options={workers
+              .filter(w => w.role === "worker")
+              .map((w) => ({ value: w.id.toString(), label: w.name, subLabel: "Worker" }))
+            }
             value={form.attending_worker_id}
             onChange={(val) => setForm({ ...form, attending_worker_id: String(val) })}
           />
@@ -498,6 +509,14 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
 
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-muted-foreground block">Vehicle Image</label>
+          {prefilledImage && !file && (
+            <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border mb-2 group/img">
+              <Image src={prefilledImage} alt="Vehicle Registry" fill className="object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                 <p className="text-[10px] text-white font-bold uppercase tracking-widest">Existing Image Found</p>
+              </div>
+            </div>
+          )}
           <input
             type="file"
             accept="image/*"

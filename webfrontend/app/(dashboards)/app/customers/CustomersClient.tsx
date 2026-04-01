@@ -5,13 +5,14 @@ import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
-import { User, Phone, Car, Edit, Trash2, Eye, Calendar, MapPin, ChevronRight, Save, X } from "lucide-react";
+import { User, Phone, Car, Edit, Trash2, Eye, Calendar, MapPin, ChevronRight, Save, X, Plus, Link as LinkIcon } from "lucide-react";
 import { Customer, customerService } from "@/services/customer.service";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { useRBAC } from "@/lib/rbac";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { vehicleService } from "@/services/vehicle.service";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -23,7 +24,13 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
   const [formLoading, setFormLoading] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState({ id: undefined as number | undefined, name: "", phone: "" });
+  const [formData, setFormData] = useState({ 
+    id: undefined as number | undefined, 
+    name: "", 
+    phone: "",
+    vehicles: [] as { id?: number; vehicle_number: string; model_name: string; vehicle_type: string; mode: 'new' | 'existing' }[]
+  });
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const pendingDeleteRef = useRef<Customer | null>(null);
 
@@ -33,9 +40,22 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
 
   // We use initialData from server, but keep this for manual refreshes
   const fetchCustomers = async () => {
-    const res = await customerService.getAll();
-    if (res.success) setCustomers(res.data);
+    setLoading(true);
+    const [cRes] = await Promise.all([
+      customerService.getAll()
+    ]);
+    if (cRes.success) setCustomers(cRes.data);
+    
+    // We can also just fetch ALL vehicles using vehicleService if preferred
+    const vehRes = await vehicleService.getAll();
+    if (vehRes.success) setAllVehicles(vehRes.data);
+    
+    setLoading(false);
   };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   const handleOpenForm = (customer?: Customer) => {
     if (customer) {
@@ -43,13 +63,13 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
         toast({ type: "error", title: "Access Denied", description: "You don't have permission" });
         return;
       }
-      setFormData({ id: customer.id, name: customer.name, phone: customer.phone });
+      setFormData({ id: customer.id, name: customer.name, phone: customer.phone, vehicles: (customer as any).vehicles || [] });
     } else {
       if (!can("create:customers")) {
         toast({ type: "error", title: "Access Denied", description: "You don't have permission" });
         return;
       }
-      setFormData({ id: undefined, name: "", phone: "" });
+      setFormData({ id: undefined, name: "", phone: "", vehicles: [] });
     }
     setIsFormModalOpen(true);
   };
@@ -216,7 +236,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
         onClose={() => setIsFormModalOpen(false)}
         title={formData.id ? "Edit Customer" : "New Customer"}
         subtitle="Maintain accurate customer records for communications and billing."
-        width="sm"
+        width="md"
         footer={
           <div className="flex justify-end gap-3 w-full">
             <WorkshopButton variant="outline" size="sm" onClick={() => setIsFormModalOpen(false)}>
@@ -228,35 +248,208 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
           </div>
         }
       >
-        <div className="flex flex-col gap-5 py-2">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Display Name</label>
-            <div className="relative group">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary" />
-              <input
-                type="text"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. John Doe"
-                className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-background focus:border-primary/40"
-              />
+        <div className="flex flex-col gap-8 py-2">
+          
+          {/* Section: Customer Profile */}
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <User size={16} strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black tracking-tight uppercase">Basic Information</h3>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Primary owner details for the account</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                <div className="relative group">
+                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors z-10" />
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. John Smith"
+                    className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-3 text-sm outline-none focus:bg-background focus:border-primary/40 transition-all font-semibold placeholder:font-normal"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Contact Number</label>
+                <div className="relative group">
+                  <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors z-10" />
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +91 9876543210"
+                    className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-3 text-sm outline-none focus:bg-background focus:border-primary/40 transition-all font-semibold placeholder:font-normal"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Phone Number</label>
-            <div className="relative group">
-              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="e.g. 9876543210"
-                className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-background focus:border-primary/40"
-              />
+
+          <div className="w-full h-px bg-border/50" />
+
+          {/* Section: Vehicle Fleet */}
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <Car size={16} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-black tracking-tight uppercase">Managed Vehicles</h3>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Vehicles associated with this customer</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ 
+                    ...prev, 
+                    vehicles: [...prev.vehicles, { vehicle_number: "", model_name: "", vehicle_type: "Car", mode: 'new' }] 
+                  }))}
+                  className="px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 transition-colors flex items-center gap-2"
+                >
+                  <Plus size={12} /> Add New
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ 
+                    ...prev, 
+                    vehicles: [...prev.vehicles, { id: 0, vehicle_number: "", model_name: "", vehicle_type: "", mode: 'existing' }] 
+                  }))}
+                  className="px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 transition-colors flex items-center gap-2"
+                >
+                  <LinkIcon size={12} /> Link Existing
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {formData.vehicles.map((vh, idx) => (
+                <div key={idx} className="p-5 rounded-3xl bg-muted/20 border border-border flex flex-col gap-4 relative group/vh hover:border-primary/20 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      vehicles: prev.vehicles.filter((_, i) => i !== idx)
+                    }))}
+                    className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center opacity-100 sm:opacity-0 group-hover/vh:opacity-100 transition-all shadow-lg z-20 hover:scale-110 active:scale-95"
+                  >
+                    <X size={14} strokeWidth={3} />
+                  </button>
+
+                  <div className="flex items-center justify-between">
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-[2px] px-2 py-0.5 rounded-md border",
+                      vh.mode === 'existing' ? "bg-blue-500/10 text-blue-600 border-blue-500/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                    )}>
+                      {vh.mode === 'existing' ? "Registered in System" : "New Registration"}
+                    </span>
+                  </div>
+
+                  {vh.mode === 'existing' ? (
+                    <div className="flex flex-col gap-2">
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1 text-primary">Search & Select Vehicle</label>
+                       <select
+                         value={vh.id}
+                         onChange={e => {
+                           const vId = Number(e.target.value);
+                           const found = allVehicles.find(v => v.id === vId);
+                           const newVehicles = [...formData.vehicles];
+                           newVehicles[idx] = { ...newVehicles[idx], id: vId, vehicle_number: found?.vehicle_number || "" };
+                           setFormData({ ...formData, vehicles: newVehicles });
+                         }}
+                         className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/40 appearance-none font-bold tracking-tight cursor-pointer shadow-sm"
+                       >
+                          <option value={0}>Choose a vehicle from shop database...</option>
+                          {allVehicles
+                            .filter(v => !formData.vehicles.some(fv => fv.id === v.id && fv !== vh)) 
+                            .map(v => (
+                              <option key={v.id} value={v.id}>{v.vehicle_number} — {v.model_name}</option>
+                            ))
+                          }
+                       </select>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">License Plate</label>
+                          <input
+                            type="text"
+                            value={vh.vehicle_number}
+                            onChange={e => {
+                              const newVehicles = [...formData.vehicles];
+                              newVehicles[idx].vehicle_number = e.target.value;
+                              setFormData({ ...formData, vehicles: newVehicles });
+                            }}
+                            placeholder="ABC 1234"
+                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 uppercase font-bold tracking-widest placeholder:normal-case placeholder:font-normal"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Vehicle Type</label>
+                          <select
+                            value={vh.vehicle_type}
+                            onChange={e => {
+                              const newVehicles = [...formData.vehicles];
+                              newVehicles[idx].vehicle_type = e.target.value;
+                              setFormData({ ...formData, vehicles: newVehicles });
+                            }}
+                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 cursor-pointer font-bold"
+                          >
+                            {VEHICLE_CONFIG.map(v => <option key={v.id} value={v.id}>{v.id}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Make & Model</label>
+                        <input
+                          type="text"
+                          value={vh.model_name}
+                          onChange={e => {
+                            const newVehicles = [...formData.vehicles];
+                            newVehicles[idx].model_name = e.target.value;
+                            setFormData({ ...formData, vehicles: newVehicles });
+                          }}
+                          placeholder="e.g. Maruti Suzuki Swift VXI"
+                          className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {formData.vehicles.length === 0 && (
+                <div className="py-12 border-2 border-dashed border-border rounded-[32px] flex flex-col items-center justify-center gap-4 opacity-50 group hover:opacity-100 hover:border-primary/30 transition-all cursor-pointer bg-muted/10 hover:bg-primary/[0.02]"
+                     onClick={() => setFormData(prev => ({ 
+                       ...prev, 
+                       vehicles: [...prev.vehicles, { vehicle_number: "", model_name: "", vehicle_type: "Car", mode: 'new' }] 
+                     }))}
+                >
+                  <div className="w-16 h-16 rounded-3xl bg-muted border border-border group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-500 flex items-center justify-center">
+                    <Car size={32} strokeWidth={1.5} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5 text-center px-6">
+                    <span className="text-xs font-black uppercase tracking-[3px] text-foreground">No Vehicles Connected</span>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
+                      Every customer needs at least one vehicle.<br/>
+                      <span className="text-primary group-hover:underline cursor-pointer">Click here to start their fleet portfolio.</span>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </WorkshopModal>
+</WorkshopModal>
 
       {/* Confirmation Modal */}
       <ConfirmationModal

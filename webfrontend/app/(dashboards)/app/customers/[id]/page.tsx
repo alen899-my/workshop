@@ -411,8 +411,24 @@ export default function CustomerDetailPage() {
                                     <span className="font-mono">₹{Number(selectedBill.service_charge || 0).toFixed(2)}</span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border/50 mt-2">
-                                    <span>Total Amount</span>
+                                {selectedBill.tax_snapshot && Array.isArray(selectedBill.tax_snapshot) && selectedBill.tax_snapshot.length > 0 && (
+                                  <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-border/50">
+                                    {selectedBill.tax_snapshot.map((t: any, i: number) => (
+                                      <div key={i} className="flex justify-between items-center text-[10px] font-bold text-emerald-600">
+                                        <span className="uppercase tracking-widest">{t.name} ({t.rate}%){t.is_inclusive ? ' [Incl.]' : ''}</span>
+                                        <span className="font-mono">₹{Number(t.amount).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border mt-2">
+                                    <div className="flex flex-col">
+                                        <span>Total Amount</span>
+                                        {(selectedBill.tax_total || 0) > 0 && (
+                                            <span className="text-[9px] font-medium text-emerald-600/80">Incl. ₹{Number(selectedBill.tax_total).toFixed(2)} tax</span>
+                                        )}
+                                    </div>
                                     <span className="font-mono">₹{Number(selectedBill.total_amount || 0).toFixed(2)}</span>
                                 </div>
                             </div>

@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
 
 // @desc    Get all vehicles (scoped by shop)
 exports.getVehicles = async (req, res) => {
@@ -66,10 +67,15 @@ exports.getVehicleById = async (req, res) => {
 // @desc    Create/Sync vehicle (called when adding vehicle or repair)
 exports.createVehicle = async (req, res) => {
   const { shopId } = req.user;
-  const { customer_id, vehicle_number, model_name, vehicle_type, vehicle_image, shop_id } = req.body;
+  const { customer_id, vehicle_number, model_name, vehicle_type, shop_id } = req.body;
   const targetShopId = req.user.role === 'super-admin' ? shop_id : shopId;
+  let vehicle_image = null;
 
   try {
+    if (req.file) {
+      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    }
+
     const result = await db.query(
       `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image) 
        VALUES ($1, $2, $3, $4, $5, $6) 
@@ -85,8 +91,18 @@ exports.createVehicle = async (req, res) => {
 
 // @desc    Update vehicle
 exports.updateVehicle = async (req, res) => {
-  const { customer_id, model_name, vehicle_type, vehicle_image } = req.body;
+  const { customer_id, model_name, vehicle_type } = req.body;
   try {
+    const existing = await db.query('SELECT vehicle_image FROM vehicles WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'Vehicle not found' });
+
+    let vehicle_image = existing.rows[0].vehicle_image;
+
+    if (req.file) {
+      if (vehicle_image) await deleteFromR2(vehicle_image);
+      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    }
+
     const result = await db.query(
       `UPDATE vehicles SET 
         customer_id = COALESCE($1, customer_id),

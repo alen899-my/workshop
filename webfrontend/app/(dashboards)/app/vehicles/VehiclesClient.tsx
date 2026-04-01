@@ -36,6 +36,7 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
     vehicle_type: "Car",
     vehicle_image: ""
   });
+  const [file, setFile] = useState<File | null>(null);
 
   const { toast } = useToast();
   const { can } = useRBAC();
@@ -80,6 +81,7 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
         vehicle_image: ""
       });
     }
+    setFile(null);
     setIsFormModalOpen(true);
   };
 
@@ -91,14 +93,19 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
     }
 
     setFormLoading(true);
-    const { id, ...saveData } = formData;
-    const finalData = {
-      ...saveData,
-      customer_id: Number(saveData.customer_id)
-    };
-    const res = id
-      ? await vehicleService.update(id, finalData)
-      : await vehicleService.create(finalData);
+
+    const submitData = new FormData();
+    submitData.append("customer_id", String(formData.customer_id));
+    submitData.append("vehicle_number", formData.vehicle_number);
+    submitData.append("model_name", formData.model_name);
+    submitData.append("vehicle_type", formData.vehicle_type);
+    if (file) {
+      submitData.append("vehicle_image", file);
+    }
+
+    const res = formData.id
+      ? await vehicleService.update(formData.id, submitData)
+      : await vehicleService.create(submitData);
 
     if (res.success) {
       toast({ type: "success", title: "Success", description: `Vehicle ${formData.id ? 'updated' : 'registered'} successfully` });
@@ -322,18 +329,34 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
             </div>
           </div>
 
-          {/* Image URL (Optional) */}
+          {/* Photo Selection (Optional) */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle Photo URL</label>
-            <div className="relative group">
-              <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-              <input
-                type="text"
-                value={formData.vehicle_image}
-                onChange={e => setFormData({ ...formData, vehicle_image: e.target.value })}
-                placeholder="Link to storage or R2 image..."
-                className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-background focus:border-primary/40 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)] transition-all"
-              />
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle Photo</label>
+            <div className="flex flex-col gap-3">
+              {(file || formData.vehicle_image) && (
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border shadow-sm group">
+                  <Image
+                    src={file ? URL.createObjectURL(file) : formData.vehicle_image}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <p className="text-[10px] text-white font-bold uppercase tracking-widest cursor-default">Current Selection</p>
+                  </div>
+                </div>
+              )}
+              <div className="relative group">
+                <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    if (e.target.files?.[0]) setFile(e.target.files[0]);
+                  }}
+                  className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2 text-xs outline-none focus:bg-background focus:border-primary/40 transition-all file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 file:cursor-pointer"
+                />
+              </div>
             </div>
           </div>
         </div>

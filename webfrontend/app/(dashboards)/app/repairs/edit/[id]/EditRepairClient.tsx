@@ -284,7 +284,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
               />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {filteredVehicles.map(v => (
                 <button
                   key={v.id}
@@ -297,7 +297,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
                     form.vehicle_type === v.id ? "bg-primary/5 border-primary shadow-sm" : "bg-card border-border hover:border-primary/40"
                   )}
                 >
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted/50 group-hover:bg-primary/10 transition-colors" style={form.vehicle_type === v.id ? { backgroundColor: v.color + '20' } : {}}>
+                  <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted/50 group-hover:bg-primary/10 transition-colors" style={form.vehicle_type === v.id ? { backgroundColor: v.color + '20' } : {}}>
                     <v.icon size={18} style={{ color: v.color }} />
                   </div>
                   <div className="flex flex-col overflow-hidden">
@@ -387,7 +387,10 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
           <WorkshopSearchableSelect
             label="Attending Worker"
             placeholder="Assign a worker..."
-            options={workers.map((w) => ({ value: w.id.toString(), label: w.name, subLabel: w.role }))}
+            options={workers
+              .filter(w => w.role === "worker")
+              .map((w) => ({ value: w.id.toString(), label: w.name, subLabel: "Worker" }))
+            }
             value={form.attending_worker_id}
             onChange={(val) => setForm({ ...form, attending_worker_id: String(val) })}
           />

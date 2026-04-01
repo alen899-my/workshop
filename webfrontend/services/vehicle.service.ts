@@ -49,12 +49,13 @@ export const vehicleService = {
     }
   },
 
-  async create(data: Partial<Vehicle>): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
+  async create(data: FormData | Partial<Vehicle>): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuth() as any },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {
@@ -62,12 +63,13 @@ export const vehicleService = {
     }
   },
 
-  async update(id: string | number, data: Partial<Vehicle>): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
+  async update(id: string | number, data: FormData | Partial<Vehicle>): Promise<{ success: boolean; data?: Vehicle; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuth() as any },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {
