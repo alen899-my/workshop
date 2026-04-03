@@ -66,3 +66,60 @@ exports.saveBill = async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
+
+// @desc    Get all bills for a shop
+exports.getAllBills = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+
+  try {
+    let query = `
+      SELECT 
+        rb.id, rb.repair_id, rb.items, rb.service_charge, 
+        rb.tax_snapshot, rb.tax_total, rb.subtotal_before_tax, rb.total_amount, rb.created_at, rb.updated_at,
+        r.vehicle_number, r.owner_name, r.repair_date, r.status, r.vehicle_image, r.vehicle_type, r.service_type, r.phone_number, r.complaints,
+        u.name as attending_worker_name
+      FROM repair_bills rb
+      JOIN repairs r ON rb.repair_id = r.id
+      LEFT JOIN users u ON r.attending_worker_id = u.id
+    `;
+    const params = [];
+
+    if (!isSuperAdmin) {
+      query += ` WHERE r.shop_id = $1`;
+      params.push(shopId);
+    }
+    
+    query += ` ORDER BY rb.created_at DESC`;
+
+    const result = await db.query(query, params);
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('getAllBills Error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+// @desc    Delete bill for a repair
+exports.deleteBill = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+  const id = req.params.id;
+
+  try {
+    // Verify ownership
+    const checkRes = await db.query(`
+      SELECT rb.id FROM repair_bills rb
+      JOIN repairs r ON rb.repair_id = r.id
+      WHERE rb.id = $1 ${isSuperAdmin ? '' : 'AND r.shop_id = $2'}
+    `, isSuperAdmin ? [id] : [id, shopId]);
+
+    if (checkRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Bill not found' });
+
+    await db.query('DELETE FROM repair_bills WHERE id = $1', [id]);
+    res.status(200).json({ success: true, message: 'Bill deleted successfully' });
+  } catch (error) {
+    console.error('deleteBill Error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};

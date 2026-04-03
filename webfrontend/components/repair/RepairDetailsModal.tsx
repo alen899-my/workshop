@@ -18,13 +18,15 @@ interface RepairDetailsModalProps {
   onClose: () => void;
   repair: any;
   currencyCode?: string;
+  mode?: 'full' | 'bill';
 }
 
 export function RepairDetailsModal({ 
   isOpen, 
   onClose, 
   repair, 
-  currencyCode = 'INR'
+  currencyCode = 'INR',
+  mode = 'full'
 }: RepairDetailsModalProps) {
   const { symbol } = useCurrency({ shopCurrency: currencyCode });
   const [selectedBill, setSelectedBill] = useState<any>(null);
@@ -33,13 +35,20 @@ export function RepairDetailsModal({
 
   React.useEffect(() => {
     if (isOpen && repair?.id) {
-      billService.getByRepairId(repair.id).then((res) => {
-        if (res.success && res.data) {
-          setSelectedBill(res.data);
-        }
-      });
+      // If we are in bill mode and the repair object already has bill details (like from InvoicesClient)
+      // we might not need to fetch again, but it's safer to fetch or use provided data.
+      // In InvoicesClient, the 'repair' passed is actually a Bill object.
+      if (mode === 'bill' && repair.items) {
+        setSelectedBill(repair);
+      } else {
+        billService.getByRepairId(repair.id).then((res) => {
+          if (res.success && res.data) {
+            setSelectedBill(res.data);
+          }
+        });
+      }
     }
-  }, [isOpen, repair?.id]);
+  }, [isOpen, repair?.id, mode, repair]);
 
   const handleDownloadPdf = async () => {
     if (!repair?.id) return;
@@ -87,12 +96,16 @@ export function RepairDetailsModal({
 
   if (!repair) return null;
 
+  const isBillOnly = mode === 'bill';
+
   return (
     <WorkshopModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Repair Details"
-      subtitle={`Viewing detailed information for ${repair.vehicle_number || 'repair job'}.`}
+      title={isBillOnly ? "Invoice Details" : "Repair Details"}
+      subtitle={isBillOnly 
+        ? `Viewing billing information for ${repair.vehicle_number}.` 
+        : `Viewing detailed information for ${repair.vehicle_number || 'repair job'}.`}
       footer={
         <div className="flex flex-col sm:flex-row justify-between w-full gap-4">
           <div className="flex flex-col sm:flex-row gap-2">
@@ -110,7 +123,7 @@ export function RepairDetailsModal({
       }
     >
       <div className="flex flex-col gap-6">
-        {repair.vehicle_image && (
+        {!isBillOnly && repair.vehicle_image && (
           <button 
             type="button" 
             className="w-full h-48 relative rounded-xl overflow-hidden border group/img"
@@ -127,163 +140,173 @@ export function RepairDetailsModal({
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle No</p>
             <p className="text-sm font-bold text-foreground">{repair.vehicle_number}</p>
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle Type / Model</p>
-            <div className="flex items-center gap-2">
-              {(() => {
-                const v = VEHICLE_CONFIG.find(vc => vc.id === repair.vehicle_type);
-                if (v) {
-                  const Icon = v.icon;
-                  return <div className="w-6 h-6 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: v.color }}><Icon size={14} /></div>;
-                }
-                return null;
-              })()}
-              <p className="text-sm font-bold text-foreground">
-                {repair.vehicle_type || 'Car'} {repair.model_name ? `- ${repair.model_name}` : ''}
-              </p>
+          {!isBillOnly && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle Type / Model</p>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const v = VEHICLE_CONFIG.find(vc => vc.id === repair.vehicle_type);
+                  if (v) {
+                    const Icon = v.icon;
+                    return <div className="w-6 h-6 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: v.color }}><Icon size={14} /></div>;
+                  }
+                  return null;
+                })()}
+                <p className="text-sm font-bold text-foreground">
+                  {repair.vehicle_type || 'Car'} {repair.model_name ? `- ${repair.model_name}` : ''}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Owner Name</p>
             <p className="text-sm font-bold text-foreground">{repair.owner_name || 'N/A'}</p>
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Phone</p>
-            <p className="text-sm font-bold text-foreground">{repair.phone_number || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Service Type</p>
-            <WorkshopBadge variant="primary" size="xs">
-              {repair.service_type || 'Repair'}
-            </WorkshopBadge>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
-            <WorkshopBadge 
-              variant={
-                repair.status === 'Completed' ? 'success' : 
-                repair.status === 'In Progress' ? 'warning' :
-                repair.status === 'Started' ? 'info' : 'secondary'
-              } 
-              size="xs"
-            >
-              {repair.status || 'Pending'}
-            </WorkshopBadge>
-          </div>
+          {!isBillOnly && (
+            <>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Phone</p>
+                <p className="text-sm font-bold text-foreground">{repair.phone_number || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Service Type</p>
+                <WorkshopBadge variant="primary" size="xs">
+                  {repair.service_type || 'Repair'}
+                </WorkshopBadge>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</p>
+                <WorkshopBadge 
+                  variant={
+                    repair.status === 'Completed' ? 'success' : 
+                    repair.status === 'In Progress' ? 'warning' :
+                    repair.status === 'Started' ? 'info' : 'secondary'
+                  } 
+                  size="xs"
+                >
+                  {repair.status || 'Pending'}
+                </WorkshopBadge>
+              </div>
+            </>
+          )}
         </div>
 
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
-            <Calendar size={12} className="mr-1" /> Schedule
-          </p>
-          <div className="p-4 rounded-lg bg-muted/30 border border-border">
-            <p className="text-sm font-medium text-foreground">
-              {repair.repair_date ? new Date(repair.repair_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not scheduled'}
-            </p>
-          </div>
-        </div>
+        {!isBillOnly && (
+          <>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
+                <Calendar size={12} className="mr-1" /> Schedule
+              </p>
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <p className="text-sm font-medium text-foreground">
+                  {repair.repair_date ? new Date(repair.repair_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not scheduled'}
+                </p>
+              </div>
+            </div>
 
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
-            <User size={12} className="mr-1" /> Assigned Worker
-          </p>
-          <div className="p-4 rounded-lg bg-muted/30 border border-border">
-            <p className="text-sm font-medium text-foreground">{repair.attending_worker_name || 'Unassigned'}</p>
-          </div>
-        </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
+                <User size={12} className="mr-1" /> Assigned Worker
+              </p>
+              <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                <p className="text-sm font-medium text-foreground">{repair.attending_worker_name || 'Unassigned'}</p>
+              </div>
+            </div>
 
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
-            <FileText size={12} className="mr-1" /> Job Card Details
-          </p>
-          {(() => {
-            let parsed: any = repair.complaints;
-            if (typeof parsed === 'string') {
-              try { parsed = JSON.parse(parsed); } catch (e) { /* ignore */ }
-            }
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
+                <FileText size={12} className="mr-1" /> Job Card Details
+              </p>
+              {(() => {
+                let parsed: any = repair.complaints;
+                if (typeof parsed === 'string') {
+                  try { parsed = JSON.parse(parsed); } catch (e) { /* ignore */ }
+                }
 
-            const labelMap: Record<string, string> = {
-              "Repair": "Repair Details",
-              "Servicing": "Service List",
-              "Inspection": "Inspection Checklist",
-              "Modification": "Modification Plan",
-              "Other": "Other Requests"
-            };
+                const labelMap: Record<string, string> = {
+                  "Repair": "Repair Details",
+                  "Servicing": "Service List",
+                  "Inspection": "Inspection Checklist",
+                  "Modification": "Modification Plan",
+                  "Other": "Other Requests"
+                };
 
-            const isBlockFormat = Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'type' in parsed[0];
+                const isBlockFormat = Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'type' in parsed[0];
 
-            if (isBlockFormat) {
-              return (
-                <div className="space-y-6">
-                  {parsed.map((block: any, bIdx: number) => (
-                    <div key={bIdx} className="border-l-4 border-primary pl-4 py-1">
-                      <p className="text-[10px] font-black uppercase tracking-[2px] text-primary mb-3">
-                        {labelMap[block.type] || block.type + " Details"}
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {block.tasks.length === 0 && <p className="text-xs text-muted-foreground italic">No specific tasks added.</p>}
-                        {block.tasks.map((t: any, tIdx: number) => (
-                          <div key={tIdx} className={cn(
+                if (isBlockFormat) {
+                  return (
+                    <div className="space-y-6">
+                      {parsed.map((block: any, bIdx: number) => (
+                        <div key={bIdx} className="border-l-4 border-primary pl-4 py-1">
+                          <p className="text-[10px] font-black uppercase tracking-[2px] text-primary mb-3">
+                            {labelMap[block.type] || block.type + " Details"}
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            {block.tasks.length === 0 && <p className="text-xs text-muted-foreground italic">No specific tasks added.</p>}
+                            {block.tasks.map((t: any, tIdx: number) => (
+                              <div key={tIdx} className={cn(
+                                "flex items-center gap-2 p-2 rounded-lg border transition-all",
+                                t.fixed ? "bg-green-500/5 border-green-500/10" : "bg-muted/30 border-border"
+                              )}>
+                                {t.fixed ? (
+                                  <ShieldCheck size={12} className="text-green-500" strokeWidth={3} />
+                                ) : (
+                                  <div className="w-3 h-3 rounded-none border border-muted-foreground/30" />
+                                )}
+                                <span className={cn(
+                                  "text-sm font-medium",
+                                  t.fixed ? "line-through text-muted-foreground/60" : "text-foreground"
+                                )}>
+                                  {t.text}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {parsed.map((c: any, i: number) => {
+                        const isFixed = typeof c === 'object' ? c.fixed : false;
+                        const text = typeof c === 'object' ? c.text : c;
+                        return (
+                          <div key={i} className={cn(
                             "flex items-center gap-2 p-2 rounded-lg border transition-all",
-                            t.fixed ? "bg-green-500/5 border-green-500/10" : "bg-muted/30 border-border"
+                            isFixed ? "bg-green-500/5 border-green-500/10" : "bg-muted/30 border-border"
                           )}>
-                            {t.fixed ? (
+                            {isFixed ? (
                               <ShieldCheck size={12} className="text-green-500" strokeWidth={3} />
                             ) : (
                               <div className="w-3 h-3 rounded-none border border-muted-foreground/30" />
                             )}
                             <span className={cn(
                               "text-sm font-medium",
-                              t.fixed ? "line-through text-muted-foreground/60" : "text-foreground"
+                              isFixed ? "line-through text-muted-foreground/60" : "text-foreground"
                             )}>
-                              {t.text}
+                              {text}
                             </span>
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              );
-            }
+                  );
+                }
 
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              return (
-                <div className="flex flex-col gap-2">
-                  {parsed.map((c: any, i: number) => {
-                    const isFixed = typeof c === 'object' ? c.fixed : false;
-                    const text = typeof c === 'object' ? c.text : c;
-                    return (
-                      <div key={i} className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg border transition-all",
-                        isFixed ? "bg-green-500/5 border-green-500/10" : "bg-muted/30 border-border"
-                      )}>
-                        {isFixed ? (
-                          <ShieldCheck size={12} className="text-green-500" strokeWidth={3} />
-                        ) : (
-                          <div className="w-3 h-3 rounded-none border border-muted-foreground/30" />
-                        )}
-                        <span className={cn(
-                          "text-sm font-medium",
-                          isFixed ? "line-through text-muted-foreground/60" : "text-foreground"
-                        )}>
-                          {text}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            }
-
-            return <p className="text-xs text-muted-foreground italic">No job details recorded.</p>;
-          })()}
-        </div>
+                return <p className="text-xs text-muted-foreground italic">No job details recorded.</p>;
+              })()}
+            </div>
+          </>
+        )}
 
         {selectedBill && (selectedBill.items?.length > 0 || selectedBill.service_charge > 0) && (
-          <div className="mt-2 pt-4 border-t border-border">
+          <div className={cn("mt-2", !isBillOnly && "pt-4 border-t border-border")}>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
-              <Receipt size={12} className="mr-1" /> Bill
+              <Receipt size={12} className="mr-1" /> Bill Details
             </p>
 
             {selectedBill.items?.length > 0 && (

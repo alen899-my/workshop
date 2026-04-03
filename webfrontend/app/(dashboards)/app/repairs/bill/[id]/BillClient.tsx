@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/WorkshopToast";
 import { billService, BillItem } from "@/services/bill.service";
 import { taxService, TaxSetting } from "@/services/tax.service";
 import { useCurrency } from "@/lib/currency";
+import { useRBAC } from "@/lib/rbac";
 import {
   Plus,
   Trash2,
@@ -30,7 +31,8 @@ interface BillClientProps {
 export default function BillClient({ id, initialRepair, initialBill, currencyCode = 'INR' }: BillClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { symbol } = useCurrency({ shopCurrency: currencyCode });
+  const { user } = useRBAC();
+  const { symbol, format } = useCurrency(user);
 
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<BillItem[]>(initialBill?.items || []);
@@ -229,9 +231,9 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                           </div>
                         </div>
                         <div>
-                          <label className="text-[9px] uppercase font-black tracking-widest text-muted-foreground mb-1 block">Amount</label>
+                          <label className="sm:hidden text-[9px] uppercase font-black tracking-widest text-muted-foreground mr-auto block">Amount</label>
                           <div className="py-1.5 text-sm font-black text-foreground text-right pr-1">
-                            {symbol}{Number(item.cost * (item.qty || 1)).toLocaleString()}
+                            {format(Number(item.cost * (item.qty || 1)))}
                           </div>
                         </div>
                       </div>
@@ -276,7 +278,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                       </div>
                       <div className="flex justify-end items-center px-4 py-2">
                         <span className="text-sm font-black text-foreground">
-                          {symbol}{Number(item.cost * (item.qty || 1)).toLocaleString()}
+                          {format(Number(item.cost * (item.qty || 1)))}
                         </span>
                       </div>
                       <div className="flex justify-center items-center px-1 py-2">
@@ -358,7 +360,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                         )}
                         {isOn && previewAmount > 0.01 && (
                           <span className="text-[10px] font-black text-emerald-600">
-                            Adds {symbol}{previewAmount.toFixed(2)} to this bill
+                            Adds {format(previewAmount)} to this bill
                           </span>
                         )}
                       </div>
@@ -396,7 +398,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                   Parts Subtotal
                 </span>
               </div>
-              <span className="text-sm font-bold text-foreground">{symbol}{itemsSubtotal.toLocaleString()}</span>
+              <span className="text-sm font-bold text-foreground">{format(itemsSubtotal)}</span>
             </div>
 
             {/* Service Charge */}
@@ -429,16 +431,14 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                   <Percent size={11} /> Tax Breakdown
                 </span>
                 {taxSnapshot.map((t, i) => (
-                  <div key={i} className="flex justify-between items-baseline gap-2 text-xs text-muted-foreground">
-                    <span className="font-bold min-w-0 truncate">
-                      {t.name} ({t.rate}%){t.is_inclusive ? " [Inclusive]" : ""}
-                    </span>
-                    <span className="font-black text-emerald-700 shrink-0">{symbol}{t.amount.toFixed(2)}</span>
+                  <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                    <span className="font-bold">{t.name} ({t.rate}%) {t.is_inclusive ? '[Inclusive]' : ''}</span>
+                    <span className="font-black text-emerald-700">{format(t.amount)}</span>
                   </div>
                 ))}
-                <div className="pt-2 border-t border-emerald-500/20 flex justify-between items-center font-black text-sm text-emerald-700">
+                <div className="pt-1 border-t border-emerald-500/20 flex justify-between font-black text-sm text-emerald-700">
                   <span>Total Tax</span>
-                  <span>{symbol}{taxTotal.toFixed(2)}</span>
+                  <span>{format(taxTotal)}</span>
                 </div>
               </div>
             )}
@@ -452,12 +452,12 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                 </span>
                 {taxTotal > 0 && (
                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                    Includes {symbol}{taxTotal.toFixed(2)} in taxes
+                    Includes {format(taxTotal)} in taxes
                   </span>
                 )}
               </div>
-              <span className="text-3xl sm:text-4xl font-black tracking-tighter text-primary">
-                {symbol}{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-4xl font-black tracking-tighter text-primary">
+                {format(grandTotal)}
               </span>
             </div>
           </div>

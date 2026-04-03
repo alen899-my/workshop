@@ -10,4 +10,10 @@ router.get('/repair/:repairId', authenticate, authorize('view:repairs'), billCon
 // @route   POST /api/bills/repair/:repairId
 router.post('/repair/:repairId', authenticate, authorize('edit:repair'), billController.saveBill);
 
+// @route   GET /api/bills
+router.get('/', authenticate, authorize('view:invoices'), billController.getAllBills);
+
+// @route   DELETE /api/bills/:id
+router.delete('/:id', authenticate, authorize('edit:repair'), billController.deleteBill);
+
 module.exports = router;

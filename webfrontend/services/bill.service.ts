@@ -31,9 +31,33 @@ export interface Bill {
   tax_total?: number;
   subtotal_before_tax?: number;
   total_amount: number;
+  // Joined fields from repairs
+  vehicle_number?: string;
+  owner_name?: string;
+  repair_date?: string;
+  status?: string;
+  created_at?: string;
+  vehicle_image?: string;
+  vehicle_type?: string;
+  service_type?: string;
+  phone_number?: string;
+  complaints?: string;
+  attending_worker_name?: string;
 }
 
 export const billService = {
+  /** Fetch all bills for the current shop */
+  async getAll(): Promise<{ success: boolean; data?: Bill[]; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}`, {
+        cache: 'no-store',
+        headers: getAuth()
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: "Connection failed" };
+    }
+  },
   /** Fetch a repair bill */
   async getByRepairId(repairId: string | number): Promise<{ success: boolean; data?: Bill; error?: string }> {
     try {
@@ -66,6 +90,19 @@ export const billService = {
       return await res.json();
     } catch (error) {
       return { success: false, error: "Save failed" };
+    }
+  },
+
+  /** Delete a bill by ID */
+  async delete(id: string | number): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, { 
+        method: "DELETE",
+        headers: getAuth()
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: "Network error" };
     }
   }
 };
