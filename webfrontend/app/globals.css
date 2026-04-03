@@ -100,56 +100,52 @@
 }
 
 .dark {
-    /* Dark mode — deep garage interior at night (image 1, inner bay ~#1e3a38) */
-    --background: oklch(0.18 0.040 184);            /* deep teal-black garage interior */
-    --foreground: oklch(0.92 0.018 160);            /* pale sage chalk text */
+    /* Pitch Black Dark Mode */
+    --background: oklch(0 0 0);                     /* True black #000000 */
+    --foreground: oklch(0.98 0 0);                  /* Crisp white text */
 
-    --card: oklch(0.22 0.044 184);
-    --card-foreground: oklch(0.92 0.018 160);
+    --card: oklch(0.05 0 0);                        /* Very dark gray #0d0d0d */
+    --card-foreground: oklch(0.98 0 0);
 
-    --popover: oklch(0.22 0.044 184);
-    --popover-foreground: oklch(0.92 0.018 160);
+    --popover: oklch(0.05 0 0);
+    --popover-foreground: oklch(0.98 0 0);
 
-    /* Primary — bright teal under fluorescent light */
-    --primary: oklch(0.58 0.090 188);
-    --primary-foreground: oklch(0.96 0.014 188);
+    /* Primary: Teal (Exact match to Light Mode) */
+    --primary: oklch(0.48 0.072 188);               /* Teal */
+    --primary-foreground: oklch(0.05 0 0);          /* Dark text for button contrast */
 
-    /* Secondary — dark bay wall panel */
-    --secondary: oklch(0.26 0.048 184);
-    --secondary-foreground: oklch(0.88 0.020 165);
+    --secondary: oklch(0.12 0 0);                   /* Dark neutral #1e1e1e */
+    --secondary-foreground: oklch(0.88 0 0);
 
-    /* Muted — oil-stained shadow */
-    --muted: oklch(0.24 0.038 184);
-    --muted-foreground: oklch(0.56 0.050 175);
+    --muted: oklch(0.15 0 0);                       /* #262626 */
+    --muted-foreground: oklch(0.65 0 0);            /* #a3a3a3 */
 
-    /* Accent — sky blue door under garage light */
-    --accent: oklch(0.62 0.088 218);
-    --accent-foreground: oklch(0.96 0.014 188);
+    --accent: oklch(0.15 0.040 188);                /* Dark Teal for ghost/outline hover */
+    --accent-foreground: oklch(0.85 0.090 188);     /* Bright Teal Text */
 
-    /* Destructive — signal red in the dark */
-    --destructive: oklch(0.52 0.190 20);
+    --destructive: oklch(0.52 0.190 20);            /* Red */
 
-    /* Borders — dark corrugated panel seam */
-    --border: oklch(1 0 0 / 9%);
-    --input: oklch(1 0 0 / 13%);
-    --ring: oklch(0.58 0.075 188);
+    /* Grayscale Borders */
+    --border: oklch(0.15 0 0);                      /* #262626 */
+    --input: oklch(0.15 0 0);
+    --ring: oklch(0.48 0.072 188);
 
     /* Charts */
-    --chart-1: oklch(0.62 0.082 188);              /* teal lit */
-    --chart-2: oklch(0.66 0.065 162);              /* sage mid */
-    --chart-3: oklch(0.62 0.088 218);              /* sky blue */
-    --chart-4: oklch(0.68 0.130 80);               /* amber post */
-    --chart-5: oklch(0.60 0.145 44);               /* hazard orange */
+    --chart-1: oklch(0.48 0.072 188);              /* Teal */
+    --chart-2: oklch(0.66 0.065 162);              /* Sage */
+    --chart-3: oklch(0.70 0.100 280);              /* Purple */
+    --chart-4: oklch(0.68 0.130 80);               /* Amber */
+    --chart-5: oklch(0.60 0.145 44);               /* Hazard orange */
 
-    /* Sidebar — night garage, deepest corner (~#0e2422) */
-    --sidebar: oklch(0.12 0.034 184);
-    --sidebar-foreground: oklch(0.88 0.020 165);
-    --sidebar-primary: oklch(0.58 0.090 188);
-    --sidebar-primary-foreground: oklch(0.96 0.014 188);
-    --sidebar-accent: oklch(0.20 0.042 184);
-    --sidebar-accent-foreground: oklch(0.88 0.020 165);
-    --sidebar-border: oklch(1 0 0 / 9%);
-    --sidebar-ring: oklch(0.58 0.075 188);
+    /* Sidebar — Pure black to match */
+    --sidebar: oklch(0 0 0);
+    --sidebar-foreground: oklch(0.88 0 0);
+    --sidebar-primary: oklch(0.48 0.072 188);
+    --sidebar-primary-foreground: oklch(0.05 0 0);
+    --sidebar-accent: oklch(0.10 0 0);
+    --sidebar-accent-foreground: oklch(0.88 0 0);
+    --sidebar-border: oklch(0.15 0 0);
+    --sidebar-ring: oklch(0.48 0.072 188);
 }
 
 @theme inline {
@@ -206,6 +202,12 @@
     }
     html {
         font-family: "Fira Mono", monospace;
+    }
+    /* Smooth dark/light mode transition */
+    html:not(.no-transition) * {
+        transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
     }
 }
 

@@ -205,7 +205,7 @@ export default function SignupPage() {
                   Already registered?{" "}
                   <Link
                     href="/login"
-                    className="font-bold text-[oklch(0.38_0.13_248)] underline underline-offset-4 hover:text-[oklch(0.45_0.15_248)] transition-colors"
+                    className="font-bold text-primary underline underline-offset-4 hover:opacity-80 transition-colors"
                   >
                     Sign in
                   </Link>

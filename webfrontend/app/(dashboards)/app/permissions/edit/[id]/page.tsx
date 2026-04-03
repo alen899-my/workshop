@@ -90,11 +90,11 @@ export default function EditPermissionPage() {
               onChange={(e) => setForm({ ...form, permission_name: e.target.value })}
             />
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-[#150618] font-mono">Current Status</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-foreground font-mono">Current Status</label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                className="w-full bg-white border-2 border-[#D1D5DB] text-sm font-medium rounded-sm px-4 py-3 font-mono focus:outline-none focus:border-[#3B82F6] transition-all"
+                className="w-full bg-card border-2 border-border text-sm font-medium rounded-sm px-4 py-3 font-mono focus:outline-none focus:border-primary transition-all"
               >
                 <option value="active">Active Access</option>
                 <option value="inactive">Restricted / Inactive</option>

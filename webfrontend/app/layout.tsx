@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fira_Mono } from "next/font/google";
 import "@/app/globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const firaMono = Fira_Mono({
   weight: ["400", "500", "700"],
@@ -26,9 +27,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={firaMono.variable} suppressHydrationWarning>
       <body className={`${firaMono.className} antialiased`} suppressHydrationWarning>
-        <WorkshopToastProvider>
-          {children}
-        </WorkshopToastProvider>
+        <ThemeProvider>
+          <WorkshopToastProvider>
+            {children}
+          </WorkshopToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

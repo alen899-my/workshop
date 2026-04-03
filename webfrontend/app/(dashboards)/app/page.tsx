@@ -27,8 +27,8 @@ export default function WorkshopAppDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[oklch(0.96_0.008_240)] font-mono">
-        <div className="w-8 h-8 rounded-full border-2 border-[oklch(0.38_0.13_248)] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background font-mono">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -40,8 +40,9 @@ export default function WorkshopAppDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[oklch(0.96_0.008_240)] font-mono">
+    <div className="min-h-screen bg-background font-mono">
      
     </div>
   );
 }
+

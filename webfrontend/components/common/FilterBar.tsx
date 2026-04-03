@@ -37,7 +37,7 @@ export function FilterBar({
         <div
           className={cn(
             "flex items-center gap-2.5 flex-1 rounded-xl border border-border/50 bg-background/50 px-3 py-2.5",
-            "focus-within:border-primary/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300"
+            "focus-within:border-primary/50 focus-within:bg-card focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300"
           )}
         >
           <Search size={14} className="shrink-0 text-primary opacity-60" />
@@ -66,7 +66,7 @@ export function FilterBar({
               "relative flex items-center gap-2 rounded-xl border px-4 py-2.5 transition-all duration-300 shrink-0 shadow-sm active:scale-95",
               open
                 ? "bg-primary text-primary-foreground border-primary"
-                : "border-border/60 bg-background/50 text-foreground hover:bg-white hover:border-primary/40"
+                : "border-border/60 bg-background/50 text-foreground hover:bg-card hover:border-primary/40"
             )}
           >
             <SlidersHorizontal size={14} className={cn(open ? "opacity-100" : "text-primary opacity-70")} />
@@ -127,7 +127,7 @@ export function FilterSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "rounded-xl border border-border/60 bg-white px-4 py-2.5",
+          "rounded-xl border border-border/60 bg-card px-4 py-2.5",
           "text-[13px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300",
           "focus:border-primary/50 focus:ring-4 focus:ring-primary/5 shadow-sm",
           !value && "text-muted-foreground/60"

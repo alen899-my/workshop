@@ -143,7 +143,7 @@ export default function CreatePermissionPage() {
                  <select
                    value={item.status}
                    onChange={(e) => updateItem(idx, 'status', e.target.value as any)}
-                   className="w-full bg-white border border-border text-sm rounded-md px-4 py-3 focus:outline-none focus:border-primary/50 transition-all"
+                   className="w-full bg-card border border-border text-sm rounded-md px-4 py-3 focus:outline-none focus:border-primary/50 transition-all"
                  >
                    <option value="active">Active</option>
                    <option value="inactive">Inactive</option>

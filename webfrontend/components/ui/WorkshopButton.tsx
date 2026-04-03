@@ -34,8 +34,8 @@ const variantStyles: Record<ButtonVariant, string> = {
     "hover:ring-1 hover:ring-destructive/20",
 
   steel:
-    "bg-slate-700 text-white border border-slate-700 " +
-    "hover:bg-slate-800",
+    "bg-foreground text-background border border-foreground " +
+    "hover:bg-foreground/90",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

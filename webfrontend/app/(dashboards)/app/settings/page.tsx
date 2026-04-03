@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { Percent, ChevronRight, Building2, ShieldCheck, Bell, Palette, Coins } from "lucide-react";
 import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
+import { ThemeSelector } from "@/components/ui/ThemeToggle";
 
 const SETTINGS_SECTIONS = [
   {
@@ -55,8 +56,6 @@ export default function SettingsPage() {
                     <div className="flex flex-col gap-1 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold tracking-tight text-foreground">{item.title}</span>
-                        
-                        
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
                     </div>
@@ -66,7 +65,27 @@ export default function SettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* ── Appearance ── */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[3px] text-muted-foreground px-1">Appearance</h2>
+          <div className="p-6 rounded-2xl border border-border bg-card">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 text-violet-600 bg-violet-500/10 border-violet-500/20">
+                <Palette size={18} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-bold tracking-tight text-foreground">Theme Mode</span>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Choose between light and dark mode, or follow your system preference.
+                </p>
+              </div>
+            </div>
+            <ThemeSelector />
+          </div>
+        </div>
       </div>
     </ModuleLayout>
   );
 }
+

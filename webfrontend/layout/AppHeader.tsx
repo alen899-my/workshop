@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, LogOut, UserCog, Clock, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function AppHeader() {
   const [user, setUser] = useState<{ 
@@ -110,8 +111,11 @@ export function AppHeader() {
         </div>
       </div>
 
-      {/* ── Right: shop name + avatar dropdown ── */}
+      {/* ── Right: theme toggle + shop name + avatar dropdown ── */}
       <div className="flex items-center gap-3" ref={dropdownRef}>
+
+        {/* Dark/Light mode toggle */}
+        <ThemeToggle />
 
         {/* Identity labels: Shop Name & Username */}
         <div className="hidden md:flex flex-col items-end gap-0.5">
@@ -131,7 +135,7 @@ export function AppHeader() {
             "flex items-center gap-2 rounded-xl border border-border/50 bg-background/50 p-1 pr-2 transition-all duration-200 active:scale-95",
             dropdownOpen
               ? "border-primary/50 bg-primary/5 shadow-inner"
-              : "hover:border-primary/30 hover:bg-white"
+              : "hover:border-primary/30 hover:bg-card"
           )}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[11px] font-black tracking-tighter text-primary-foreground shadow-md shadow-primary/25">
