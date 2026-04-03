@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
-import { Car, User, Phone, MapPin, Edit, Trash2, Eye, Calendar, Wrench, ShieldCheck, ChevronRight, FileText, Save, Image as ImageIcon, Search } from "lucide-react";
+import { Car, User, Phone, MapPin, Edit, Trash2, Eye, Save, Image as ImageIcon, Search, ExternalLink } from "lucide-react";
 import { Vehicle, vehicleService } from "@/services/vehicle.service";
 import { Customer, customerService } from "@/services/customer.service";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
@@ -13,8 +13,7 @@ import { useToast } from "@/components/ui/WorkshopToast";
 import { useRBAC } from "@/lib/rbac";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
-import { cn } from "@/lib/utils";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: { initialVehicles?: Vehicle[], initialCustomers?: Customer[] }) {
@@ -40,8 +39,6 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
 
   const { toast } = useToast();
   const { can } = useRBAC();
-
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const fetchData = async () => {
@@ -169,7 +166,7 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
         return (
           <div className="flex items-center gap-3">
             {vehicle.vehicle_image ? (
-              <div className="w-10 h-10 rounded-xl overflow-hidden border border-border shadow-sm">
+              <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-border shadow-sm group/thumb shrink-0">
                 <Image
                   src={vehicle.vehicle_image as string}
                   alt={vehicle.model_name}
@@ -177,10 +174,21 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
                   height={40}
                   className="w-full h-full object-cover"
                 />
+                {/* View button overlay on hover */}
+                <a
+                  href={vehicle.vehicle_image as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute inset-0 bg-black/55 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center"
+                  title="View full image"
+                >
+                  <ExternalLink size={13} className="text-white" />
+                </a>
               </div>
             ) : (
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-colors"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-colors shrink-0"
                 style={{ backgroundColor: config.color }}
               >
                 <Icon size={20} strokeWidth={2.5} />
@@ -329,23 +337,47 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
             </div>
           </div>
 
-          {/* Photo Selection (Optional) */}
+          {/* Photo Upload */}
           <div className="flex flex-col gap-2 md:col-span-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle Photo</label>
             <div className="flex flex-col gap-3">
+
+              {/* Existing / selected image — shown with a View button */}
               {(file || formData.vehicle_image) && (
-                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border shadow-sm group">
-                  <Image
-                    src={file ? URL.createObjectURL(file) : formData.vehicle_image}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <p className="text-[10px] text-white font-bold uppercase tracking-widest cursor-default">Current Selection</p>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-muted/30">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-border shrink-0">
+                    <Image
+                      src={file ? URL.createObjectURL(file) : formData.vehicle_image}
+                      alt="Selected"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {file ? file.name : "Current Photo"}
+                    </p>
+                    {file && (
+                      <p className="text-[10px] text-muted-foreground/50">
+                        {(file.size / 1024).toFixed(0)} KB
+                      </p>
+                    )}
+                  </div>
+                  {/* View in new tab */}
+                  <a
+                    href={file ? URL.createObjectURL(file) : formData.vehicle_image}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all shrink-0"
+                  >
+                    <ExternalLink size={11} />
+                    View
+                  </a>
                 </div>
               )}
+
+              {/* File input */}
               <div className="relative group">
                 <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                 <input

@@ -274,7 +274,7 @@ export function WorkshopTable<T>({
                   >
                     {showIndex && (
                       <td className="px-5 py-4 w-12 border-r border-border/30">
-                        <span className="font-mono text-[11px] tabular-nums text-muted-foreground/40 font-bold">
+                        <span className="font-mono text-[11px] tabular-nums text-muted-foreground/40 font-normal">
                           {globalIdx + 1}
                         </span>
                       </td>
@@ -305,8 +305,8 @@ export function WorkshopTable<T>({
                                 onClick={() => action.onClick(row)}
                                 title={action.label}
                                 className={cn(
-                                  "flex items-center gap-1.5 rounded-lg px-3 py-2",
-                                  "text-[12px] font-bold border shadow-sm",
+                                  "flex items-center gap-1.5 rounded-none px-3 py-2",
+                                  "text-[12px] font-medium border shadow-sm",
                                   ACTION_VARIANT[action.variant ?? "default"]
                                 )}
                               >
@@ -398,7 +398,7 @@ export function WorkshopTable<T>({
                     key={p}
                     onClick={() => setPage(Number(p))}
                     className={cn(
-                      "min-w-[34px] h-8.5 rounded-lg text-[12px] font-mono font-black",
+                      "min-w-[34px] h-8.5 rounded-none text-[12px] font-mono font-medium",
                       p === safePage
                         ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 border border-primary"
                         : "text-foreground bg-muted/30 hover:bg-muted hover:text-primary border border-border/80"

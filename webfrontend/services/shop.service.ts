@@ -11,7 +11,13 @@ export interface Shop {
   id: number;
   name: string;
   location: string;
+  address?: string;
+  state?: string;
+  city?: string;
   owner_name: string;
+  phone?: string;
+  country?: string;
+  currency?: string;
   created_at: string;
 }
 

@@ -9,9 +9,12 @@ import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { useRBAC } from "@/lib/rbac";
+import { AuthFormField } from "@/components/ui/AuthFormField";
+import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import {
   Percent, Plus, Trash2, Edit, ToggleLeft, ToggleRight, Globe, Info,
-  CheckCircle2, XCircle, Package, Wrench, Layers, Power, Search
+  CheckCircle2, XCircle, Package, Wrench, Layers, Power, Search, MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FilterBar } from "@/components/common/FilterBar";
@@ -19,17 +22,17 @@ import { WorkshopTable } from "@/components/common/Workshoptable";
 import { ColumnDef } from "@/components/common/Workshoptable";
 
 const APPLIES_TO_OPTIONS = [
-  { value: 'all', label: 'Everything (Parts + Service)', icon: Layers },
-  { value: 'parts', label: 'Parts & Materials Only', icon: Package },
-  { value: 'service', label: 'Labor & Service Only', icon: Wrench },
+  { value: 'all', label: 'Everything (Parts + Labor)', icon: Layers },
+  { value: 'parts', label: 'Only Spare Parts', icon: Package },
+  { value: 'service', label: 'Only Labor Charges', icon: Wrench },
 ];
 
 const PRESET_TAXES = [
-  { name: "GST", rate: 18, description: "Goods and Services Tax (India)", is_inclusive: false, applies_to: "all" },
-  { name: "VAT", rate: 20, description: "Value Added Tax (UK/EU)", is_inclusive: true, applies_to: "all" },
-  { name: "Sales Tax", rate: 8, description: "Sales Tax (USA)", is_inclusive: false, applies_to: "parts" },
-  { name: "HST", rate: 13, description: "Harmonized Sales Tax (Canada)", is_inclusive: false, applies_to: "all" },
-  { name: "PST", rate: 7, description: "Provincial Sales Tax (Canada)", is_inclusive: false, applies_to: "parts" },
+  { name: "GST", rate: 18, description: "Standard India GST (18%)", is_inclusive: false, applies_to: "all" },
+  { name: "VAT", rate: 20, description: "Standard UK/EU VAT (20%)", is_inclusive: true, applies_to: "all" },
+  { name: "Sales Tax", rate: 8, description: "US Style Sales Tax", is_inclusive: false, applies_to: "parts" },
+  { name: "HST", rate: 13, description: "Canadian HST", is_inclusive: false, applies_to: "all" },
+  { name: "PST", rate: 7, description: "Canadian PST (Parts Only)", is_inclusive: false, applies_to: "parts" },
 ];
 
 const emptyForm = {
@@ -100,10 +103,11 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
       return;
     }
     setFormLoading(true);
+    const currentShopId = isSuperAdmin ? form.shop_id : (user?.shopId || user?.shop_id);
     const payload = { 
       ...form, 
       rate: Number(form.rate),
-      shop_id: form.shop_id === "" ? undefined : form.shop_id 
+      shop_id: currentShopId === "" ? undefined : Number(currentShopId) 
     };
     const res = editing
       ? await taxService.update(editing.id, payload)
@@ -156,40 +160,43 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
   const columns: ColumnDef<TaxSetting>[] = [
     {
       key: "name",
-      header: "Tax Rule",
+      header: "Tax Rules",
       sortable: true,
       renderCell: (tax) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex flex-col items-center justify-center border font-black shrink-0",
-            tax.is_active ? "bg-primary/10 text-primary border-primary/20" : "bg-muted text-muted-foreground border-border"
+            "w-12 h-12 rounded-xl flex flex-col items-center justify-center border shrink-0 shadow-sm",
+            tax.is_active ? "bg-primary text-primary-foreground border-primary/20" : "bg-muted text-muted-foreground border-border"
           )}>
-            <span className="text-sm">{tax.rate}</span>
+            <span className="text-sm font-normal">{tax.rate}%</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-             <span className="font-bold text-foreground text-sm tracking-tight">{tax.name}</span>
+          <div className="flex flex-col gap-0.5 min-w-0">
+             <span className="font-medium text-foreground text-sm tracking-tight truncate">{tax.name}</span>
              {isSuperAdmin && tax.shop_name && (
-               <span className="text-[9px] font-black text-primary uppercase tracking-[2px]">{tax.shop_name}</span>
+               <WorkshopBadge variant="primary" size="xs" className="mt-1 w-fit">
+                 {tax.shop_name}
+               </WorkshopBadge>
              )}
-             {tax.description && <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{tax.description}</span>}
+             {tax.description && <span className="text-[10px] text-muted-foreground truncate max-w-[200px] hidden sm:block">{tax.description}</span>}
           </div>
         </div>
       )
     },
     {
       key: "mode",
-      header: "Mode & Scope",
+      header: "Application",
+      className: "hidden md:table-cell",
       renderCell: (tax) => (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className={cn(
-               "text-[9px] font-black uppercase tracking-[2px] px-2 py-0.5 rounded-md border inline-block w-fit",
-               tax.is_inclusive ? "bg-blue-500/10 text-blue-600 border-blue-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-            )}>
-               {tax.is_inclusive ? "Inclusive" : "Exclusive"}
-            </span>
+            <WorkshopBadge 
+               variant={tax.is_inclusive ? "info" : "warning"} 
+               size="xs"
+            >
+               {tax.is_inclusive ? "Included" : "Extra"}
+            </WorkshopBadge>
           </div>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1.5">
              {tax.applies_to === 'all' && <Layers size={10} />}
              {tax.applies_to === 'parts' && <Package size={10} />}
              {tax.applies_to === 'service' && <Wrench size={10} />}
@@ -202,22 +209,22 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
       key: "status",
       header: "Status",
       sortable: true,
+      className: "hidden sm:table-cell",
       renderCell: (tax) => (
-        <span className={cn(
-          "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-[2px] border",
-          tax.is_active ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted/50 text-muted-foreground border-border/50"
-        )}>
-          {tax.is_active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-          {tax.is_active ? "Active" : "Inactive"}
-        </span>
+        <WorkshopBadge 
+          variant={tax.is_active ? "success" : "muted"} 
+          size="xs"
+        >
+          {tax.is_active ? "Live" : "Off"}
+        </WorkshopBadge>
       )
     }
   ];
 
   return (
     <ModuleLayout
-      title="Tax Configuration"
-      description="Configure tax rules for your workshop. Taxes are automatically calculated on every bill based on your settings."
+      title="Tax Settings"
+      description="Manage how taxes are applied to your bills. You can set up GST, VAT, or Sales Tax rules here."
       buttonLabel={canManage ? "Add Tax Rule" : undefined}
       onButtonClick={canManage ? openCreate : undefined}
       backUrl="/app/settings"
@@ -225,38 +232,40 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
       <div className="flex flex-col gap-10">
 
         {/* Info Banner */}
-        <div className="p-6 rounded-3xl bg-primary/5 border border-primary/20 flex items-start gap-5">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+        <div className="p-6 rounded-none bg-primary/5 border border-primary/20 flex items-start gap-5">
+          <div className="w-12 h-12 rounded-none bg-primary/10 flex items-center justify-center text-primary shrink-0">
             <Globe size={24} strokeWidth={1.5} />
           </div>
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-black uppercase tracking-tight text-foreground">Global Tax Support</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              This system supports <strong>exclusive taxes</strong> (added on top — used in India GST, US Sales Tax) and <strong>inclusive taxes</strong> (already inside the price — used in UK/EU VAT).
-              Each tax can be scoped to apply on <em>Parts Only</em>, <em>Labor Only</em>, or <em>Everything</em>.
-              You can have multiple taxes active at the same time — they all stack and appear on the final bill.
+          <div className="flex flex-col gap-1.5">
+            <h3 className="text-sm font-bold text-foreground">Understanding Tax Rules</h3>
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
+              We support both <strong>Extra Tax</strong> (added on top of your price) and <strong>Included Tax</strong> (built into the price). 
+              Choose whether the tax applies to just spare parts, just labor work, or the entire bill. 
+              Multiple active taxes will be added together on the final invoice.
             </p>
+          </div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[2px] text-emerald-600">Active Taxes</span>
-            <span className="text-4xl font-black text-emerald-600">{activeTaxes.length}</span>
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Applied to every new bill</span>
+          <div className="p-6 rounded-none bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[2px] text-emerald-600">Active Taxes</span>
+            <span className="text-4xl font-normal text-emerald-600">{activeTaxes.length}</span>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Applied to every new bill</span>
           </div>
-          <div className="p-6 rounded-3xl bg-muted/30 border border-border flex flex-col gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground">Inactive Taxes</span>
-            <span className="text-4xl font-black text-foreground">{inactiveTaxes.length}</span>
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Saved but not applied</span>
+          <div className="p-6 rounded-none bg-muted/30 border border-border flex flex-col gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[2px] text-muted-foreground">Inactive Taxes</span>
+            <span className="text-4xl font-normal text-foreground">{inactiveTaxes.length}</span>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Saved but not applied</span>
           </div>
-          <div className="p-6 rounded-3xl bg-primary/5 border border-primary/20 flex flex-col gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[2px] text-primary">Combined Rate</span>
-            <span className="text-4xl font-black text-primary">
+          <div className="p-6 rounded-none bg-primary/5 border border-primary/20 flex flex-col gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[2px] text-primary">Combined Rate</span>
+            <span className="text-4xl font-normal text-primary">
               {activeTaxes.reduce((acc, t) => acc + Number(t.rate), 0).toFixed(1)}%
             </span>
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Total from all active taxes</span>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Total from all active taxes</span>
           </div>
         </div>
 
@@ -275,12 +284,12 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                 <Percent size={40} />
               </div>
               <div className="flex flex-col items-center gap-2 text-center px-8">
-                <h3 className="text-sm font-black uppercase tracking-[3px] text-foreground">No Tax Rules Configured</h3>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed max-w-sm">
+                <h3 className="text-sm font-bold uppercase tracking-[3px] text-foreground">No Tax Rules Configured</h3>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest leading-relaxed max-w-sm">
                   Your bills currently show no taxes. Add a tax rule (like GST, VAT, or Sales Tax) to have it automatically applied on every new bill.
                 </p>
                 {canManage && (
-                  <button onClick={openCreate} className="mt-4 px-5 py-2.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-[2px] hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <button onClick={openCreate} className="mt-4 px-5 py-2.5 rounded-none bg-primary text-white text-[10px] font-medium uppercase tracking-[2px] hover:bg-primary/90 transition-colors flex items-center gap-2">
                     <Plus size={14} /> Create First Tax Rule
                   </button>
                 )}
@@ -291,7 +300,20 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
               columns={columns}
               data={filtered}
               actions={canManage ? [
-                { label: "Toggle Active", icon: Power, variant: "success", onClick: handleToggle },
+                { 
+                  label: "Disable", 
+                  icon: Power, 
+                  variant: "danger", 
+                  onClick: handleToggle,
+                  hidden: (row) => !row.is_active 
+                },
+                { 
+                  label: "Enable", 
+                  icon: CheckCircle2, 
+                  variant: "success", 
+                  onClick: handleToggle,
+                  hidden: (row) => row.is_active 
+                },
                 { label: "Edit", icon: Edit, variant: "warning", onClick: openEdit },
                 { label: "Delete", icon: Trash2, variant: "danger", onClick: handleDelete }
               ] : undefined}
@@ -308,10 +330,10 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
         subtitle="Configure a tax to be automatically applied when generating bills."
         width="md"
         footer={
-          <div className="flex justify-end gap-3 w-full">
-            <WorkshopButton variant="outline" size="sm" onClick={() => setFormOpen(false)}>Cancel</WorkshopButton>
-            <WorkshopButton variant="primary" size="sm" loading={formLoading} onClick={handleSubmit} icon={<Plus size={14} />}>
-              {editing ? "Save Changes" : "Create Tax Rule"}
+          <div className="flex items-center justify-end gap-3 w-full border-t pt-4">
+            <WorkshopButton variant="outline" size="sm" onClick={() => setFormOpen(false)}>Close</WorkshopButton>
+            <WorkshopButton variant="primary" size="sm" loading={formLoading} onClick={handleSubmit} icon={<CheckCircle2 size={14} />}>
+              {editing ? "Save Changes" : "Add Tax Rule"}
             </WorkshopButton>
           </div>
         }
@@ -321,16 +343,16 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
           {/* Quick Presets */}
           {!editing && (
             <div className="flex flex-col gap-3">
-              <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Quick Presets (click to fill)</label>
+              <label className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground ml-1">Quick Presets (click to fill)</label>
               <div className="flex flex-wrap gap-2">
                 {PRESET_TAXES.map(preset => (
                   <button
                     key={preset.name}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    className="px-3 py-1.5 rounded-xl bg-muted/40 border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-bold flex items-center gap-2"
+                    className="px-3 py-1.5 rounded-none bg-muted/40 border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-normal flex items-center gap-2"
                   >
-                    <span className="text-primary font-black">{preset.rate}%</span>
+                    <span className="text-primary font-bold">{preset.rate}%</span>
                     {preset.name}
                     <span className="text-[9px] text-muted-foreground">{preset.is_inclusive ? "Incl." : "Excl."}</span>
                   </button>
@@ -341,35 +363,25 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
 
           {/* Super Admin Shop Selector */}
           {isSuperAdmin && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Assign to Shop <span className="text-red-500">*</span></label>
-              <select
-                value={form.shop_id}
-                onChange={e => setForm({ ...form, shop_id: e.target.value === "" ? "" : Number(e.target.value) })}
-                className="w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/40 focus:bg-background transition-all font-bold"
-              >
-                <option value="">-- Select a Shop --</option>
-                {shops.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
+            <WorkshopSearchableSelect
+              label="Assigned Shop"
+              options={shops.map(s => ({ value: s.id, label: s.name }))}
+              value={form.shop_id}
+              onChange={val => setForm({ ...form, shop_id: Number(val) })}
+              placeholder="Select a shop to link this tax rule"
+            />
           )}
 
           {/* Name + Rate */}
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <AuthFormField
+              label="Tax Label (Name)"
+              placeholder="e.g. GST, VAT, Service Tax"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Tax Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. GST, VAT, Sales Tax"
-                className="w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/40 focus:bg-background transition-all font-bold placeholder:font-normal"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Rate (%)</label>
+              <label className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground ml-1">Tax Percentage (%)</label>
               <div className="relative">
                 <input
                   type="number"
@@ -379,28 +391,23 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                   value={form.rate}
                   onChange={e => setForm({ ...form, rate: e.target.value })}
                   placeholder="e.g. 18"
-                  className="w-full bg-muted/40 border border-border rounded-xl pl-4 pr-9 py-3 text-sm outline-none focus:border-primary/40 focus:bg-background transition-all font-bold text-right"
+                  className="w-full bg-background border border-border rounded-none pl-4 pr-10 h-[42px] text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-normal text-right"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-muted-foreground">%</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">%</span>
               </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Description (optional)</label>
-            <input
-              type="text"
-              value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })}
-              placeholder="e.g. Goods and Services Tax — Government of India"
-              className="w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/40 focus:bg-background transition-all placeholder:font-normal"
-            />
-          </div>
+          <AuthFormField
+            label="Brief Explanation (Optional)"
+            placeholder="e.g. Applied on all labor services"
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+          />
 
           {/* Applies To */}
           <div className="flex flex-col gap-3">
-            <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">What Should This Tax Apply To?</label>
+            <label className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground ml-1">What Should This Tax Apply To?</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {APPLIES_TO_OPTIONS.map(opt => {
                 const Icon = opt.icon;
@@ -411,12 +418,12 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                     type="button"
                     onClick={() => setForm({ ...form, applies_to: opt.value as any })}
                     className={cn(
-                      "p-4 rounded-2xl border flex flex-col items-start gap-2 transition-all text-left",
+                      "p-4 rounded-none border flex flex-col items-start gap-2 transition-all text-left",
                       active ? "border-primary/40 bg-primary/5 text-primary" : "border-border bg-muted/20 text-muted-foreground hover:border-primary/20"
                     )}
                   >
                     <Icon size={18} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest">{opt.label}</span>
                   </button>
                 );
               })}
@@ -425,52 +432,52 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
 
           {/* Tax Mode */}
           <div className="flex flex-col gap-3">
-            <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">How Is This Tax Applied?</label>
-            <div className="grid grid-cols-2 gap-4">
+            <label className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground ml-1">Tax Calculation Mode</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setForm({ ...form, is_inclusive: false })}
                 className={cn(
-                  "p-5 rounded-2xl border flex flex-col gap-2 transition-all text-left",
+                  "p-5 rounded-none border flex flex-col gap-2 transition-all text-left",
                   !form.is_inclusive ? "border-primary/40 bg-primary/5" : "border-border bg-muted/10 hover:border-primary/20"
                 )}
               >
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !form.is_inclusive ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
-                  <Percent size={16} />
+                <div className={cn("w-8 h-8 rounded-none flex items-center justify-center", !form.is_inclusive ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                  <Plus size={16} />
                 </div>
-                <span className={cn("text-xs font-black uppercase tracking-tight", !form.is_inclusive ? "text-primary" : "text-foreground")}>
-                  Added on Top (Exclusive)
+                <span className={cn("text-xs font-medium uppercase tracking-tight", !form.is_inclusive ? "text-primary" : "text-foreground")}>
+                  Add on Top (Extra)
                 </span>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
-                  Customer pays the listed price + tax.<br/>Used for: India GST, US Sales Tax
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Tax is calculated and added to your bill total. Used for GST or Sales Tax.
                 </p>
               </button>
               <button
                 type="button"
                 onClick={() => setForm({ ...form, is_inclusive: true })}
                 className={cn(
-                  "p-5 rounded-2xl border flex flex-col gap-2 transition-all text-left",
+                  "p-5 rounded-none border flex flex-col gap-2 transition-all text-left",
                   form.is_inclusive ? "border-blue-500/30 bg-blue-500/5" : "border-border bg-muted/10 hover:border-blue-500/20"
                 )}
               >
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", form.is_inclusive ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground")}>
-                  <Percent size={16} />
+                <div className={cn("w-8 h-8 rounded-none flex items-center justify-center", form.is_inclusive ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground")}>
+                  <Layers size={16} />
                 </div>
-                <span className={cn("text-xs font-black uppercase tracking-tight", form.is_inclusive ? "text-blue-600" : "text-foreground")}>
-                  Already Included (Inclusive)
+                <span className={cn("text-xs font-medium uppercase tracking-tight", form.is_inclusive ? "text-blue-600" : "text-foreground")}>
+                  Built-in (Already in Price)
                 </span>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
-                  Tax is inside the shown price already.<br/>Used for: UK/Europe VAT
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Price already has tax in it. We calculate what part is tax. Used for VAT.
                 </p>
               </button>
             </div>
           </div>
 
           {/* Active Toggle */}
-          <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border">
+          <div className="flex items-center justify-between p-5 rounded-none bg-muted/20 border border-border">
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-black text-foreground">Apply to All New Bills</span>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+              <span className="text-sm font-medium text-foreground">Apply to All New Bills</span>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
                 When active, this tax is automatically added every time a bill is created
               </p>
             </div>

@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { repairService } from "@/services/repair.service";
 import { billService } from "@/services/bill.service";
+import { useRBAC } from "@/lib/rbac";
 import BillClient from "./BillClient";
 import Loading from "../../../loading";
 
 export default function RepairBillPage() {
   const params = useParams();
   const id = params?.id as string;
+  const { user } = useRBAC();
   const [data, setData] = useState<{ repair: any; bill: any } | null>(null);
 
   useEffect(() => {
@@ -35,7 +37,8 @@ export default function RepairBillPage() {
     <BillClient 
       id={id!} 
       initialRepair={data.repair} 
-      initialBill={data.bill} 
+      initialBill={data.bill}
+      currencyCode={user?.shopCurrency || 'INR'}
     />
   );
 }

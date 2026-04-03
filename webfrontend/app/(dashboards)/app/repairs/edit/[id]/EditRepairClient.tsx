@@ -9,13 +9,14 @@ import { repairService } from "@/services/repair.service";
 import { User } from "@/services/user.service";
 import {
   Car, Phone, User as UserIcon, Calendar, Plus, X, ShieldCheck, Tag, Wrench,
-  Search, ChevronRight, MoreHorizontal
+  Search, ChevronRight, MoreHorizontal, Loader2, Trash2, ExternalLink
 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { VEHICLE_CONFIG, MAIN_VEHICLES } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import { useRBAC } from "@/lib/rbac";
+import NextImage from "next/image";
 
 interface EditRepairClientProps {
     id: string;
@@ -26,23 +27,9 @@ interface EditRepairClientProps {
 export default function EditRepairClient({ id, initialRepair, workers }: EditRepairClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useRBAC();
 
   const [loading, setLoading] = useState(false);
-
-  // Parse complaints from initialData
-  let parsedComplaints = [];
-  if (Array.isArray(initialRepair.complaints)) {
-    parsedComplaints = initialRepair.complaints.map((c: any) => typeof c === 'string' ? { text: c, fixed: false } : c);
-  } else if (typeof initialRepair.complaints === 'string' && initialRepair.complaints.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(initialRepair.complaints);
-      if (Array.isArray(parsed)) {
-        parsedComplaints = parsed.map((c: any) => typeof c === 'string' ? { text: c, fixed: false } : c);
-      }
-    } catch (e) {
-      parsedComplaints = [{ text: initialRepair.complaints, fixed: false }];
-    }
-  }
 
   const [form, setForm] = useState({
     vehicle_number: initialRepair.vehicle_number || "",
@@ -50,16 +37,76 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
     phone_number: initialRepair.phone_number || "",
     model_name: initialRepair.model_name || "",
     vehicle_type: initialRepair.vehicle_type || "Car",
-    complaints: parsedComplaints as { text: string; fixed: boolean }[],
     repair_date: initialRepair.repair_date ? new Date(initialRepair.repair_date).toISOString().substring(0, 10) : "",
     attending_worker_id: initialRepair.attending_worker_id ? initialRepair.attending_worker_id.toString() : "",
-    status: initialRepair.status || "Pending",
-    service_type: initialRepair.service_type || "Repair"
+    status: initialRepair.status || "Pending"
   });
+
+  const [serviceBlocks, setServiceBlocks] = useState<{ type: string, tasks: { text: string, fixed: boolean }[] }[]>(() => {
+    let parsed = initialRepair.complaints;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch (e) { parsed = []; }
+    }
+    
+    // Check if it's the new block format or old flat format
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      if (typeof parsed[0] === 'object' && 'type' in parsed[0] && 'tasks' in parsed[0]) {
+        return parsed;
+      }
+      // Migrate old flat format to a single 'Repair' block
+      return [{ type: initialRepair.service_type || "Repair", tasks: parsed }];
+    }
+    
+    return [{ type: initialRepair.service_type || "Repair", tasks: [] }];
+  });
+
+  const SERVICE_TYPES = ["Repair", "Servicing", "Inspection", "Modification", "Other"];
+
+  const SERVICE_CONFIG_UI: Record<string, { label: string; placeholder: string; sub: string }> = {
+    "Repair": { label: "What's wrong with the vehicle?", placeholder: "e.g. Engine noise, brake failed...", sub: "Reported Problems" },
+    "Servicing": { label: "What needs to be serviced?", placeholder: "e.g. Oil change, washing, general check...", sub: "Service Items" },
+    "Inspection": { label: "What do we need to check?", placeholder: "e.g. Tire life, computer scanning...", sub: "Inspection Checklist" },
+    "Modification": { label: "What are the modification details?", placeholder: "e.g. Color wrap, exhaust change...", sub: "Customization Plan" },
+    "Other": { label: "Additional work details", placeholder: "Explain the work needed...", sub: "Other Requests" }
+  };
+
+  const addServiceBlock = () => {
+    setServiceBlocks([...serviceBlocks, { type: "Repair", tasks: [] }]);
+  };
+
+  const removeServiceBlock = (index: number) => {
+    if (serviceBlocks.length > 1) {
+       setServiceBlocks(serviceBlocks.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateBlockType = (index: number, type: string) => {
+    const next = [...serviceBlocks];
+    next[index].type = type;
+    setServiceBlocks(next);
+  };
+
+  const addTaskToBlock = (index: number, text: string) => {
+    if (!text.trim()) return;
+    const next = [...serviceBlocks];
+    next[index].tasks.push({ text: text.trim(), fixed: false });
+    setServiceBlocks(next);
+  };
+
+  const toggleTaskInBlock = (blockIdx: number, taskIdx: number) => {
+    const next = [...serviceBlocks];
+    next[blockIdx].tasks[taskIdx].fixed = !next[blockIdx].tasks[taskIdx].fixed;
+    setServiceBlocks(next);
+  };
+
+  const removeTaskFromBlock = (blockIdx: number, taskIdx: number) => {
+    const next = [...serviceBlocks];
+    next[blockIdx].tasks = next[blockIdx].tasks.filter((_, i) => i !== taskIdx);
+    setServiceBlocks(next);
+  };
 
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [vehicleSearch, setVehicleSearch] = useState("");
-  const [currentComplaint, setCurrentComplaint] = useState("");
   const [existingImage, setExistingImage] = useState<string | null>(initialRepair.vehicle_image || null);
   const [file, setFile] = useState<File | null>(null);
 
@@ -71,30 +118,66 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
   const selectedVehicle = VEHICLE_CONFIG.find(v => v.id === form.vehicle_type) || VEHICLE_CONFIG[0];
   const isMainVehicle = MAIN_VEHICLES.includes(form.vehicle_type);
 
-  const addComplaint = () => {
-    if (currentComplaint.trim()) {
-      setForm(f => ({
-        ...f,
-        complaints: [...f.complaints, { text: currentComplaint.trim(), fixed: false }]
-      }));
-      setCurrentComplaint("");
-    }
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              resolve(optimizedFile);
+            } else {
+              resolve(file); // Fallback
+            }
+          }, 'image/jpeg', 0.82);
+        };
+      };
+    });
   };
 
-  const toggleComplaint = (index: number) => {
-    setForm(f => ({
-      ...f,
-      complaints: f.complaints.map((c, i) => i === index ? { ...c, fixed: !c.fixed } : c)
-    }));
-  };
-
-  const removeComplaint = (index: number) => {
-    setForm(f => ({ ...f, complaints: f.complaints.filter((_, i) => i !== index) }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const rawFile = e.target.files[0];
+      
+      // 10MB limit
+      if (rawFile.size > 10 * 1024 * 1024) {
+        toast({ type: "error", title: "File too large", description: "Maximum image size is 10MB." });
+        e.target.value = "";
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const optimized = await compressImage(rawFile);
+        setFile(optimized);
+
+      } catch (err) {
+        setFile(rawFile);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -109,15 +192,18 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
 
     const formData = new FormData();
     formData.append("vehicle_number", form.vehicle_number);
-    formData.append("owner_name", form.owner_name || "");
-    formData.append("phone_number", form.phone_number || "");
+    if (form.owner_name) formData.append("owner_name", form.owner_name);
+    if (form.phone_number) formData.append("phone_number", form.phone_number);
     if (form.model_name) formData.append("model_name", form.model_name);
     if (form.vehicle_type) formData.append("vehicle_type", form.vehicle_type);
-    if (form.complaints.length > 0) formData.append("complaints", JSON.stringify(form.complaints));
-    formData.append("repair_date", form.repair_date || "");
+
+    // Multi-block serialization
+    formData.append("complaints", JSON.stringify(serviceBlocks));
+    formData.append("service_type", serviceBlocks.map(b => b.type).join(", "));
+
+    if (form.repair_date) formData.append("repair_date", form.repair_date);
     if (form.attending_worker_id) formData.append("attending_worker_id", form.attending_worker_id);
     formData.append("status", form.status);
-    formData.append("service_type", form.service_type);
 
     if (file) {
       formData.append("vehicle_image", file);
@@ -144,12 +230,28 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 md:col-span-2">
 
-        {existingImage && !file && (
+        {(existingImage || file) && (
           <div className="md:col-span-2 mb-4">
-            <label className="text-[10px] font-bold tracking-[2px] text-muted-foreground/60 block mb-2 uppercase">Current Vehicle Image</label>
-            <div className="relative w-full h-48 sm:h-64 rounded-xl overflow-hidden border border-border">
-              <Image src={existingImage} alt="Vehicle Image" fill className="object-cover" />
+            <label className="text-[10px] font-bold tracking-[2px] text-muted-foreground/60 block mb-2 uppercase">Vehicle Image</label>
+            {/* Full image display */}
+            <div className="relative w-full h-48 sm:h-60 rounded-xl overflow-hidden border border-border bg-muted/10 mb-2">
+              <NextImage
+                src={file ? URL.createObjectURL(file) : (existingImage || "")}
+                alt="Vehicle"
+                fill
+                className="object-cover"
+              />
             </div>
+            {/* View in new tab button */}
+            <a
+              href={file ? URL.createObjectURL(file) : (existingImage || "")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all"
+            >
+              <ExternalLink size={12} />
+              View 
+            </a>
           </div>
         )}
 
@@ -311,76 +413,125 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
           </div>
         </WorkshopModal>
 
-        <div className="md:col-span-2 flex flex-col gap-2">
-          <label className="text-xs font-semibold text-muted-foreground block">What's wrong? (Complaints)</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="flex-1 bg-card border border-border text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-primary/50 transition-all font-medium"
-              placeholder="Type a complaint..."
-              value={currentComplaint}
-              onChange={(e) => setCurrentComplaint(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addComplaint();
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={addComplaint}
-              className="bg-primary text-primary-foreground w-12 rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-            >
-              <Plus size={20} />
-            </button>
-          </div>
+        {/* MULTI-SERVICE BLOCK SYSTEM */}
+        <div className="md:col-span-2 flex flex-col gap-6 sm:gap-8 py-2 sm:py-4">
+           {serviceBlocks.map((block, bIdx) => {
+             const ui = SERVICE_CONFIG_UI[block.type] || SERVICE_CONFIG_UI["Other"];
+             return (
+               <div key={bIdx} className="bg-muted/10 border border-border p-4 sm:p-6 rounded-none relative group/block">
+                  {/* Block Header Toolbar */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-none bg-primary/10 text-primary flex items-center justify-center text-xs font-black font-mono">
+                         {bIdx + 1}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-[2px] text-primary">Service Category</span>
+                      </div>
+                    </div>
+                    
+                    {serviceBlocks.length > 1 && (
+                      <button 
+                        type="button" 
+                        onClick={() => removeServiceBlock(bIdx)}
+                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors border border-border/50 sm:border-transparent sm:hover:border-destructive/20"
+                      >
+                         <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
 
-          <div className="space-y-2 mt-2">
-            {form.complaints.map((c, i) => (
-              <div key={i} className="flex items-center gap-3 bg-muted/30 p-3 rounded-xl border border-border">
-                <button
-                  type="button"
-                  onClick={() => toggleComplaint(i)}
-                  className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors border-2 ${c.fixed ? 'bg-green-500 border-green-500' : 'border-muted-foreground/30'}`}
-                >
-                  {c.fixed && <ShieldCheck size={12} className="text-white" />}
-                </button>
-                <span className={`flex-1 text-sm font-medium ${c.fixed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                  {c.text}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeComplaint(i)}
-                  className="text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
-                >
-                  <X size={16} />
-                </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                    <div className="flex flex-col gap-1.5">
+                      <select
+                        value={block.type}
+                        onChange={(e) => updateBlockType(bIdx, e.target.value)}
+                        className="w-full bg-background border border-border text-sm rounded-none px-4 py-3 focus:outline-none focus:border-primary transition-all font-bold text-foreground h-[48px]"
+                      >
+                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-muted-foreground block">{ui.label}</label>
+                      <p className="text-[10px] text-muted-foreground/50 font-mono uppercase tracking-tight">{ui.sub}</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        className="flex-1 bg-background border border-border text-sm rounded-none px-4 py-3 focus:outline-none focus:border-primary transition-all font-medium h-[48px]"
+                        placeholder={ui.placeholder}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addTaskToBlock(bIdx, (e.target as HTMLInputElement).value);
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                           const input = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement);
+                           addTaskToBlock(bIdx, input.value);
+                           input.value = "";
+                        }}
+                        className="bg-primary text-primary-foreground h-[48px] sm:w-12 rounded-none flex items-center justify-center hover:bg-primary/90 transition-colors gap-2 sm:gap-0 px-4 sm:px-0"
+                      >
+                        <Plus size={20} />
+                        <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Add Task</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 mt-2">
+                      {block.tasks.length === 0 && (
+                        <div className="p-6 border border-dashed border-border/60 text-center bg-muted/5">
+                           <p className="text-[10px] text-muted-foreground/40 font-black uppercase tracking-[2px]">Empty Service List</p>
+                        </div>
+                      )}
+                      {block.tasks.map((t, tIdx) => (
+                        <div key={tIdx} className="flex items-start gap-3 bg-card p-3 sm:p-4 border border-border group/task">
+                          <button
+                            type="button"
+                            onClick={() => toggleTaskInBlock(bIdx, tIdx)}
+                            className={`mt-0.5 w-5 h-5 flex-shrink-0 flex items-center justify-center transition-colors border-2 ${t.fixed ? 'bg-green-500 border-green-500' : 'border-muted-foreground/30'}`}
+                          >
+                            {t.fixed && <ShieldCheck size={12} className="text-white" />}
+                          </button>
+                          <span className={`flex-1 text-sm font-medium leading-relaxed ${t.fixed ? 'line-through text-muted-foreground/70' : 'text-foreground'}`}>
+                            {t.text}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeTaskFromBlock(bIdx, tIdx)}
+                            className="sm:opacity-0 group-hover/task:opacity-100 text-destructive hover:bg-destructive/10 p-2 sm:p-1.5 transition-all -mr-1 -mt-1 sm:m-0"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+               </div>
+             );
+           })}
+
+           <button
+             type="button"
+             onClick={addServiceBlock}
+             className="w-full py-6 sm:py-8 border-2 border-dashed border-primary/20 bg-primary/[0.02] text-primary hover:bg-primary/5 hover:border-primary/40 transition-all flex flex-col items-center justify-center gap-3 sm:gap-2 px-6"
+           >
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                 <Plus size={24} />
               </div>
-            ))}
-          </div>
-        </div>
-
-        <AuthFormField
-          label="Repair Date"
-          type="date"
-          value={form.repair_date}
-          onChange={(e) => setForm({ ...form, repair_date: e.target.value })}
-          icon={<Calendar size={16} />}
-        />
-
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Service Type</label>
-          <select
-            value={form.service_type}
-            onChange={(e) => setForm({ ...form, service_type: e.target.value })}
-            className="w-full bg-card border border-border text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-primary/50 transition-all font-bold text-foreground"
-          >
-            <option value="Repair">Repair</option>
-            <option value="Servicing">Servicing</option>
-            <option value="Inspection">Inspection</option>
-            <option value="Other">Other</option>
-          </select>
+              <div className="flex flex-col items-center text-center">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[3px]">Add Another Service Category</span>
+                <p className="text-[9px] text-muted-foreground/60 max-w-[280px] leading-tight mt-1">Use this to keep different things like washing and repairs separate</p>
+              </div>
+           </button>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -388,8 +539,19 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
             label="Attending Worker"
             placeholder="Assign a worker..."
             options={workers
-              .filter(w => w.role === "worker")
-              .map((w) => ({ value: w.id.toString(), label: w.name, subLabel: "Worker" }))
+              .filter(w => {
+                // Owners/Admins see everyone except customers
+                if (user?.role === "shop_owner" || user?.role === "admin" || user?.role === "super-admin") {
+                  return w.role !== "customer";
+                }
+                // Workers see only fellow workers
+                return w.role === "worker";
+              })
+              .map((w) => ({ 
+                value: w.id.toString(), 
+                label: w.name, 
+                subLabel: w.role === "shop_owner" ? "Owner" : w.role === "admin" ? "Admin" : "Worker"
+              }))
             }
             value={form.attending_worker_id}
             onChange={(val) => setForm({ ...form, attending_worker_id: String(val) })}

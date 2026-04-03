@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { repairService, Repair } from "@/services/repair.service";
+import { useRBAC } from "@/lib/rbac";
 import RepairsClient from "./RepairsClient";
 import Loading from "../loading";
 
 /** Client-Side entry to support localStorage auth */
 export default function RepairsPage() {
+  const { user } = useRBAC();
   const [initialData, setInitialData] = useState<Repair[] | null>(null);
 
   useEffect(() => {
@@ -19,5 +21,5 @@ export default function RepairsPage() {
 
   if (initialData === null) return <Loading />;
 
-  return <RepairsClient initialData={initialData} />;
+  return <RepairsClient initialData={initialData} currencyCode={user?.shopCurrency || 'INR'} />;
 }

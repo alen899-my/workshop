@@ -4,10 +4,15 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MapPin, Locate, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
+import { WorkshopRegionSelects } from "@/components/ui/WorkshopRegionSelects";
+import countryToCurrency from 'country-to-currency';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 function AuthFormWrapper({
   badge,
@@ -23,7 +28,7 @@ function AuthFormWrapper({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[500px] mx-auto">
+    <div className="flex flex-col gap-8 w-full max-w-[600px] mx-auto">
       <div className="flex flex-col gap-3">
         {badge && (
           <div className="flex items-center gap-3 mb-1">
@@ -60,32 +65,39 @@ function AuthFormWrapper({
 
 interface FormState {
   shopName: string;
-  location: string;
   ownerName: string;
   phone: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
   password: string;
   confirmPassword: string;
+  currency: string;
 }
 
 const INITIAL: FormState = {
   shopName: "",
-  location: "",
   ownerName: "",
   phone: "",
+  country: "IN",
+  state: "",
+  city: "",
+  address: "",
   password: "",
   confirmPassword: "",
+  currency: "INR",
 };
 
 const signupSchema = z
   .object({
     shopName: z.string().min(1, "Required"),
-    location: z.string().min(1, "Required"),
     ownerName: z.string().min(1, "Required"),
-    phone: z
-      .string()
-      .min(1, "Required")
-      .transform((val) => val.replace(/[\s\-+]/g, ""))
-      .pipe(z.string().regex(/^\d{7,15}$/, "Invalid phone format")),
+    phone: z.string().min(8, "Invalid phone"),
+    country: z.string().min(1, "Required"),
+    state: z.string().min(1, "Required"),
+    city: z.string().min(1, "Required"),
+    address: z.string().min(1, "Required"),
     password: z.string().min(6, "Min 6 chars"),
     confirmPassword: z.string().min(1, "Required"),
   })
@@ -116,19 +128,21 @@ export default function SignupPage() {
   if (checking) return null;
 
   function set(key: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm((f) => ({ ...f, [key]: e.target.value }));
+    };
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
+    // Validate with Zod
     const result = signupSchema.safeParse(form);
     if (!result.success) {
       const errs: Partial<FormState> = {};
       result.error.issues.forEach((issue) => {
         const key = issue.path[0] as keyof FormState;
-        if (key && !errs[key]) errs[key] = issue.message;
+        if (key && !errs[key]) errs[key] = (issue as any).message;
       });
       setErrors(errs);
       return;
@@ -138,23 +152,30 @@ export default function SignupPage() {
     setLoading(true);
     
     try {
+      // Map form fields to backend expectations
+      // Using location = city for backend compatibility if needed
+      const payload = {
+        ...form,
+        location: form.city, 
+      };
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register-shop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        toast({ type: "error", title: "Registration Failed", description: data.error || "Failed to create shop account" });
+        toast({ type: "error", title: "Registration Failed", description: data.error || "Could not register shop" });
         return;
       }
 
-      toast({ type: "success", title: "Registered Successfully", description: "You can now log into your account." });
+      toast({ type: "success", title: "Registered Successfully", description: "You can now log in." });
       router.push("/login");
 
     } catch (error) {
-      toast({ type: "error", title: "Network Error", description: "Failed to connect to the server." });
+      toast({ type: "error", title: "Network Error", description: "Connectivity issue with the server" });
     } finally {
       setLoading(false);
     }
@@ -177,8 +198,8 @@ export default function SignupPage() {
         <div className="mt-20 my-auto">
             <AuthFormWrapper
               badge="Setup Account"
-              title="Register Shop"
-              subtitle="Set up your independent auto repair shop globally in under 2 minutes."
+              title="Register Workshop"
+              subtitle="Register Your Workshop To continuet"
               footer={
                 <span>
                   Already registered?{" "}
@@ -193,57 +214,102 @@ export default function SignupPage() {
             >
               <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <AuthFormField
-                    label="Shop Name"
-                    type="text"
-                    placeholder="Speed Auto Works"
-                    value={form.shopName}
-                    onChange={set("shopName")}
-                    error={errors.shopName}
-                  />
-                  <AuthFormField
-                    label="Owner Name"
-                    type="text"
-                    placeholder="Rajan K."
-                    value={form.ownerName}
-                    onChange={set("ownerName")}
-                    error={errors.ownerName}
-                  />
-                  <AuthFormField
-                    label="Location"
-                    type="text"
-                    placeholder="Kochi, Kerala"
-                    value={form.location}
-                    onChange={set("location")}
-                    error={errors.location}
-                  />
-                  <AuthFormField
-                    label="Phone Number"
-                    type="tel"
-                    placeholder="09876543210"
-                    value={form.phone}
-                    onChange={set("phone")}
-                    error={errors.phone}
-                  />
-                  <AuthFormField
-                    label="Password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={set("password")}
-                    error={errors.password}
-                  />
-                  <AuthFormField
-                    label="Confirm Password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={form.confirmPassword}
-                    onChange={set("confirmPassword")}
-                    error={errors.confirmPassword}
-                  />
+                  <div className="sm:col-span-1">
+                    <AuthFormField
+                      label="Shop Name"
+                      type="text"
+                      placeholder="Speed Auto Works"
+                      value={form.shopName}
+                      onChange={set("shopName")}
+                      error={errors.shopName}
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <AuthFormField
+                      label="Owner Name"
+                      type="text"
+                      placeholder="Rajan K."
+                      value={form.ownerName}
+                      onChange={set("ownerName")}
+                      error={errors.ownerName}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <WorkshopRegionSelects
+                      country={form.country}
+                      state={form.state}
+                      city={form.city}
+                      onChange={(res) => {
+                        const code = res.country;
+                        const curr = (countryToCurrency as any)[code] || "USD";
+                        setForm(f => ({ 
+                           ...f, 
+                           ...res,
+                           currency: curr
+                        }));
+                      }}
+                      errors={{
+                        country: errors.country,
+                        state: errors.state,
+                        city: errors.city
+                      }}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <AuthFormField
+                      label="Full Address / Location Details"
+                      type="text"
+                      placeholder="Avenue Road, MG Corner, Kochi..."
+                      value={form.address}
+                      onChange={set("address")}
+                      error={errors.address}
+                      icon={<MapPin size={16} />}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Phone Number</label>
+                      <PhoneInput
+                        country={form.country.toLowerCase()}
+                        value={form.phone}
+                        onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
+                        containerClass="!w-full"
+                        inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                        buttonClass="!bg-background !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted"
+                        dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
+                        searchClass="!bg-muted !border !border-border !text-foreground"
+                      />
+                      {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                      <AuthFormField
+                        label="Password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={form.password}
+                        onChange={set("password")}
+                        error={errors.password}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <AuthFormField
+                      label="Confirm Password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.confirmPassword}
+                      onChange={set("confirmPassword")}
+                      error={errors.confirmPassword}
+                    />
+                  </div>
                 </div>
 
-                <div className="mt-2">
+                <div className="mt-4">
                   <WorkshopButton
                     type="submit"
                     variant="primary"
@@ -251,17 +317,9 @@ export default function SignupPage() {
                     fullWidth
                     loading={loading}
                   >
-                    Register Workshop
+                   Sign Up
                   </WorkshopButton>
                 </div>
-
-                <p className="text-xs text-center font-medium text-muted-foreground mt-2">
-                  By registering, you agree to the{" "}
-                  <Link href="/terms" className="text-primary underline underline-offset-2 hover:text-foreground">
-                    Terms of Service
-                  </Link>
-                  .
-                </p>
               </form>
             </AuthFormWrapper>
         </div>
@@ -277,31 +335,7 @@ export default function SignupPage() {
           priority
           sizes="50vw"
         />
-        
-        {/* Extremely subtle protective bottom gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--foreground)/0.15] to-transparent pointer-events-none" />
-        
-        {/* Floating Review Card */}
-        <div className="absolute bottom-16 right-16 z-20">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/40 p-6 rounded-2xl shadow-xl max-w-sm">
-            <div className="flex gap-1 mb-3 text-yellow-500 text-sm">
-              ★★★★★
-            </div>
-            <p className="text-foreground font-medium leading-relaxed italic text-sm">
-              &quot;The onboarding took 2 minutes. Now our entire 4-bay workshop is managed effortlessly from the primary screen. Unbelievable value.&quot;
-            </p>
-            <div className="mt-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-bold text-primary-foreground uppercase text-xs">
-                SV
-              </div>
-              <div>
-                <p className="font-bold text-sm text-foreground">Sarah V.</p>
-                <p className="text-xs text-muted-foreground">Manager, QuickFix Garage</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none" />
       </div>
     </div>
   );

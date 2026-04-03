@@ -240,3 +240,80 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
 }
+
+/* 📱 react-phone-input-2 Custom Integration */
+.react-tel-input .form-control {
+  font-family: inherit !important;
+}
+
+.react-tel-input .flag-dropdown {
+  background-color: transparent !important;
+  border: 1px solid oklch(var(--border)) !important;
+  border-right: none !important;
+}
+
+.react-tel-input .selected-flag {
+  background-color: transparent !important;
+  border-radius: 6px 0 0 6px !important;
+  height: 40px !important;
+  margin-top: 1px !important;
+}
+
+.react-tel-input .selected-flag:hover,
+.react-tel-input .selected-flag:focus,
+.react-tel-input .flag-dropdown.open .selected-flag {
+  background-color: oklch(var(--muted)) !important;
+}
+
+.react-tel-input .flag-dropdown.open {
+  border-color: oklch(var(--primary)) !important;
+  box-shadow: 0 0 0 2px oklch(var(--primary) / 0.1) !important;
+}
+
+.react-tel-input .country-list {
+  background-color: oklch(var(--card)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1px solid oklch(var(--border)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  padding: 4px !important;
+  width: 300px !important;
+}
+
+.react-tel-input .country-list .country {
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+.react-tel-input .country-list .country.highlight {
+  background-color: oklch(var(--primary) / 0.1) !important;
+  color: oklch(var(--primary)) !important;
+}
+
+.react-tel-input .country-list .country:hover {
+  background-color: oklch(var(--muted)) !important;
+}
+
+.react-tel-input .country-list .search {
+  background-color: oklch(var(--muted)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1px solid oklch(var(--border)) !important;
+  padding: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+.react-tel-input .country-list .search-box {
+  background-color: transparent !important;
+  color: inherit !important;
+  width: calc(100% - 20px) !important;
+}
+
+.react-tel-input .country-list .country-name {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.react-tel-input .country-list .dial-code {
+  color: oklch(var(--muted-foreground)) !important;
+}

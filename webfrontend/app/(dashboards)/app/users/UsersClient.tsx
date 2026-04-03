@@ -14,6 +14,7 @@ import { useRBAC } from "@/lib/rbac";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 
 interface UsersClientProps {
   initialData: User[];
@@ -70,17 +71,16 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       className: "font-semibold text-foreground tracking-tight",
       renderCell: (row) => (
         <div className="flex flex-col">
-          <span className="font-bold text-foreground">
+          <span className="font-medium text-foreground text-sm uppercase tracking-tight">
             {row.name || "Anonymous User"}
           </span>
-          <span className={cn(
-            "text-[10px] px-1.5 py-0.5 rounded-sm border inline-block w-fit mt-1",
-            row.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-              row.role === 'shop_owner' ? 'bg-primary/10 text-primary border-primary/20' :
-                'bg-muted/30 text-muted-foreground border-border'
-          )}>
+          <WorkshopBadge 
+            variant={row.role === 'admin' ? 'danger' : row.role === 'shop_owner' ? 'primary' : 'muted'} 
+            size="xs"
+            className="mt-1"
+          >
             {(row as any).role_name || (row.role ? row.role.replace('_', ' ') : 'Unassigned')}
-          </span>
+          </WorkshopBadge>
         </div>
       )
     },
@@ -99,14 +99,12 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       header: "Status",
       sortable: true,
       renderCell: (row) => (
-        <div className={cn(
-          "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase inline-block",
-          row.status === "active"
-            ? "bg-green-500/10 text-green-500 border border-green-500/20"
-            : "bg-red-500/10 text-red-500 border border-red-500/20"
-        )}>
+        <WorkshopBadge 
+          variant={row.status === "active" ? "success" : "danger"} 
+          size="xs"
+        >
           {row.status}
-        </div>
+        </WorkshopBadge>
       )
     },
     {
@@ -217,7 +215,7 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Full Name</p>
-                <p className="text-sm font-bold text-foreground">{selectedUser.name}</p>
+                <p className="text-sm font-medium text-foreground">{selectedUser.name}</p>
               </div>
             </div>
 
@@ -236,20 +234,20 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Account Status</p>
-                <div className={cn(
-                  "text-xs font-bold uppercase",
-                  selectedUser.status === "active" ? "text-green-500" : "text-red-500"
-                )}>
+                <WorkshopBadge 
+                  variant={selectedUser.status === "active" ? "success" : "danger"} 
+                  size="xs"
+                >
                   {selectedUser.status}
-                </div>
+                </WorkshopBadge>
               </div>
             </div>
 
             <div className="pt-4 border-t border-border">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Assigned Workshop</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Assigned Shop</p>
               <div className="flex items-center gap-2 mt-1">
                 <Building2 size={14} className="text-muted-foreground/60" />
-                <p className="text-sm font-medium">{(selectedUser as any).shop_name || "Direct / Unassigned"}</p>
+                <p className="text-sm font-normal">{(selectedUser as any).shop_name || "Direct / Unassigned"}</p>
               </div>
             </div>
 
@@ -277,12 +275,12 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
                          </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                         <span className={cn(
-                           "text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border",
-                           r.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                         )}>
+                         <WorkshopBadge 
+                           variant={r.status === 'Completed' ? 'success' : 'warning'} 
+                           size="xs"
+                         >
                            {r.status}
-                         </span>
+                         </WorkshopBadge>
                          <span className="text-[9px] text-muted-foreground font-medium">{new Date(r.repair_date).toLocaleDateString()}</span>
                       </div>
                     </Link>

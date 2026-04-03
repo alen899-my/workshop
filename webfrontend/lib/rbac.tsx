@@ -4,9 +4,16 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { permissionService } from "@/services/permission.service";
 
 interface User {
+  id?: number | string;
+  name?: string;
+  phone?: string;
   role?: string;
+  shopId?: number | string;
+  shop_id?: number | string;
   shopName?: string;
   ownerName?: string;
+  shopRole?: string;
+  shopCurrency?: string;
 }
 
 interface RBACContextType {

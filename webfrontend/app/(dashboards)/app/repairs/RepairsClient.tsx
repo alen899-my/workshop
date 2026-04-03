@@ -10,32 +10,31 @@ import {
   Search, ChevronRight, MoreHorizontal, Hammer, Edit, Trash2, Eye, FileText, Receipt
 } from "lucide-react";
 import { Repair, repairService } from "@/services/repair.service";
-import { billService, Bill } from "@/services/bill.service";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useRBAC } from "@/lib/rbac";
+import { useCurrency } from "@/lib/currency";
 import { useToast } from "@/components/ui/WorkshopToast";
-import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
-import Image from "next/image";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
+import { RepairDetailsModal } from "@/components/repair/RepairDetailsModal";
 
 interface RepairsClientProps {
   initialData: Repair[];
+  currencyCode?: string;
 }
 
-export default function RepairsClient({ initialData }: RepairsClientProps) {
+export default function RepairsClient({ initialData, currencyCode = 'INR' }: RepairsClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { can } = useRBAC();
+  const { symbol } = useCurrency({ shopCurrency: currencyCode });
 
   const [repairs, setRepairs] = useState<Repair[]>(initialData);
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
-  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [shareLoading, setShareLoading] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const pendingDeleteRef = useRef<Repair | null>(null);
   const searchParams = useSearchParams();
@@ -75,15 +74,15 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
       key: "vehicle",
       header: "Vehicle",
       sortable: true,
-      className: "font-semibold text-foreground tracking-tight",
+      className: "font-normal text-foreground tracking-tight",
       renderCell: (row) => (
         <div className="flex flex-col">
-          <span className="font-bold text-foreground">
+          <span className="font-normal text-foreground">
             {row.vehicle_number}
           </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-sm border inline-block w-fit mt-1 bg-muted/30 text-muted-foreground border-border">
+          <WorkshopBadge variant="muted" size="xs" className="mt-1">
             {row.owner_name || 'N/A'}
-          </span>
+          </WorkshopBadge>
         </div>
       )
     },
@@ -103,17 +102,20 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
       header: "Status",
       sortable: true,
       renderCell: (row) => {
-        let colors = "bg-muted/30 text-muted-foreground border-border";
-        if (row.status === "Pending") colors = "bg-orange-500/10 text-orange-500 border-orange-500/20";
-        if (row.status === "Started") colors = "bg-blue-500/10 text-blue-500 border-blue-500/20";
-        if (row.status === "In Progress") colors = "bg-purple-500/10 text-purple-500 border-purple-500/20";
-        if (row.status === "Completed") colors = "bg-green-500/10 text-green-500 border-green-500/20";
-
+        const statusMap: Record<string, any> = {
+          "Pending": "warning",
+          "Started": "info",
+          "In Progress": "secondary",
+          "Completed": "success"
+        };
         return (
-          <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase inline-block border", colors)}>
+          <WorkshopBadge 
+            variant={statusMap[row.status] || "muted"} 
+            size="xs"
+          >
             {row.status}
-          </div>
-        )
+          </WorkshopBadge>
+        );
       }
     },
     {
@@ -144,14 +146,7 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
   const handleView = async (row: Repair) => {
     if (can("view:repairs")) {
       setSelectedRepair(row);
-      setSelectedBill(null); // Reset until load
       setIsViewModalOpen(true);
-
-      // Attempt lazy fetch
-      const billRes = await billService.getByRepairId(row.id);
-      if (billRes.success && billRes.data) {
-        setSelectedBill(billRes.data);
-      }
     } else toast({ type: "error", title: "Access Denied", description: "You don't have permission" });
   };
 
@@ -183,48 +178,6 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
         pendingDeleteRef.current = null;
       }
     });
-  };
-
-  const handleDownloadPdf = async (id: string) => {
-    setPdfLoading(true);
-    try {
-      const token = localStorage.getItem("workshop_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/repairs/${id}/pdf?action=download`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt_${id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({ type: "error", title: "Download Failed", description: "Failed to create PDF receipt." });
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
-  const handleShareWhatsApp = async (id: string) => {
-    setShareLoading(true);
-    try {
-      const token = localStorage.getItem("workshop_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/repairs/${id}/pdf?action=store`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success || !data.url) throw new Error("Failed");
-      const text = encodeURIComponent(`Here is the receipt for your vehicle repair: ${data.url}`);
-      window.open(`https://wa.me/?text=${text}`, '_blank');
-    } catch (e) {
-      toast({ type: "error", title: "Share Failed", description: "Failed to generate public PDF link." });
-    } finally {
-      setShareLoading(false);
-    }
   };
 
   return (
@@ -266,184 +219,12 @@ export default function RepairsClient({ initialData }: RepairsClientProps) {
         ]}
       />
 
-      <WorkshopModal
+      <RepairDetailsModal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title="Repair Details"
-        subtitle="Viewing detailed information for this repair job."
-        footer={
-          <div className="flex flex-col sm:flex-row justify-between w-full gap-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleDownloadPdf(selectedRepair.id.toString())} disabled={pdfLoading} className="w-full sm:w-auto">
-                {pdfLoading ? "Processing..." : "Download PDF"}
-              </WorkshopButton>
-              <WorkshopButton variant="outline" size="sm" onClick={() => selectedRepair && handleShareWhatsApp(selectedRepair.id.toString())} disabled={shareLoading} className="w-full sm:w-auto">
-                {shareLoading ? "Generating Link..." : "Share via WhatsApp"}
-              </WorkshopButton>
-            </div>
-            <WorkshopButton variant="primary" size="sm" onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto">
-              Close
-            </WorkshopButton>
-          </div>
-        }
-      >
-        {selectedRepair && (
-          <div className="flex flex-col gap-6">
-            {selectedRepair.vehicle_image && (
-              <div className="w-full h-48 relative rounded-xl overflow-hidden border">
-                <Image src={selectedRepair.vehicle_image} alt="Vehicle Form" fill className="object-cover" />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle No</p>
-                <p className="text-sm font-bold text-foreground">{selectedRepair.vehicle_number}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle Type / Model</p>
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const v = VEHICLE_CONFIG.find(vc => vc.id === selectedRepair.vehicle_type);
-                    if (v) {
-                      const Icon = v.icon;
-                      return <div className="w-6 h-6 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: v.color }}><Icon size={14} /></div>;
-                    }
-                    return null;
-                  })()}
-                  <p className="text-sm font-bold text-foreground">
-                    {selectedRepair.vehicle_type || 'Car'} {selectedRepair.model_name ? `- ${selectedRepair.model_name}` : ''}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Owner Name</p>
-                <p className="text-sm font-bold text-foreground">{selectedRepair.owner_name || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Phone</p>
-                <p className="text-sm font-bold text-foreground">{selectedRepair.phone_number || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Service Type</p>
-                <div className={"text-xs font-bold uppercase"}>
-                  {selectedRepair.service_type || 'Repair'}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-muted/30 p-4 border border-border rounded-xl">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 flex items-center"><FileText size={12} className="mr-1" /> Complaints</p>
-              {(() => {
-                let parsed: any = selectedRepair.complaints;
-                if (typeof parsed === 'string') {
-                  try { parsed = JSON.parse(parsed); } catch (e) { /* ignore */ }
-                }
-
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  return (
-                    <div className="flex flex-col gap-2">
-                      {parsed.map((c: any, i: number) => {
-                        const isFixed = typeof c === 'object' ? c.fixed : false;
-                        const text = typeof c === 'object' ? c.text : c;
-                        return (
-                          <div key={i} className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg border transition-all",
-                            isFixed ? "bg-green-500/5 border-green-500/20" : "bg-muted/50 border-border"
-                          )}>
-                            {isFixed ? (
-                              <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white scale-90">
-                                <ShieldCheck size={12} strokeWidth={3} />
-                              </div>
-                            ) : (
-                              <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 scale-90" />
-                            )}
-                            <span className={cn(
-                              "text-xs font-medium",
-                              isFixed ? "line-through text-muted-foreground/70" : "text-foreground"
-                            )}>
-                              {text}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-                return <p className="text-sm text-muted-foreground italic">No complaints logged.</p>;
-              })()}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Repair Status</p>
-                <div className={"text-xs font-bold uppercase"}>
-                  {selectedRepair.status}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Repair Date</p>
-                <p className="text-sm font-medium">{selectedRepair.repair_date ? new Date(selectedRepair.repair_date).toLocaleDateString() : 'N/A'}</p>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Attending Worker</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Wrench size={14} className="text-muted-foreground/60" />
-                <p className="text-sm font-medium">{selectedRepair.attending_worker_name || "Unassigned"}</p>
-              </div>
-            </div>
-
-
-            {selectedBill && (selectedBill.items?.length > 0 || selectedBill.service_charge > 0) && (
-              <div className="mt-2 pt-4 border-t border-border">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-3 flex items-center">
-                  <Receipt size={12} className="mr-1" /> Bill
-                </p>
-
-                {selectedBill.items?.length > 0 && (
-                  <div className="flex flex-col gap-2 mb-3">
-                    {selectedBill.items.map((item: any, i: number) => (
-                      <div key={i} className="flex justify-between items-center text-xs text-foreground bg-muted/10 p-2 rounded-md border border-border">
-                        <span className="font-medium">{item.name} <span className="text-muted-foreground">x{item.qty}</span></span>
-                        <span className="font-mono">₹{(item.cost * item.qty).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1">
-                  <span>Service Charge</span>
-                  <span className="font-mono">₹{Number(selectedBill.service_charge || 0).toFixed(2)}</span>
-                </div>
-
-                {selectedBill.tax_snapshot && Array.isArray(selectedBill.tax_snapshot) && selectedBill.tax_snapshot.length > 0 && (
-                  <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-border/50">
-                    {selectedBill.tax_snapshot.map((t: any, i: number) => (
-                      <div key={i} className="flex justify-between items-center text-[10px] font-bold text-emerald-600">
-                        <span className="uppercase tracking-widest">{t.name} ({t.rate}%){t.is_inclusive ? ' [Incl.]' : ''}</span>
-                        <span className="font-mono">₹{Number(t.amount).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border mt-2">
-                  <div className="flex flex-col">
-                    <span>Total Amount</span>
-                    {(selectedBill.tax_total || 0) > 0 && (
-                      <span className="text-[9px] font-medium text-emerald-600/80">Incl. ₹{Number(selectedBill.tax_total).toFixed(2)} tax</span>
-                    )}
-                  </div>
-                  <span className="font-mono">₹{Number(selectedBill.total_amount || 0).toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
-      </WorkshopModal>
+        repair={selectedRepair}
+        currencyCode={currencyCode}
+      />
 
       {/* Confirmation Modal */}
       <ConfirmationModal

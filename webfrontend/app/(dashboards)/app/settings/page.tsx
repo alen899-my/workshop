@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
-import { Percent, ChevronRight, Building2, ShieldCheck, Bell, Palette } from "lucide-react";
+import { Percent, ChevronRight, Building2, ShieldCheck, Bell, Palette, Coins } from "lucide-react";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 
 const SETTINGS_SECTIONS = [
   {
@@ -14,8 +15,16 @@ const SETTINGS_SECTIONS = [
         icon: Percent,
         title: "Tax Configuration",
         description: "Configure GST, VAT, Sales Tax, and global billing conditions.",
-        badge: "Global",
+        
         color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
+      },
+      {
+        href: "/app/settings/currency",
+        icon: Coins,
+        title: "Currency Settings",
+        description: "Set your branch's default currency code for bills and reporting.",
+        
+        color: "text-amber-600 bg-amber-500/10 border-amber-500/20",
       },
     ],
   },
@@ -25,7 +34,7 @@ export default function SettingsPage() {
   return (
     <ModuleLayout
       title="System Settings"
-      description="Configure core application parameters and logic."
+      description="Change settings for your workshop."
     >
       <div className="flex flex-col gap-10 max-w-4xl">
         {SETTINGS_SECTIONS.map(section => (
@@ -46,11 +55,8 @@ export default function SettingsPage() {
                     <div className="flex flex-col gap-1 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold tracking-tight text-foreground">{item.title}</span>
-                        {item.badge && (
-                          <span className="text-[9px] font-black uppercase tracking-[2px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                            {item.badge}
-                          </span>
-                        )}
+                        
+                        
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
                     </div>

@@ -29,8 +29,8 @@ export function ModuleLayout({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-3">
           {backUrl && (
-            <Link href={backUrl} className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors group w-fit">
-               <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+            <Link href={backUrl} className="flex items-center gap-2 text-xs font-normal text-muted-foreground hover:text-primary transition-colors group w-fit">
+               <div className="w-6 h-6 rounded-none bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                   <ChevronLeft size={14} />
                </div>
                Back to overview

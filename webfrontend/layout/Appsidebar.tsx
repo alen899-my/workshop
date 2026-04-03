@@ -53,9 +53,7 @@ const NAV_MAIN = [
   },
 ];
 
-const NAV_BOTTOM = [
-  { href: "/app/settings", icon: Settings, title: "Settings" },
-];
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +77,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
         "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm",
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active
-          ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-md shadow-sidebar-primary/10"
+          ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-md shadow-sidebar-primary/10"
           : "text-sidebar-foreground/60"
       )}
     >
@@ -180,7 +178,7 @@ export function AppSidebar() {
           return (
             <div key={group.label} className="mb-5">
               {!isCollapsed && (
-                <p className="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-sidebar-foreground/35">
+                <p className="mb-2 px-3 text-[10px] font-medium tracking-[2px] text-sidebar-foreground/35">
                   {group.label}
                 </p>
               )}
@@ -210,29 +208,7 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Bottom section */}
-      <div className="border-t border-sidebar-border px-2 py-3">
-        <div className="flex flex-col gap-0.5">
-          {NAV_BOTTOM.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              collapsed={isCollapsed}
-              onClick={onItemClick}
-              active={pathname.startsWith(item.href)}
-            />
-          ))}
-        </div>
-
-
-        {isCollapsed && (
-          <div className="mt-2 flex justify-center">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-primary text-[11px] font-bold text-sidebar-primary-foreground">
-              WS
-            </div>
-          </div>
-        )}
-      </div>
+    
     </div>
   );
 

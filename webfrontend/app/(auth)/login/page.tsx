@@ -8,6 +8,8 @@ import { z } from "zod";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 function AuthFormWrapper({
   badge,
@@ -59,11 +61,7 @@ function AuthFormWrapper({
 }
 
 const loginSchema = z.object({
-  phone: z
-    .string()
-    .min(1, "Phone number is required")
-    .transform((val) => val.replace(/[\s\-+]/g, ""))
-    .pipe(z.string().regex(/^\d{7,15}$/, "Enter a valid phone number")),
+  phone: z.string().min(8, "Invalid phone number"),
   password: z.string().min(6, "Minimum 6 characters"),
 });
 
@@ -96,7 +94,7 @@ export default function LoginPage() {
       const errs: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
         const key = issue.path[0]?.toString();
-        if (key && !errs[key]) errs[key] = issue.message;
+        if (key && !errs[key]) errs[key] = (issue as any).message || issue.message;
       });
       setErrors(errs);
       return;
@@ -163,15 +161,20 @@ export default function LoginPage() {
             }
           >
             <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-              <AuthFormField
-                label="Phone Number"
-                type="tel"
-                placeholder="09876543210"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                error={errors.phone}
-                autoComplete="tel"
-              />
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Phone Number</label>
+                <PhoneInput
+                  country="in"
+                  value={form.phone}
+                  onChange={(phone) => setForm({ ...form, phone: `+${phone}` })}
+                  containerClass="!w-full"
+                  inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                  buttonClass="!bg-background !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted"
+                  dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
+                  searchClass="!bg-muted !border !border-border !text-foreground"
+                />
+                {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
+              </div>
 
               <div className="flex flex-col gap-1.5 items-end">
                 <AuthFormField
@@ -218,30 +221,7 @@ export default function LoginPage() {
           priority
           sizes="50vw"
         />
-        
-        {/* Subtle bottom gradient just to ground elements slightly */}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--foreground)/0.2] to-transparent pointer-events-none" />
-        
-        {/* Floating Review Card */}
-        <div className="absolute bottom-16 right-16 z-20">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/40 p-6 rounded-2xl shadow-xl max-w-sm">
-            <div className="flex gap-1 mb-3 text-yellow-500 text-sm">
-              ★★★★★
-            </div>
-            <p className="text-foreground font-medium leading-relaxed italic text-sm">
-              &quot;VehRep completely transformed our repair bay. No more lost job cards and instant billing directly from my phone.&quot;
-            </p>
-            <div className="mt-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-bold text-primary-foreground uppercase text-xs">
-                MD
-              </div>
-              <div>
-                <p className="font-bold text-sm text-foreground">Michael Davis</p>
-                <p className="text-xs text-muted-foreground">Owner, Davis Auto Works</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

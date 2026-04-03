@@ -26,6 +26,8 @@ import {
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useRBAC } from "@/lib/rbac";
+import { useCurrency } from "@/lib/currency";
 
 export default function RepairDetailPage() {
   const params = useParams();
@@ -35,7 +37,10 @@ export default function RepairDetailPage() {
   const [repair, setRepair] = useState<Repair | null>(null);
   const [bill, setBill] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
+  const { user } = useRBAC();
+  const currencyCode = user?.shopCurrency || 'INR';
+  const { symbol } = useCurrency({ shopCurrency: currencyCode });
+  
   useEffect(() => {
     const fetch = async () => {
       if (!id) return;
@@ -107,30 +112,85 @@ export default function RepairDetailPage() {
                 <h3 className="text-lg font-black tracking-tight">Reported Complaints</h3>
              </div>
              
-             <div className="flex flex-col gap-3">
-                {Array.isArray(repair.complaints) ? repair.complaints.map((c: any, i: number) => (
-                   <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-muted/30 border border-border group">
-                      <div className={cn(
-                        "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border",
-                        c.status === 'fixed' ? "bg-emerald-500 text-white border-emerald-600" : "bg-muted border-border"
-                      )}>
-                         {c.status === 'fixed' ? <CheckCircle2 size={12} /> : <Clock size={12} className="text-muted-foreground" />}
+              <div className="flex flex-col gap-3">
+                  {(() => {
+                    let parsed: any = repair.complaints;
+                    if (typeof parsed === 'string') {
+                      try { parsed = JSON.parse(parsed); } catch (e) { parsed = []; }
+                    }
+
+                    const isBlockFormat = Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'type' in parsed[0];
+
+                    if (isBlockFormat) {
+                      const labelMap: Record<string, string> = {
+                        "Repair": "Repair Details",
+                        "Servicing": "Service List",
+                        "Inspection": "Inspection Checklist",
+                        "Modification": "Modification Plan",
+                        "Other": "Other Requests"
+                      };
+                      return (
+                        <div className="space-y-6">
+                          {parsed.map((block: any, bIdx: number) => (
+                            <div key={bIdx} className="border-l-4 border-primary pl-4 py-1">
+                              <p className="text-[10px] font-black uppercase tracking-[2px] text-primary mb-3">
+                                {labelMap[block.type] || block.type + " Details"}
+                              </p>
+                              <div className="flex flex-col gap-2">
+                                {block.tasks.length === 0 && <p className="text-xs text-muted-foreground italic">No specific tasks added.</p>}
+                                {block.tasks.map((t: any, tIdx: number) => (
+                                  <div key={tIdx} className={cn(
+                                    "flex items-center gap-2 p-2 rounded-lg border transition-all",
+                                    t.fixed ? "bg-green-500/5 border-green-500/10" : "bg-muted/30 border-border"
+                                  )}>
+                                    {t.fixed ? (
+                                      <CheckCircle2 size={12} className="text-green-500" strokeWidth={3} />
+                                    ) : (
+                                      <Clock size={12} className="text-muted-foreground" />
+                                    )}
+                                    <span className={cn(
+                                      "text-sm font-medium",
+                                      t.fixed ? "line-through text-muted-foreground/60" : "text-foreground"
+                                    )}>
+                                      {t.text}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                      return parsed.map((c: any, i: number) => (
+                        <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-muted/30 border border-border group">
+                          <div className={cn(
+                            "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border",
+                            c.fixed ? "bg-emerald-500 text-white border-emerald-600" : "bg-muted border-border"
+                          )}>
+                            {c.fixed ? <CheckCircle2 size={12} /> : <Clock size={12} className="text-muted-foreground" />}
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className={cn("text-sm font-bold text-foreground", c.fixed && "line-through opacity-50")}>
+                              {c.text || c.complaint || "Technical Issue"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                              {c.fixed ? "Resolved" : "Pending Inspection"}
+                            </span>
+                          </div>
+                        </div>
+                      ));
+                    }
+
+                    return (
+                      <div className="p-8 border border-dashed rounded-2xl flex flex-col items-center justify-center text-muted-foreground opacity-40">
+                        <p className="text-sm font-medium italic">No specific complaints recorded for this job.</p>
                       </div>
-                      <div className="flex flex-col gap-0.5">
-                         <span className={cn("text-sm font-bold text-foreground", c.status === 'fixed' && "line-through opacity-50")}>
-                            {c.text || c.complaint || "Technical Issue"}
-                         </span>
-                         <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                            {c.status === 'fixed' ? "Resolved" : "Pending Inspection"}
-                         </span>
-                      </div>
-                   </div>
-                )) : (
-                   <div className="p-8 border border-dashed rounded-2xl flex flex-col items-center justify-center text-muted-foreground opacity-40">
-                      <p className="text-sm font-medium italic">No specific complaints recorded for this job.</p>
-                   </div>
-                )}
-             </div>
+                    );
+                  })()}
+               </div>
           </div>
 
           {/* Billing Summary */}
@@ -162,7 +222,7 @@ export default function RepairDetailPage() {
                             <div key={i} className="grid grid-cols-4 p-4 text-xs group hover:bg-muted/30 transition-colors">
                                <div className="col-span-2 px-1 font-bold text-foreground">{item.name}</div>
                                <div className="text-center font-medium text-muted-foreground">x{item.qty}</div>
-                               <div className="text-right px-1 font-black text-foreground">₹{Number(item.cost * item.qty).toLocaleString()}</div>
+                               <div className="text-right px-1 font-black text-foreground">{symbol}{Number(item.cost * item.qty).toLocaleString()}</div>
                             </div>
                          ))}
                       </div>
@@ -171,11 +231,11 @@ export default function RepairDetailPage() {
                    <div className="flex flex-col gap-3 p-6 rounded-2xl bg-muted/20 border border-border">
                       <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
                          <span className="uppercase tracking-widest">Parts Subtotal</span>
-                         <span>₹{bill.items.reduce((acc: number, item: any) => acc + (item.cost * item.qty), 0).toLocaleString()}</span>
+                         <span>{symbol}{bill.items.reduce((acc: number, item: any) => acc + (item.cost * item.qty), 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
                          <span className="uppercase tracking-widest">Technician Fee</span>
-                         <span>₹{Number(bill.service_charge || 0).toLocaleString()}</span>
+                         <span>{symbol}{Number(bill.service_charge || 0).toLocaleString()}</span>
                       </div>
 
                       {/* Tax Breakdown */}
@@ -188,7 +248,7 @@ export default function RepairDetailPage() {
                                 <span className="text-[8px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-black">TAX</span>
                                 {t.name} ({t.rate}%){t.is_inclusive ? ' [Incl.]' : ''}
                               </span>
-                              <span>₹{Number(t.amount).toFixed(2)}</span>
+                              <span>{symbol}{Number(t.amount).toFixed(2)}</span>
                             </div>
                           ))}
                         </>
@@ -200,11 +260,11 @@ export default function RepairDetailPage() {
                             <Calculator size={16} className="text-primary" />
                             <span className="text-sm font-black uppercase tracking-tighter text-foreground">Grand Total</span>
                          </div>
-                         <span className="text-xl font-black text-primary">₹{Number(bill.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                         <span className="text-xl font-black text-primary">{symbol}{Number(bill.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       {bill.tax_total > 0 && (
                         <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest text-right">
-                          Includes ₹{Number(bill.tax_total).toFixed(2)} in taxes
+                          Includes {symbol}{Number(bill.tax_total).toFixed(2)} in taxes
                         </p>
                       )}
                    </div>
@@ -273,7 +333,6 @@ export default function RepairDetailPage() {
 
            {/* Assignment Block */}
            <div className="p-6 rounded-3xl border border-border bg-card flex flex-col gap-4 shadow-sm">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Tech Assignment</span>
               
               <div className="flex items-center gap-4">
                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center">

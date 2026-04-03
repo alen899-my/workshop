@@ -31,7 +31,6 @@ export function WorkshopModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      // Also prevent touch events on body for mobile
       document.body.style.touchAction = "none";
     } else {
       document.body.style.overflow = "unset";
@@ -53,50 +52,52 @@ export function WorkshopModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] grid place-items-center p-4 overflow-y-auto no-scrollbar outline-none focus:outline-none">
-      {/* Fixed Backdrop - Fully transparent with no blur */}
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-4 outline-none focus:outline-none">
+      {/* Premium Backdrop with Blur */}
       <div
-        className="fixed inset-0 bg-background/20 cursor-pointer z-[-1]"
+        className="fixed inset-0 bg-background/40 backdrop-blur-[2px] cursor-pointer z-[-1] transition-all duration-300 animate-in fade-in"
         onClick={onClose}
       />
 
-      {/* Modal Content container - Center aligned in the grid */}
+      {/* Modal Content container */}
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-2xl border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] m-auto pointer-events-auto",
+          "relative w-full overflow-hidden rounded-none border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] pointer-events-auto flex flex-col transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4",
+          "h-auto max-h-[calc(100dvh-2rem)]", // Maximum height on small screens
           widthClasses[width]
         )}
       >
         {/* Decorative Top Bar */}
-        <div className="h-1 bg-primary w-full" />
-        {/* Header Section */}
-        <div className="flex items-center justify-between border-b border-border bg-muted/10 px-4 py-4 sm:px-8 sm:py-5">
-          <div className="flex flex-col gap-1.5">
-            <h2 className="font-mono text-[13px] font-black uppercase tracking-[0.25em] text-foreground leading-none">
+        <div className="h-1 bg-primary w-full shrink-0" />
+        
+        {/* Header Section - Fixed at top */}
+        <div className="flex items-center justify-between border-b border-border bg-muted/10 px-5 py-4 sm:px-8 sm:py-6 shrink-0">
+          <div className="flex flex-col gap-1 min-w-0">
+            <h2 className="text-[13px] font-black uppercase tracking-[0.2em] text-foreground leading-tight truncate">
               {title}
             </h2>
             {subtitle && (
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-primary/70 leading-none">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 leading-tight truncate">
                 {subtitle}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground/50 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/50 text-muted-foreground/40 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 hover:scale-105 transition-all shrink-0 ml-4"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Modal Body - Maximum visibility scrollable area */}
-        <div className="max-h-[75vh] overflow-y-auto px-4 py-6 sm:px-8 sm:py-8 no-scrollbar text-foreground/90">
+        {/* Modal Body - Scrollable Area */}
+        <div className="overflow-y-auto px-5 py-6 sm:px-8 sm:py-8 no-scrollbar text-foreground/90 flex-1 min-h-0">
           {children}
         </div>
 
-        {/* Footer actions area */}
+        {/* Footer actions area - Fixed at bottom */}
         {footer && (
-          <div className="border-t border-border bg-muted/20 px-4 py-4 sm:px-8">
+          <div className="border-t border-border bg-muted/5 px-5 py-5 sm:px-8 sm:py-6 shrink-0">
             {footer}
           </div>
         )}

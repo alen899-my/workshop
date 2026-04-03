@@ -8,12 +8,14 @@ interface AuthFormFieldProps extends React.InputHTMLAttributes<HTMLInputElement>
   label: string;
   error?: string;
   icon?: React.ReactNode;
+  rightElement?: React.ReactNode;
 }
 
 export function AuthFormField({
   label,
   error,
   icon,
+  rightElement,
   className,
   type,
   ...props
@@ -24,7 +26,7 @@ export function AuthFormField({
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <label className="text-xs font-semibold text-muted-foreground ml-0.5">
+      <label className="text-xs font-normal text-muted-foreground ml-0.5">
         {label}
       </label>
       <div className="relative group">
@@ -44,11 +46,16 @@ export function AuthFormField({
             "transition-all duration-200",
             error && "border-destructive focus:border-destructive focus:ring-destructive/10",
             icon && "pl-10",
-            isPassword && "pr-10",
+            (isPassword || rightElement) && "pr-10",
             className
           )}
           {...props}
         />
+        {rightElement && !isPassword && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+            {rightElement}
+          </div>
+        )}
         {isPassword && (
           <button
             type="button"

@@ -32,26 +32,51 @@ exports.getShopById = async (req, res) => {
 
 // @desc    Create new shop
 exports.createShop = async (req, res) => {
-  const { name, location, owner_name } = req.body;
+  const { 
+    name, location, owner_name, phone, country, currency, 
+    latitude, longitude, place_id, state, city, address 
+  } = req.body;
   try {
     const result = await db.query(
-      'INSERT INTO shops (name, location, owner_name) VALUES ($1, $2, $3) RETURNING *',
-      [name, location, owner_name]
+      `INSERT INTO shops (
+        name, location, owner_name, phone, country, currency, 
+        latitude, longitude, place_id, state, city, address
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [
+        name, location, owner_name, phone, country || 'India', currency || 'INR', 
+        latitude, longitude, place_id, state, city, address
+      ]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
+    console.error('createShop Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
 
 // @desc    Update shop metadata
 exports.updateShop = async (req, res) => {
-  const { name, location, owner_name } = req.body;
+  const { 
+    name, location, owner_name, currency, country, phone, 
+    latitude, longitude, place_id, state, city, address 
+  } = req.body;
   try {
-    // Current shops table schema: id, name, location, owner_name, created_at
     const result = await db.query(
-      'UPDATE shops SET name=$1, location=$2, owner_name=$3 WHERE id=$4 RETURNING *',
-      [name, location, owner_name, req.params.id]
+      `UPDATE shops 
+       SET name = COALESCE($1, name), 
+           location = COALESCE($2, location), 
+           owner_name = COALESCE($3, owner_name),
+           currency = COALESCE($4, currency),
+           country = COALESCE($5, country),
+           phone = COALESCE($6, phone),
+           latitude = COALESCE($7, latitude),
+           longitude = COALESCE($8, longitude),
+           place_id = COALESCE($9, place_id),
+           state = COALESCE($10, state),
+           city = COALESCE($11, city),
+           address = COALESCE($12, address)
+       WHERE id = $13 RETURNING *`,
+      [name, location, owner_name, currency, country, phone, latitude, longitude, place_id, state, city, address, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Shop not found' });
     res.status(200).json({ success: true, data: result.rows[0] });
