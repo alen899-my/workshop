@@ -10,6 +10,8 @@ import { roleService, Role } from "@/services/role.service";
 import { shopService, Shop } from "@/services/shop.service";
 import { Shield, Phone, User as UserIcon, Building2 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 /** Professional Interface to Refine Personnel Profile */
 export default function EditUserPage() {
@@ -138,13 +140,19 @@ export default function EditUserPage() {
           />
         </div>
 
-        <AuthFormField
-          label="Phone Number"
-          placeholder="+91 XXXXX XXXXX"
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          icon={<Phone size={16} />}
-        />
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1 mb-0.5">Contact Phone Number</label>
+          <PhoneInput
+            country="in"
+            value={form.phone}
+            onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
+            containerClass="!w-full"
+            inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+            buttonClass="!bg-background !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted"
+            dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
+            searchClass="!bg-muted !border !border-border !text-foreground"
+          />
+        </div>
 
         <div className="flex flex-col gap-2">
           <WorkshopSearchableSelect

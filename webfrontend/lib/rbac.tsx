@@ -5,6 +5,7 @@ import { permissionService } from "@/services/permission.service";
 
 interface User {
   id?: number | string;
+  userId?: number | string;
   name?: string;
   phone?: string;
   role?: string;
@@ -15,6 +16,7 @@ interface User {
   shopRole?: string;
   shopCurrency?: string;
 }
+
 
 interface RBACContextType {
   user: User | null;

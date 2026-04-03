@@ -35,7 +35,6 @@ const NAV_MAIN = [
       { href: "/app/repairs/create", icon: PlusCircle, title: "New Repair", permission: "create:repair" },
       { href: "/app/repairs", icon: Wrench, title: "Repairs", permission: "view:repairs" },
       { href: "/app/vehicles", icon: Car, title: "Vehicles" },
-      { href: "/app/jobs", icon: ClipboardList, title: "Job Cards" },
     ],
   },
   {

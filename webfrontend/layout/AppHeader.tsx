@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, LogOut, UserCog, Clock, CalendarDays } from "lucide-react";
+import { ChevronDown, LogOut, UserCog, User as UserIcon, Clock, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useRBAC } from "@/lib/rbac";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function AppHeader() {
-  const [user, setUser] = useState<{ 
-    shopName?: string; 
-    ownerName?: string; 
-    role?: string 
-  } | null>(null);
+  const router = useRouter();
+  const { user, can } = useRBAC();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -22,14 +22,6 @@ export function AppHeader() {
     return () => clearInterval(id);
   }, []);
 
-  // Load user
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("workshop_user");
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch {}
-    }
-  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -165,29 +157,54 @@ export function AppHeader() {
               <p className="font-mono text-[14px] font-black text-foreground truncate leading-none">
                 {(user?.shopName || "Workshop").toUpperCase()}
               </p>
-              <p className="font-mono text-[10px] font-bold text-muted-foreground tracking-tight truncate mt-1.5">
-                SECURE SESSION ACTIVE
-              </p>
+              
             </div>
 
             {/* Actions */}
             <div className="p-1.5 flex flex-col gap-0.5">
+              {can("edit:shops") && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    const sid = user?.shopId || user?.shop_id;
+                    if (sid) router.push(`/app/shops/edit/${sid}`);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
+                >
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
+                    <UserCog size={13} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-mono text-[12px] font-bold text-foreground leading-none">
+                      Edit Shop Details
+                    </p>
+                    <p className="font-mono text-[9px] text-muted-foreground mt-0.5">
+                      Management dashboard
+                    </p>
+                  </div>
+                </button>
+              )}
+
               <button
-                onClick={() => setDropdownOpen(false)}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  router.push("/app/profile");
+                }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
-                  <UserCog size={13} className="text-primary" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10">
+                  <UserIcon size={13} className="text-secondary-foreground" />
                 </div>
                 <div>
                   <p className="font-mono text-[12px] font-bold text-foreground leading-none">
-                    Edit Profile
+                    My Profile
                   </p>
                   <p className="font-mono text-[9px] text-muted-foreground mt-0.5">
-                    Update shop details
+                    Account settings
                   </p>
                 </div>
               </button>
+
 
               {/* Divider */}
               <div className="my-1 h-px bg-border" />

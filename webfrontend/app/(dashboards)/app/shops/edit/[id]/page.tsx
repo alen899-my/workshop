@@ -80,7 +80,7 @@ export default function EditShopPage() {
   return (
     <ModuleForm
       title="Edit Shop"
-      subtitle={`Update information for shop #${id}`}
+      subtitle={`Update information for shop`}
       backUrl="/app/shops"
       onSubmit={handleSubmit}
       loading={loading}
