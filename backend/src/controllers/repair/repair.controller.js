@@ -33,15 +33,20 @@ exports.getRepairs = async (req, res) => {
       LEFT JOIN users sb ON r.submitted_by_id = sb.id
     `;
 
+    const { status, workerId } = req.query;
+    const statusFilter = status === 'Inactive' ? 'r.deleted_at IS NOT NULL' : 'r.deleted_at IS NULL';
+    const workerFilter = workerId ? `AND r.attending_worker_id = $${isSuperAdmin ? 1 : 2}` : '';
+
     if (isSuperAdmin) {
-      const result = await db.query(select + from + ' ORDER BY r.created_at DESC');
+      const query = select + from + ` WHERE ${statusFilter} ${workerFilter} ORDER BY r.created_at DESC`;
+      const result = await db.query(query, workerId ? [workerId] : []);
       return res.status(200).json({ success: true, data: result.rows });
     } else {
       if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned' });
-      const result = await db.query(
-        select + from + ' WHERE r.shop_id = $1 ORDER BY r.created_at DESC',
-        [shopId]
-      );
+      const query = select + from + ` WHERE r.shop_id = $1 AND ${statusFilter} ${workerFilter} ORDER BY r.created_at DESC`;
+      const params = [shopId];
+      if (workerId) params.push(workerId);
+      const result = await db.query(query, params);
       return res.status(200).json({ success: true, data: result.rows });
     }
   } catch (error) {
@@ -71,7 +76,7 @@ exports.getRepairById = async (req, res) => {
       LEFT JOIN shops s ON r.shop_id = s.id
       LEFT JOIN users aw ON r.attending_worker_id = aw.id
       LEFT JOIN users sb ON r.submitted_by_id = sb.id
-      WHERE r.id = $1
+      WHERE r.id = $1 AND r.deleted_at IS NULL
     `;
     const result = await db.query(select, [req.params.id]);
 
@@ -324,13 +329,10 @@ exports.deleteRepair = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    if (existing.rows[0].vehicle_image) {
-      await deleteFromR2(existing.rows[0].vehicle_image);
-    }
+    // We use SOFT DELETE to prevent data loss for owners/vehicles/bills
+    await db.query(`UPDATE repairs SET deleted_at = CURRENT_TIMESTAMP, status = 'Inactive' WHERE id = $1`, [req.params.id]);
 
-    await db.query('DELETE FROM repairs WHERE id = $1', [req.params.id]);
-
-    res.status(200).json({ success: true, message: 'Repair deleted' });
+    res.status(200).json({ success: true, message: 'Repair record archived (Metadata and registry preserved)' });
   } catch (error) {
     console.error('deleteRepair Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
@@ -346,8 +348,8 @@ exports.getDashboardStats = async (req, res) => {
   }
 
   try {
-    const shopFilter = isSuperAdmin ? '' : `WHERE shop_id = ${shopId}`;
-    const shopFilterWithAlias = isSuperAdmin ? '' : `WHERE r.shop_id = ${shopId}`;
+    const shopFilter = isSuperAdmin ? 'WHERE deleted_at IS NULL' : `WHERE shop_id = ${shopId} AND deleted_at IS NULL`;
+    const shopFilterWithAlias = isSuperAdmin ? 'WHERE r.deleted_at IS NULL' : `WHERE r.shop_id = ${shopId} AND r.deleted_at IS NULL`;
 
     // 1. Total & Pending Counts
     const countsR = await db.query(`

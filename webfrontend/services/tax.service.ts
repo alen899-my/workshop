@@ -21,9 +21,10 @@ export interface TaxSetting {
 }
 
 export const taxService = {
-  async getAll(): Promise<{ success: boolean; data: TaxSetting[]; error?: string }> {
+  async getAll(status?: string): Promise<{ success: boolean; data: TaxSetting[]; error?: string }> {
     try {
-      const res = await fetch(API_URL, { headers: getAuth(), cache: 'no-store' });
+      const url = status ? `${API_URL}?status=${status}` : API_URL;
+      const res = await fetch(url, { headers: getAuth(), cache: 'no-store' });
       return await res.json();
     } catch {
       return { success: false, data: [], error: "Connection failed" };

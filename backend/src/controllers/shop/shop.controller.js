@@ -7,10 +7,13 @@ exports.getShops = async (req, res) => {
   const isGlobalAdmin = role === 'super-admin' || role === 'admin';
   const shopId = isGlobalAdmin ? null : userShopId;
 
+  const { status } = req.query;
+  const statusFilter = status === 'Inactive' ? 'deleted_at IS NOT NULL' : 'deleted_at IS NULL';
+
   try {
     const query = shopId 
-       ? 'SELECT * FROM shops WHERE id = $1' 
-       : 'SELECT * FROM shops ORDER BY created_at DESC';
+       ? `SELECT * FROM shops WHERE id = $1 AND ${statusFilter}` 
+       : `SELECT * FROM shops WHERE ${statusFilter} ORDER BY created_at DESC`;
     const result = await db.query(query, shopId ? [shopId] : []);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
@@ -22,7 +25,7 @@ exports.getShops = async (req, res) => {
 // @desc    Get single shop
 exports.getShopById = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM shops WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT * FROM shops WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Shop not found' });
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -40,11 +43,11 @@ exports.createShop = async (req, res) => {
     const result = await db.query(
       `INSERT INTO shops (
         name, location, owner_name, phone, country, currency, 
-        latitude, longitude, place_id, state, city, address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        latitude, longitude, place_id, state, city, address, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
         name, location, owner_name, phone, country || 'India', currency || 'INR', 
-        latitude, longitude, place_id, state, city, address
+        latitude, longitude, place_id, state, city, address, req.body.status || 'Active'
       ]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -74,9 +77,10 @@ exports.updateShop = async (req, res) => {
            place_id = COALESCE($9, place_id),
            state = COALESCE($10, state),
            city = COALESCE($11, city),
-           address = COALESCE($12, address)
-       WHERE id = $13 RETURNING *`,
-      [name, location, owner_name, currency, country, phone, latitude, longitude, place_id, state, city, address, req.params.id]
+           address = COALESCE($12, address),
+           status = COALESCE($13, status)
+       WHERE id = $14 RETURNING *`,
+      [name, location, owner_name, currency, country, phone, latitude, longitude, place_id, state, city, address, req.body.status, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Shop not found' });
     res.status(200).json({ success: true, data: result.rows[0] });
@@ -86,11 +90,11 @@ exports.updateShop = async (req, res) => {
   }
 };
 
-// @desc    Delete shop hub
+// @desc    Soft Delete shop hub
 exports.deleteShop = async (req, res) => {
   try {
-    await db.query('DELETE FROM shops WHERE id = $1', [req.params.id]);
-    res.status(200).json({ success: true, message: 'Shop hub and associated registry data purged' });
+    await db.query(`UPDATE shops SET deleted_at = NOW(), status = 'Inactive' WHERE id = $1`, [req.params.id]);
+    res.status(200).json({ success: true, message: 'Shop hub archived (Inactive)' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
   }

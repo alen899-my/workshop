@@ -32,7 +32,17 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
 
   const [bills, setBills] = useState<Bill[]>(initialData);
   const [search, setSearch] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
   const [filterStatus, setFilterStatus] = useState("");
+
+  // Fetch when recordStatus changes
+  React.useEffect(() => {
+    const fetchFiltered = async () => {
+      const res = await billService.getAll(recordStatus);
+      if (res.success && res.data) setBills(res.data);
+    };
+    fetchFiltered();
+  }, [recordStatus]);
 
   // Modal states
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
@@ -55,10 +65,11 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
     });
   }, [bills, search, filterStatus]);
 
-  const activeFilterCount = [filterStatus].filter(Boolean).length;
+  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterStatus].filter(Boolean).length;
 
   const handleReset = () => {
     setSearch("");
+    setRecordStatus("Active");
     setFilterStatus("");
   };
 
@@ -184,6 +195,15 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
             { value: "Completed", label: "Completed" },
           ]}
           placeholder="All Statuses"
+        />
+        <FilterSelect
+          label="Record Status"
+          value={recordStatus}
+          onChange={setRecordStatus}
+          options={[
+            { value: "Active", label: "Active" },
+            { value: "Inactive", label: "Archived" },
+          ]}
         />
       </FilterBar>
 

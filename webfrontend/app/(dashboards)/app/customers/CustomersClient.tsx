@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
-import { FilterBar } from "@/components/common/FilterBar";
+import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { User, Phone, Car, Edit, Trash2, Eye, Calendar, MapPin, ChevronRight, Save, X, Plus, Link as LinkIcon } from "lucide-react";
 import { Customer, customerService } from "@/services/customer.service";
@@ -20,6 +20,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
   const [customers, setCustomers] = useState<Customer[]>(initialData);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
@@ -42,7 +43,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
   const fetchCustomers = async () => {
     setLoading(true);
     const [cRes] = await Promise.all([
-      customerService.getAll()
+      customerService.getAll(recordStatus)
     ]);
     if (cRes.success) setCustomers(cRes.data);
     
@@ -55,7 +56,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [recordStatus]);
 
   const handleOpenForm = (customer?: Customer) => {
     if (customer) {
@@ -216,8 +217,21 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
           searchPlaceholder="Search by name or phone..."
           search={search}
           onSearchChange={setSearch}
-          onReset={() => setSearch("")}
-        />
+          onReset={() => {
+            setSearch("");
+            setRecordStatus("Active");
+          }}
+        >
+          <FilterSelect
+            label="Record Status"
+            value={recordStatus}
+            onChange={setRecordStatus}
+            options={[
+              { value: "Active", label: "Active" },
+              { value: "Inactive", label: "Archived" },
+            ]}
+          />
+        </FilterBar>
 
         <WorkshopTable
           columns={columns}

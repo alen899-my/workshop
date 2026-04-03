@@ -12,15 +12,20 @@ export interface User {
   name: string;
   phone: string;
   role: string;
-  status: "active" | "inactive";
+  status?: string;
   created_at: string;
 }
 
 export const userService = {
-  /** Fetch all team members */
-  async getAll(shopId?: number): Promise<{ success: boolean; data: User[]; error?: string }> {
+  /** Fetch all team members (optional status filter: Active/Inactive) */
+  async getAll(status?: string, shopId?: number): Promise<{ success: boolean; data: User[]; error?: string }> {
     try {
-      const url = shopId ? `${API_URL}?shopId=${shopId}` : API_URL;
+      let url = API_URL;
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (shopId) params.append('shopId', shopId.toString());
+      if (params.toString()) url += `?${params.toString()}`;
+      
       const res = await fetch(url, { 
         cache: 'no-store',
         headers: getAuth()

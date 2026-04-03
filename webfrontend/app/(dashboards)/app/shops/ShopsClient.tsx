@@ -31,7 +31,17 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
   const [filterLocation, setFilterLocation] = useState("");
+
+  // Fetch data when recordStatus changes
+  React.useEffect(() => {
+    const fetchFiltered = async () => {
+      const res = await shopService.getAll(recordStatus);
+      if (res.success) setShops(res.data);
+    };
+    fetchFiltered();
+  }, [recordStatus]);
 
   const uniqueLocations = useMemo(() => {
     const seen = new Set<string>();
@@ -49,10 +59,11 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
     });
   }, [shops, search, filterLocation]);
 
-  const activeFilterCount = [filterLocation].filter(Boolean).length;
+  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterLocation].filter(Boolean).length;
 
   const handleReset = () => {
     setSearch("");
+    setRecordStatus("Active");
     setFilterLocation("");
   };
 
@@ -140,6 +151,15 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
         activeFilterCount={activeFilterCount}
         onReset={handleReset}
       >
+        <FilterSelect
+          label="Record Status"
+          value={recordStatus}
+          onChange={setRecordStatus}
+          options={[
+            { value: "Active", label: "Active" },
+            { value: "Inactive", label: "Archived" },
+          ]}
+        />
         <FilterSelect
           label="Location"
           value={filterLocation}

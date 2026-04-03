@@ -43,7 +43,7 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
   React.useEffect(() => {
     const autoViewId = searchParams.get('view');
     if (autoViewId && repairs.length > 0) {
-      const rep = repairs.find((r: Repair) => r.id.toString() === autoViewId);
+      const rep = repairs.find((r: Repair) => r && r.id.toString() === autoViewId);
       if (rep) handleView(rep);
     }
   }, [searchParams, repairs]);
@@ -51,9 +51,20 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
+
+  // Fetch data when recordStatus changes
+  useEffect(() => {
+    const fetchFiltered = async () => {
+      const res = await repairService.getAll(recordStatus);
+      if (res.success) setRepairs(res.data);
+    };
+    fetchFiltered();
+  }, [recordStatus]);
 
   const filtered = useMemo(() => {
     return repairs.filter((r: Repair) => {
+      if (!r) return false;
       const q = search.toLowerCase();
       if (search && !r.vehicle_number?.toLowerCase().includes(q) && !r.owner_name?.toLowerCase().includes(q)) return false;
       if (filterStatus && r.status !== filterStatus) return false;
@@ -61,11 +72,12 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
     });
   }, [repairs, search, filterStatus]);
 
-  const activeFilterCount = [filterStatus].filter(Boolean).length;
+  const activeFilterCount = [filterStatus, recordStatus === 'Active' ? '' : 'Archived'].filter(Boolean).length;
 
   const handleReset = () => {
     setSearch("");
     setFilterStatus("");
+    setRecordStatus("Active");
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -163,13 +175,13 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
     pendingDeleteRef.current = row;
     setConfirmConfig({
       isOpen: true,
-      title: "Delete Repair",
-      message: `Are you sure you want to delete repair for vehicle: ${row.vehicle_number}?`,
+      title: "Delete Repair Record",
+      message: `Delete repair record for ${row.vehicle_number}? This will NOT delete the vehicle or customer from your registry.`,
       onConfirm: async () => {
         if (!pendingDeleteRef.current) return;
         const res = await repairService.delete(pendingDeleteRef.current.id);
         if (res.success) {
-          setRepairs((prev: Repair[]) => prev.filter((r: Repair) => r.id !== pendingDeleteRef.current!.id));
+          setRepairs((prev: Repair[]) => prev.filter((r: Repair) => r && pendingDeleteRef.current && r.id !== pendingDeleteRef.current.id));
           toast({ type: "success", title: "Deleted", description: "Repair record deleted successfully." });
         } else {
           toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });
@@ -205,6 +217,15 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
             { value: "Completed", label: "Completed" },
           ]}
           placeholder="All Statuses"
+        />
+        <FilterSelect
+          label="Record Status"
+          value={recordStatus}
+          onChange={setRecordStatus}
+          options={[
+            { value: "Active", label: "Active" },
+            { value: "Inactive", label: "Archived" },
+          ]}
         />
       </FilterBar>
 

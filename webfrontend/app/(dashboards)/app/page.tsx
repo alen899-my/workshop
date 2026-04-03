@@ -267,7 +267,7 @@ export default function WorkshopDashboard() {
               stats.workers.map((worker, i) => (
                 <Link
                   key={worker.id}
-                  href={`/app/users/edit/${worker.id}`}
+                  href={`/app/users/${worker.id}`}
                   className={cn(
                     "flex items-center justify-between p-4 hover:bg-primary/5 transition-colors active:bg-primary/10",
                     i !== stats.workers.length - 1 && "border-b border-border/50"

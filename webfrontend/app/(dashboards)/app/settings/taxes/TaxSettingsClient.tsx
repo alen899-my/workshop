@@ -17,7 +17,7 @@ import {
   CheckCircle2, XCircle, Package, Wrench, Layers, Power, Search, MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FilterBar } from "@/components/common/FilterBar";
+import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
 import { WorkshopTable } from "@/components/common/Workshoptable";
 import { ColumnDef } from "@/components/common/Workshoptable";
 
@@ -53,9 +53,15 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
   const [formLoading, setFormLoading] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, id: 0, title: "", message: "", onConfirm: () => {} });
   const [search, setSearch] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
   const [shops, setShops] = useState<Shop[]>([]);
   const { toast } = useToast();
   const { can, user } = useRBAC();
+
+  // Fetch when recordStatus changes
+  useEffect(() => {
+    refresh();
+  }, [recordStatus]);
   
   const isSuperAdmin = user?.role === "super-admin";
   const canManage = can("manage:settings");
@@ -69,7 +75,7 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
   }, [isSuperAdmin]);
 
   const refresh = async () => {
-    const res = await taxService.getAll();
+    const res = await taxService.getAll(recordStatus);
     if (res.success) setTaxes(res.data);
   };
 
@@ -275,8 +281,21 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
             searchPlaceholder="Search taxes..."
             search={search}
             onSearchChange={setSearch}
-            onReset={() => setSearch("")}
-          />
+            onReset={() => {
+              setSearch("");
+              setRecordStatus("Active");
+            }}
+          >
+            <FilterSelect
+              label="Record Status"
+              value={recordStatus}
+              onChange={setRecordStatus}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Archived" },
+              ]}
+            />
+          </FilterBar>
 
           {taxes.length === 0 ? (
             <div className="py-20 border-2 border-dashed border-border rounded-[32px] flex flex-col items-center justify-center gap-5 bg-muted/5">

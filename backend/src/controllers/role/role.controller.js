@@ -3,7 +3,7 @@ const db = require('../../config/db');
 // @desc    Get all roles
 exports.getRoles = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM roles ORDER BY name ASC');
+    const result = await db.query('SELECT * FROM roles WHERE deleted_at IS NULL ORDER BY name ASC');
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
@@ -13,7 +13,7 @@ exports.getRoles = async (req, res) => {
 // @desc    Get role options (minimal data for forms)
 exports.getRoleOptions = async (req, res) => {
   try {
-    const result = await db.query('SELECT id, name, slug FROM roles WHERE status = $1 ORDER BY name ASC', ['active']);
+    const result = await db.query('SELECT id, name, slug FROM roles WHERE status = $1 AND deleted_at IS NULL ORDER BY name ASC', ['active']);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
@@ -23,7 +23,7 @@ exports.getRoleOptions = async (req, res) => {
 // @desc    Get single role with its permissions (slugs)
 exports.getRoleById = async (req, res) => {
   try {
-    const roleR = await db.query('SELECT * FROM roles WHERE id = $1', [req.params.id]);
+    const roleR = await db.query('SELECT * FROM roles WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
     if (roleR.rows.length === 0) return res.status(404).json({ success: false, error: 'Role not found' });
     
     const role = roleR.rows[0];
@@ -118,11 +118,11 @@ exports.updateRole = async (req, res) => {
   }
 };
 
-// @desc    Delete role
+// @desc    Soft Delete role
 exports.deleteRole = async (req, res) => {
   try {
-    await db.query('DELETE FROM roles WHERE id = $1', [req.params.id]);
-    res.status(200).json({ success: true, message: 'Role and mappings deleted' });
+    await db.query(`UPDATE roles SET deleted_at = NOW(), status = 'inactive' WHERE id = $1`, [req.params.id]);
+    res.status(200).json({ success: true, message: 'Role archived (Inactive)' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
   }

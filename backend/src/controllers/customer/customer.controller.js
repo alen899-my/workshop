@@ -13,13 +13,16 @@ exports.getCustomers = async (req, res) => {
       LEFT JOIN shops s ON c.shop_id = s.id
     `;
 
+    const { status } = req.query;
+    const statusFilter = status === 'Inactive' ? 'c.deleted_at IS NOT NULL' : 'c.deleted_at IS NULL';
+
     if (isSuperAdmin) {
-      const result = await db.query(select + ' ORDER BY c.created_at DESC');
+      const result = await db.query(select + ` WHERE ${statusFilter} ORDER BY c.created_at DESC`);
       return res.status(200).json({ success: true, data: result.rows });
     } else {
       if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned' });
       const result = await db.query(
-        select + ' WHERE c.shop_id = $1 ORDER BY c.created_at DESC',
+        select + ` WHERE c.shop_id = $1 AND ${statusFilter} ORDER BY c.created_at DESC`,
         [shopId]
       );
       return res.status(200).json({ success: true, data: result.rows });
@@ -40,7 +43,7 @@ exports.getCustomerById = async (req, res) => {
       SELECT c.*, s.name as shop_name
       FROM customers c 
       LEFT JOIN shops s ON c.shop_id = s.id
-      WHERE c.id = $1
+      WHERE c.id = $1 AND c.deleted_at IS NULL
     `, [req.params.id]);
 
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Customer not found' });
@@ -50,8 +53,8 @@ exports.getCustomerById = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    // Fetch vehicles
-    const vehicles = await db.query('SELECT * FROM vehicles WHERE customer_id = $1', [customer.id]);
+    // Fetch active vehicles
+    const vehicles = await db.query('SELECT * FROM vehicles WHERE customer_id = $1 AND deleted_at IS NULL', [customer.id]);
     customer.vehicles = vehicles.rows;
 
     res.status(200).json({ success: true, data: customer });
@@ -72,8 +75,8 @@ exports.createCustomer = async (req, res) => {
     await client.query('BEGIN');
 
     const result = await client.query(
-      'INSERT INTO customers (shop_id, name, phone) VALUES ($1, $2, $3) RETURNING *',
-      [targetShopId, name, phone]
+      'INSERT INTO customers (shop_id, name, phone, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [targetShopId, name, phone, req.body.status || 'Active']
     );
     const customer = result.rows[0];
 
@@ -116,8 +119,8 @@ exports.updateCustomer = async (req, res) => {
     await client.query('BEGIN');
 
     const result = await client.query(
-      'UPDATE customers SET name = $1, phone = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
-      [name, phone, req.params.id]
+      'UPDATE customers SET name = $1, phone = $2, status = COALESCE($3, status), updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+      [name, phone, req.body.status, req.params.id]
     );
     const customer = result.rows[0];
 
@@ -152,11 +155,11 @@ exports.updateCustomer = async (req, res) => {
   }
 };
 
-// @desc    Delete customer
+// @desc    Soft Delete customer
 exports.deleteCustomer = async (req, res) => {
   try {
-    await db.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
-    res.status(200).json({ success: true, message: 'Customer deleted' });
+    await db.query(`UPDATE customers SET deleted_at = NOW(), status = 'Inactive' WHERE id = $1`, [req.params.id]);
+    res.status(200).json({ success: true, message: 'Customer record archived (Inactive)' });
   } catch (error) {
     console.error('deleteCustomer Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });

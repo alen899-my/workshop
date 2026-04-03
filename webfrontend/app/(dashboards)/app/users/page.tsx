@@ -16,7 +16,7 @@ export default function UsersPage({ searchParams }: { searchParams: Promise<{ sh
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await userService.getAll(shopId);
+      const res = await userService.getAll(undefined, shopId);
       if (res.success && res.data) {
         setData(res.data);
       }

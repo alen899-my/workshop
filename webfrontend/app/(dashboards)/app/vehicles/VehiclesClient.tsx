@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
-import { FilterBar } from "@/components/common/FilterBar";
+import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { Car, User, Phone, MapPin, Edit, Trash2, Eye, Save, Image as ImageIcon, Search, ExternalLink } from "lucide-react";
 import { Vehicle, vehicleService } from "@/services/vehicle.service";
@@ -21,10 +21,16 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [recordStatus, setRecordStatus] = useState("Active");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const pendingDeleteRef = useRef<Vehicle | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+
+  // Fetch data when recordStatus changes
+  React.useEffect(() => {
+    fetchData();
+  }, [recordStatus]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -43,7 +49,7 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
 
   const fetchData = async () => {
     const [vRes, cRes] = await Promise.all([
-      vehicleService.getAll(),
+      vehicleService.getAll(recordStatus),
       customerService.getAll()
     ]);
     if (vRes.success) setVehicles(vRes.data);
@@ -243,8 +249,21 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
           searchPlaceholder="Search number, model, or owner..."
           search={search}
           onSearchChange={setSearch}
-          onReset={() => setSearch("")}
-        />
+          onReset={() => {
+            setSearch("");
+            setRecordStatus("Active");
+          }}
+        >
+           <FilterSelect
+            label="Record Status"
+            value={recordStatus}
+            onChange={setRecordStatus}
+            options={[
+              { value: "Active", label: "Active" },
+              { value: "Inactive", label: "Archived" },
+            ]}
+          />
+        </FilterBar>
 
         <WorkshopTable
           columns={columns}

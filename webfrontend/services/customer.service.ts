@@ -14,13 +14,15 @@ export interface Customer {
   shop_name?: string;
   vehicle_count?: number;
   vehicles?: any[];
+  status?: string;
   created_at: string;
 }
 
 export const customerService = {
-  async getAll(): Promise<{ success: boolean; data: Customer[]; error?: string }> {
+  async getAll(status?: string): Promise<{ success: boolean; data: Customer[]; error?: string }> {
     try {
-      const res = await fetch(API_URL, { headers: getAuth(), cache: 'no-store' });
+      const url = status ? `${API_URL}?status=${status}` : API_URL;
+      const res = await fetch(url, { headers: getAuth(), cache: 'no-store' });
       return await res.json();
     } catch (error) {
       return { success: false, data: [], error: "Connection failed" };

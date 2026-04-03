@@ -14,13 +14,16 @@ exports.getVehicles = async (req, res) => {
       LEFT JOIN shops s ON v.shop_id = s.id
     `;
 
+    const { status } = req.query;
+    const statusFilter = status === 'Inactive' ? 'v.deleted_at IS NOT NULL' : 'v.deleted_at IS NULL';
+
     if (isSuperAdmin) {
-      const result = await db.query(select + ' ORDER BY v.created_at DESC');
+      const result = await db.query(select + ` WHERE ${statusFilter} ORDER BY v.created_at DESC`);
       return res.status(200).json({ success: true, data: result.rows });
     } else {
       if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned' });
       const result = await db.query(
-        select + ' WHERE v.shop_id = $1 ORDER BY v.created_at DESC',
+        select + ` WHERE v.shop_id = $1 AND ${statusFilter} ORDER BY v.created_at DESC`,
         [shopId]
       );
       return res.status(200).json({ success: true, data: result.rows });
@@ -42,7 +45,7 @@ exports.getVehicleById = async (req, res) => {
       FROM vehicles v
       LEFT JOIN customers c ON v.customer_id = c.id
       LEFT JOIN shops s ON v.shop_id = s.id
-      WHERE v.id = $1
+      WHERE v.id = $1 AND v.deleted_at IS NULL
     `;
     const result = await db.query(select, [req.params.id]);
 
@@ -77,10 +80,10 @@ exports.createVehicle = async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
-      [customer_id, targetShopId, vehicle_number, model_name, vehicle_type, vehicle_image]
+      [customer_id, targetShopId, vehicle_number, model_name, vehicle_type, vehicle_image, req.body.status || 'Active']
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -109,10 +112,11 @@ exports.updateVehicle = async (req, res) => {
         model_name = COALESCE($2, model_name),
         vehicle_type = COALESCE($3, vehicle_type),
         vehicle_image = COALESCE($4, vehicle_image),
+        status = COALESCE($5, status),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $5 
+      WHERE id = $6 
       RETURNING *`,
-      [customer_id, model_name, vehicle_type, vehicle_image, req.params.id]
+      [customer_id, model_name, vehicle_type, vehicle_image, req.body.status, req.params.id]
     );
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -134,6 +138,7 @@ exports.getVehicleByNumber = async (req, res) => {
       LEFT JOIN customers c ON v.customer_id = c.id
       LEFT JOIN shops s ON v.shop_id = s.id
       WHERE REPLACE(v.vehicle_number, ' ', '') = REPLACE($1, ' ', '')
+      AND v.deleted_at IS NULL
     `;
     
     let query = select;
@@ -158,11 +163,11 @@ exports.getVehicleByNumber = async (req, res) => {
   }
 };
 
-// @desc    Delete vehicle
+// @desc    Soft Delete vehicle
 exports.deleteVehicle = async (req, res) => {
   try {
-    await db.query('DELETE FROM vehicles WHERE id = $1', [req.params.id]);
-    res.status(200).json({ success: true, message: 'Vehicle deleted' });
+    await db.query(`UPDATE vehicles SET deleted_at = NOW(), status = 'Inactive' WHERE id = $1`, [req.params.id]);
+    res.status(200).json({ success: true, message: 'Vehicle record archived (Inactive)' });
   } catch (error) {
     console.error('deleteVehicle Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });

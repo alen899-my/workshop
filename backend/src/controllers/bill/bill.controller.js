@@ -12,7 +12,7 @@ exports.getBill = async (req, res) => {
     if (repairRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Repair not found' });
     if (!isSuperAdmin && repairRes.rows[0].shop_id !== shopId) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    const result = await db.query('SELECT * FROM repair_bills WHERE repair_id = $1', [repairId]);
+    const result = await db.query('SELECT * FROM repair_bills WHERE repair_id = $1 AND deleted_at IS NULL', [repairId]);
     
     // If no bill exists yet, return empty structured data
     if (result.rows.length === 0) {
@@ -47,16 +47,16 @@ exports.saveBill = async (req, res) => {
     const totalAmount = subtotalBeforeTax + parsedTaxTotal;
 
     const query = `
-      INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (repair_id) DO UPDATE 
       SET items = EXCLUDED.items, service_charge = EXCLUDED.service_charge, 
           tax_snapshot = EXCLUDED.tax_snapshot, tax_total = EXCLUDED.tax_total,
           subtotal_before_tax = EXCLUDED.subtotal_before_tax,
-          total_amount = EXCLUDED.total_amount, updated_at = CURRENT_TIMESTAMP
+          total_amount = EXCLUDED.total_amount, status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
-    const params = [repairId, JSON.stringify(parsedItems), service_charge || 0, JSON.stringify(tax_snapshot), parsedTaxTotal, subtotalBeforeTax, totalAmount];
+    const params = [repairId, JSON.stringify(parsedItems), service_charge || 0, JSON.stringify(tax_snapshot), parsedTaxTotal, subtotalBeforeTax, totalAmount, req.body.status || 'Active'];
 
     const result = await db.query(query, params);
 
@@ -85,9 +85,14 @@ exports.getAllBills = async (req, res) => {
     `;
     const params = [];
 
+    const { status } = req.query;
+    const statusFilter = status === 'Inactive' ? 'rb.deleted_at IS NOT NULL' : 'rb.deleted_at IS NULL';
+
     if (!isSuperAdmin) {
-      query += ` WHERE r.shop_id = $1`;
+      query += ` WHERE r.shop_id = $1 AND ${statusFilter} AND r.deleted_at IS NULL `;
       params.push(shopId);
+    } else {
+      query += ` WHERE ${statusFilter} AND r.deleted_at IS NULL `;
     }
     
     query += ` ORDER BY rb.created_at DESC`;
@@ -116,8 +121,8 @@ exports.deleteBill = async (req, res) => {
 
     if (checkRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Bill not found' });
 
-    await db.query('DELETE FROM repair_bills WHERE id = $1', [id]);
-    res.status(200).json({ success: true, message: 'Bill deleted successfully' });
+    await db.query(`UPDATE repair_bills SET deleted_at = NOW(), status = 'Inactive' WHERE id = $1`, [id]);
+    res.status(200).json({ success: true, message: 'Bill archived (Inactive)' });
   } catch (error) {
     console.error('deleteBill Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });

@@ -28,10 +28,15 @@ export interface Repair {
 }
 
 export const repairService = {
-  /** Fetch all repairs */
-  async getAll(): Promise<{ success: boolean; data: Repair[]; error?: string }> {
+  /** Fetch all repairs (optional status filter: Active/Inactive, optional workerId filter) */
+  async getAll(status?: string, workerId?: string | number): Promise<{ success: boolean; data: Repair[]; error?: string }> {
     try {
-      const res = await fetch(API_URL, { 
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (workerId) params.append('workerId', workerId.toString());
+      
+      const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
+      const res = await fetch(url, { 
         cache: 'no-store',
         headers: getAuth()
       });

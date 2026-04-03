@@ -3,7 +3,7 @@ const db = require('../../config/db');
 // @desc    Get all permissions
 exports.getPermissions = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM permissions ORDER BY module_name ASC, created_at DESC');
+    const result = await db.query('SELECT * FROM permissions WHERE deleted_at IS NULL ORDER BY module_name ASC, created_at DESC');
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     console.error('Error fetching permissions:', error);
@@ -14,7 +14,7 @@ exports.getPermissions = async (req, res) => {
 // @desc    Get single permission
 exports.getPermissionById = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM permissions WHERE id = $1', [req.params.id]);
+    const result = await db.query('SELECT * FROM permissions WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Permission not found' });
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -66,12 +66,12 @@ exports.updatePermission = async (req, res) => {
   }
 };
 
-// @desc    Delete permission
+// @desc    Soft Delete permission
 exports.deletePermission = async (req, res) => {
   try {
-    const result = await db.query('DELETE FROM permissions WHERE id = $1 RETURNING *', [req.params.id]);
+    const result = await db.query(`UPDATE permissions SET deleted_at = NOW(), status = 'inactive' WHERE id = $1 RETURNING *`, [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Permission not found' });
-    res.status(200).json({ success: true, message: 'Deleted successfully' });
+    res.status(200).json({ success: true, message: 'Permission archived (Inactive)' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
   }
@@ -86,7 +86,7 @@ exports.getRolePermissions = async (req, res) => {
         FROM role_permissions rp
         JOIN permissions p ON rp.permission_id = p.id
         JOIN roles r ON rp.role_id = r.id
-        WHERE r.slug = $1
+        WHERE r.slug = $1 AND p.deleted_at IS NULL AND r.deleted_at IS NULL
       `, [role]);
     res.status(200).json({ 
       success: true, 

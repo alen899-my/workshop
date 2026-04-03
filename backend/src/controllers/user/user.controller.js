@@ -25,16 +25,20 @@ exports.getUsers = async (req, res) => {
       LEFT JOIN shops s ON u.shop_id = s.id
     `;
 
-    if (isSuperAdmin) {
-      // SUPERADMIN: see everyone across all shops
-      const result = await db.query(select + from + 'ORDER BY u.created_at DESC');
+    const { status, shopId: queryShopId } = req.query;
+    const statusFilter = status === 'Inactive' ? 'u.deleted_at IS NOT NULL' : 'u.deleted_at IS NULL';
+
+    if (isSuperAdmin && !queryShopId) {
+      // SUPERADMIN: see everyone across all shops (unfiltered by shop unless explicit)
+      const result = await db.query(select + from + ` WHERE ${statusFilter} ORDER BY u.created_at DESC`);
       return res.status(200).json({ success: true, data: result.rows });
     } else {
       // shop_owner / worker: scoped to their shop only
-      if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned to your account' });
+      const targetShopId = isSuperAdmin ? queryShopId : shopId;
+      if (!targetShopId) return res.status(403).json({ success: false, error: 'No shop context' });
       const result = await db.query(
-        select + from + 'WHERE u.shop_id = $1 ORDER BY u.created_at DESC',
-        [shopId]
+        select + from + ` WHERE u.shop_id = $1 AND ${statusFilter} ORDER BY u.created_at DESC`,
+        [targetShopId]
       );
       return res.status(200).json({ success: true, data: result.rows });
     }
@@ -52,12 +56,12 @@ exports.getUserById = async (req, res) => {
     const result = await db.query(
       `SELECT u.id, u.name, u.phone, u.role, r.name AS role_name, u.status, u.created_at, u.shop_id,
               s.name AS shop_name, s.location AS shop_location
-       FROM users u 
-       LEFT JOIN roles r ON u.role = r.slug 
-       LEFT JOIN shops s ON u.shop_id = s.id
-       WHERE u.id = $1`,
-      [req.params.id]
-    );
+        FROM users u 
+        LEFT JOIN roles r ON u.role = r.slug 
+        LEFT JOIN shops s ON u.shop_id = s.id
+        WHERE u.id = $1 AND u.deleted_at IS NULL`,
+       [req.params.id]
+     );
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
 
     const user = result.rows[0];
@@ -199,7 +203,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// @desc    Delete user — scoped by shop
+// @desc    Soft Delete user — scoped by shop
 exports.deleteUser = async (req, res) => {
   const { role: requesterRole, shopId: requesterShopId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
@@ -212,8 +216,8 @@ exports.deleteUser = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
     }
 
-    await db.query('DELETE FROM users WHERE id = $1', [req.params.id]);
-    res.status(200).json({ success: true, message: 'User removed from registry' });
+    await db.query(`UPDATE users SET deleted_at = NOW(), status = 'Inactive' WHERE id = $1`, [req.params.id]);
+    res.status(200).json({ success: true, message: 'User record archived (Inactive)' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
   }

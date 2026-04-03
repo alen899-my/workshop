@@ -10,22 +10,23 @@ exports.getTaxSettings = async (req, res) => {
     let result;
     if (isSuperAdmin && !queryShopId) {
        // Super admin fetching all shops' taxes
-       result = await db.query(`
-         SELECT t.*, s.name as shop_name 
-         FROM tax_settings t 
-         LEFT JOIN shops s ON t.shop_id = s.id 
-         ORDER BY t.created_at DESC
-       `);
+        result = await db.query(`
+          SELECT t.*, s.name as shop_name 
+          FROM tax_settings t 
+          LEFT JOIN shops s ON t.shop_id = s.id 
+          WHERE t.deleted_at IS NULL
+          ORDER BY t.created_at DESC
+        `);
     } else {
        // Regular shop fetch
        const targetShopId = isSuperAdmin ? queryShopId : shopId;
        if (!targetShopId) {
           return res.status(200).json({ success: true, data: [] });
        }
-       result = await db.query(
-         'SELECT * FROM tax_settings WHERE shop_id = $1 ORDER BY created_at ASC',
-         [targetShopId]
-       );
+        result = await db.query(
+          'SELECT * FROM tax_settings WHERE shop_id = $1 AND deleted_at IS NULL ORDER BY created_at ASC',
+          [targetShopId]
+        );
     }
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
@@ -108,8 +109,8 @@ exports.deleteTaxSetting = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    await db.query('DELETE FROM tax_settings WHERE id = $1', [id]);
-    res.status(200).json({ success: true, message: 'Tax setting deleted' });
+    await db.query(`UPDATE tax_settings SET deleted_at = NOW(), is_active = false WHERE id = $1`, [id]);
+    res.status(200).json({ success: true, message: 'Tax setting archived (Inactive)' });
   } catch (error) {
     console.error('deleteTaxSetting Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });

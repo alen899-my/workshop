@@ -46,10 +46,11 @@ export interface Bill {
 }
 
 export const billService = {
-  /** Fetch all bills for the current shop */
-  async getAll(): Promise<{ success: boolean; data?: Bill[]; error?: string }> {
+  /** Fetch all bills (optional status filter: Active/Inactive) */
+  async getAll(status?: string): Promise<{ success: boolean; data?: Bill[]; error?: string }> {
     try {
-      const res = await fetch(`${API_URL}`, {
+      const url = status ? `${API_URL}?status=${status}` : API_URL;
+      const res = await fetch(url, {
         cache: 'no-store',
         headers: getAuth()
       });
