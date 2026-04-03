@@ -34,7 +34,7 @@ const NAV_MAIN = [
       { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
       { href: "/app/repairs/create", icon: PlusCircle, title: "New Repair", permission: "create:repair" },
       { href: "/app/repairs", icon: Wrench, title: "Repairs", permission: "view:repairs" },
-      { href: "/app/vehicles", icon: Car, title: "Vehicles" },
+      { href: "/app/vehicles", icon: Car, title: "Vehicles", permission: "view:vehicles" },
     ],
   },
   {
@@ -47,7 +47,7 @@ const NAV_MAIN = [
       { href: "/app/permissions", icon: ShieldCheck, title: "Permissions", permission: "view:permission" },
       { href: "/app/invoices", icon: Receipt, title: "Invoices", permission: "view:invoices" },
       { href: "/app/reports", icon: BarChart2, title: "Reports", permission: "view:reports" },
-      { href: "/app/settings", icon: Settings, title: "Settings" },
+      { href: "/app/settings", icon: Settings, title: "Settings", permission: "manage:settings" },
     ],
   },
 ];
@@ -77,7 +77,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active
           ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-md shadow-sidebar-primary/10"
-          : "text-sidebar-foreground/60"
+          : "text-sidebar-foreground/85"
       )}
     >
       {/* Active left bar */}
@@ -89,7 +89,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
         size={16}
         className={cn(
           "shrink-0",
-          active ? "opacity-100" : "opacity-60 group-hover:opacity-90"
+          active ? "opacity-100" : "opacity-80 group-hover:opacity-100"
         )}
       />
 
@@ -177,7 +177,7 @@ export function AppSidebar() {
           return (
             <div key={group.label} className="mb-5">
               {!isCollapsed && (
-                <p className="mb-2 px-3 text-[10px] font-medium tracking-[2px] text-sidebar-foreground/35">
+                <p className="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-sidebar-foreground/60 uppercase">
                   {group.label}
                 </p>
               )}

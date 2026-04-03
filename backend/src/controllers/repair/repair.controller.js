@@ -336,3 +336,76 @@ exports.deleteRepair = async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
+// @desc    Get dashboard summary statistics
+exports.getDashboardStats = async (req, res) => {
+  const { role, shopId } = req.user;
+  const isSuperAdmin = role === 'super-admin';
+
+  if (!isSuperAdmin && !shopId) {
+    return res.status(403).json({ success: false, error: 'No shop assigned' });
+  }
+
+  try {
+    const shopFilter = isSuperAdmin ? '' : `WHERE shop_id = ${shopId}`;
+    const shopFilterWithAlias = isSuperAdmin ? '' : `WHERE r.shop_id = ${shopId}`;
+
+    // 1. Total & Pending Counts
+    const countsR = await db.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status != 'Completed') as pending
+      FROM repairs
+      ${shopFilter}
+    `);
+
+    // 2. Total Revenue (from bills)
+    const revenueR = await db.query(`
+      SELECT SUM(rb.total_amount) as revenue
+      FROM repair_bills rb
+      JOIN repairs r ON rb.repair_id = r.id
+      ${shopFilterWithAlias}
+    `);
+
+    // 3. Recent 3 Repairs
+    const recentR = await db.query(`
+      SELECT r.*, s.name as shop_name
+      FROM repairs r
+      LEFT JOIN shops s ON r.shop_id = s.id
+      ${shopFilterWithAlias}
+      ORDER BY r.created_at DESC
+      LIMIT 3
+    `);
+
+    // 4. Avg Completion Time (in hours) - Jobs that are COMPLETED
+    const timeR = await db.query(`
+      SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600) as avg_hours
+      FROM repairs
+      ${shopFilter} AND status = 'Completed'
+    `);
+
+    // 5. Worker Assignments (Technicians/Shop Staff)
+    const workersR = await db.query(`
+      SELECT 
+        u.id, u.name, u.role,
+        (SELECT COUNT(*) FROM repairs r WHERE r.attending_worker_id = u.id AND r.status != 'Completed') as active_jobs
+      FROM users u
+      WHERE u.shop_id = $1 AND u.role != 'super-admin'
+      ORDER BY active_jobs DESC
+    `, [shopId]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalRepairs: parseInt(countsR.rows[0].total || 0),
+        pendingRepairs: parseInt(countsR.rows[0].pending || 0),
+        totalRevenue: parseFloat(revenueR.rows[0].revenue || 0),
+        recentRepairs: recentR.rows[0] ? recentR.rows : [],
+        avgCompletionHours: parseFloat(timeR.rows[0].avg_hours || 0).toFixed(1),
+        workers: workersR.rows
+      }
+    });
+  } catch (error) {
+    console.error('getDashboardStats Error:', error);
+    res.status(500).json({ success: false, error: 'Server error fetching stats' });
+  }
+};

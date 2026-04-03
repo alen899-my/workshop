@@ -110,9 +110,9 @@
     --popover: oklch(0.05 0 0);
     --popover-foreground: oklch(0.98 0 0);
 
-    /* Primary: Teal (Exact match to Light Mode) */
-    --primary: oklch(0.48 0.072 188);               /* Teal */
-    --primary-foreground: oklch(0.05 0 0);          /* Dark text for button contrast */
+    /* Primary: Vibrantly Glowing Teal for Dark Mode */
+    --primary: oklch(0.68 0.12 188);               
+    --primary-foreground: oklch(0.05 0 0);          /* Dark text for maximum contrast on glow */
 
     --secondary: oklch(0.12 0 0);                   /* Dark neutral #1e1e1e */
     --secondary-foreground: oklch(0.88 0 0);
@@ -138,9 +138,11 @@
     --chart-5: oklch(0.60 0.145 44);               /* Hazard orange */
 
     /* Sidebar — Pure black to match */
+    /* Sidebar — Pure black to match */
     --sidebar: oklch(0 0 0);
     --sidebar-foreground: oklch(0.88 0 0);
-    --sidebar-primary: oklch(0.48 0.072 188);
+    /* Sidebar Primary to match main theme */
+    --sidebar-primary: oklch(0.68 0.12 188);
     --sidebar-primary-foreground: oklch(0.05 0 0);
     --sidebar-accent: oklch(0.10 0 0);
     --sidebar-accent-foreground: oklch(0.88 0 0);

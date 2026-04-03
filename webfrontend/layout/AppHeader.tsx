@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useRBAC } from "@/lib/rbac";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export function AppHeader() {
   const router = useRouter();
@@ -15,15 +14,12 @@ export function AppHeader() {
   const [now, setNow] = useState<Date | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Live clock — ticks every second
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -37,6 +33,10 @@ export function AppHeader() {
   const handleLogout = () => {
     localStorage.removeItem("workshop_token");
     localStorage.removeItem("workshop_user");
+    // Remove cookies
+    document.cookie = "workshop_token=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "workshop_role=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "workshop_permissions=; path=/; max-age=0; SameSite=Lax";
     window.location.href = "/login";
   };
 
@@ -56,112 +56,85 @@ export function AppHeader() {
     admin: "Super Admin",
     shop_owner: "Shop Owner",
     worker: "Technician",
-    shop: "Shop Manager"
+    shop: "Shop Manager",
   };
 
-  const displayRole = user?.role ? (roleLabels[user.role.toLowerCase()] || user.role) : "Administrator";
+  const displayRole = user?.role
+    ? roleLabels[user.role.toLowerCase()] || user.role
+    : "Administrator";
 
   return (
-    <header className="h-14 shrink-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 sm:px-6 sticky top-0 transition-all">
+    <header className="h-14 shrink-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 sticky top-0">
 
-      {/* ── Left: mobile spacer (hamburger is absolute-positioned in sidebar) ── */}
-      <div className="flex items-center gap-3">
+      {/* ── Left: date & time ── */}
+      <div className="flex items-center gap-4">
+        {/* Mobile spacer for sidebar hamburger */}
         <div className="w-8 md:hidden" />
 
-        {/* Date + Time — hidden on small screens */}
-        <div className="hidden sm:flex items-center gap-4 px-1">
-          {/* Date */}
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-primary/10">
-              <CalendarDays size={13} className="text-primary" />
-            </div>
-            <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-foreground/50 uppercase">
-              {dateStr}
-            </span>
-          </div>
-
-          {/* Divider */}
-          <div className="h-4 w-px bg-border/60" />
-
-          {/* Time with seconds */}
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-accent/10">
-              <Clock size={13} className="text-accent-foreground" />
-            </div>
-            <span className="font-mono text-[15px] font-black tabular-nums tracking-tighter text-foreground/90">
-              {timeStr}
-            </span>
-          </div>
+        {/* Date — sm and up */}
+        <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
+          <CalendarDays size={14} />
+          <span className="text-sm">{dateStr}</span>
         </div>
 
-        {/* Mobile: time only, no date */}
-        <div className="flex sm:hidden items-center gap-1.5 px-1">
-          <Clock size={11} className="text-primary/70 shrink-0" />
-          <span className="font-mono text-[12px] font-bold tabular-nums tracking-widest text-foreground/80">
-            {timeStr}
-          </span>
+        <div className="hidden sm:block h-4 w-px bg-border" />
+
+        {/* Time */}
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Clock size={14} />
+          <span className="text-sm tabular-nums">{timeStr}</span>
         </div>
       </div>
 
-      {/* ── Right: theme toggle + shop name + avatar dropdown ── */}
+      {/* ── Right: theme + user menu ── */}
       <div className="flex items-center gap-3" ref={dropdownRef}>
 
-        {/* Dark/Light mode toggle */}
         <ThemeToggle />
 
-        {/* Identity labels: Shop Name & Username */}
-        <div className="hidden md:flex flex-col items-end gap-0.5">
-          <span className="font-mono text-[13px] font-bold tracking-tight text-foreground leading-none">
-            {(user?.shopName || "Workshop").toUpperCase()}
+        {/* Shop name & role — md and up */}
+        <div className="hidden md:flex flex-col items-end">
+          <span className="text-sm font-semibold text-foreground leading-tight">
+            {user?.shopName || "Workshop"}
           </span>
-          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-primary leading-none">
-            {displayRole}
-          </span>
+          <span className="text-xs text-muted-foreground leading-tight">{displayRole}</span>
         </div>
 
         {/* Avatar button */}
         <button
           onClick={() => setDropdownOpen(v => !v)}
-          aria-label="Account menu"
+          aria-label="Open account menu"
           className={cn(
-            "flex items-center gap-2 rounded-xl border border-border/50 bg-background/50 p-1 pr-2 transition-all duration-200 active:scale-95",
-            dropdownOpen
-              ? "border-primary/50 bg-primary/5 shadow-inner"
-              : "hover:border-primary/30 hover:bg-card"
+            "flex items-center gap-1.5 rounded-lg border border-border p-1 pr-2 transition-colors",
+            dropdownOpen ? "bg-muted" : "hover:bg-muted"
           )}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[11px] font-black tracking-tighter text-primary-foreground shadow-md shadow-primary/25">
+          {/* Avatar circle */}
+          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
             {initials}
           </div>
           <ChevronDown
-            size={12}
+            size={13}
             className={cn(
-              "text-muted-foreground transition-transform duration-300",
+              "text-muted-foreground transition-transform duration-200",
               dropdownOpen && "rotate-180"
             )}
           />
         </button>
 
-        {/* ── Dropdown menu ── */}
+        {/* ── Dropdown ── */}
         {dropdownOpen && (
-          <div className="absolute right-4 top-[calc(3.5rem+8px)] sm:right-6 w-52 rounded-2xl border border-border bg-card shadow-[0_16px_48px_rgba(0,0,0,0.12)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute right-4 sm:right-6 top-[calc(3.5rem+6px)] w-56 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
 
-            {/* User info header */}
-            <div className="border-b border-border bg-muted/20 px-4 py-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-primary">
-                  Operator Panel
-                </p>
-                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              </div>
-              <p className="font-mono text-[14px] font-black text-foreground truncate leading-none">
-                {(user?.shopName || "Workshop").toUpperCase()}
+            {/* User info */}
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-sm font-semibold text-foreground truncate">
+                {user?.shopName || "Workshop"}
               </p>
-              
+              <p className="text-xs text-muted-foreground mt-0.5">{displayRole}</p>
             </div>
 
-            {/* Actions */}
-            <div className="p-1.5 flex flex-col gap-0.5">
+            {/* Menu items */}
+            <div className="p-1">
               {can("edit:shops") && (
                 <button
                   onClick={() => {
@@ -169,18 +142,12 @@ export function AppHeader() {
                     const sid = user?.shopId || user?.shop_id;
                     if (sid) router.push(`/app/shops/edit/${sid}`);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
-                    <UserCog size={13} className="text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-mono text-[12px] font-bold text-foreground leading-none">
-                      Edit Shop Details
-                    </p>
-                    <p className="font-mono text-[9px] text-muted-foreground mt-0.5">
-                      Management dashboard
-                    </p>
+                  <UserCog size={15} className="text-muted-foreground shrink-0" />
+                  <div className="text-left">
+                    <p className="font-medium leading-none">Shop Settings</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Edit your shop details</p>
                   </div>
                 </button>
               )}
@@ -190,39 +157,25 @@ export function AppHeader() {
                   setDropdownOpen(false);
                   router.push("/app/profile");
                 }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10">
-                  <UserIcon size={13} className="text-secondary-foreground" />
-                </div>
-                <div>
-                  <p className="font-mono text-[12px] font-bold text-foreground leading-none">
-                    My Profile
-                  </p>
-                  <p className="font-mono text-[9px] text-muted-foreground mt-0.5">
-                    Account settings
-                  </p>
+                <UserIcon size={15} className="text-muted-foreground shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium leading-none">My Profile</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Account settings</p>
                 </div>
               </button>
 
-
-              {/* Divider */}
               <div className="my-1 h-px bg-border" />
 
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-destructive/8 group"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-destructive/10 transition-colors group"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-destructive/10 group-hover:bg-destructive/20 transition-colors">
-                  <LogOut size={13} className="text-destructive" />
-                </div>
-                <div>
-                  <p className="font-mono text-[12px] font-bold text-destructive leading-none">
-                    Log Out
-                  </p>
-                  <p className="font-mono text-[9px] text-muted-foreground mt-0.5">
-                    End your session
-                  </p>
+                <LogOut size={15} className="text-destructive shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium text-destructive leading-none">Log Out</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">End your session</p>
                 </div>
               </button>
             </div>

@@ -6,6 +6,9 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { authorize } = require('../../middleware/rbac.middleware');
 const { upload } = require('../../middleware/upload');
 
+// @route   GET /api/repairs/stats/summary
+router.get('/stats/summary', authenticate, repairController.getDashboardStats);
+
 // @route   GET /api/repairs
 router.get('/', authenticate, repairController.getRepairs);
 

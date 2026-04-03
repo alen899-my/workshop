@@ -8,6 +8,7 @@ import { z } from "zod";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
+import { permissionService } from "@/services/permission.service";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
@@ -68,7 +69,7 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [form, setForm] = useState({ phone: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -88,7 +89,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     const result = loginSchema.safeParse(form);
     if (!result.success) {
       const errs: Record<string, string> = {};
@@ -102,7 +103,7 @@ export default function LoginPage() {
 
     setErrors({});
     setLoading(true);
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
@@ -119,9 +120,18 @@ export default function LoginPage() {
       localStorage.setItem("workshop_token", data.token);
       localStorage.setItem("workshop_user", JSON.stringify(data.data));
 
+      // Fetch permissions for middleware guarding
+      const permsRes = await permissionService.getRolePermissions(data.data.role);
+      const perms = permsRes.success ? permsRes.data?.join(',') : "";
+
+      // Set cookies for middleware redirection and dynamic permission-based protection
+      document.cookie = `workshop_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `workshop_role=${data.data.role}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `workshop_permissions=${perms}; path=/; max-age=604800; SameSite=Lax`;
+
       toast({ type: "success", title: "Welcome back", description: "Loading your dashboard..." });
       router.push("/app");
-      
+
     } catch (error) {
       toast({ type: "error", title: "Network Error", description: "Failed to connect to the server." });
     } finally {
@@ -133,7 +143,7 @@ export default function LoginPage() {
     <div className="h-screen flex bg-background font-mono overflow-hidden">
       {/* ── LEFT: Form panel ── */}
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-6 sm:px-12 py-12 relative z-10 overflow-y-auto h-full no-scrollbar">
-        
+
         {/* Brand Header */}
         <div className="absolute top-8 left-8 sm:top-12 sm:left-12">
           <Link href="/" className="flex items-center flex-shrink-0">

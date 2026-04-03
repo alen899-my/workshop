@@ -82,6 +82,19 @@ export const repairService = {
     }
   },
 
+  /** Fetch dashboard summary stats */
+  async getSummaryStats(): Promise<{ success: boolean; data: { totalRepairs: number; pendingRepairs: number; totalRevenue: number; recentRepairs: Repair[]; avgCompletionHours: string; workers: {id: number; name: string; role: string; active_jobs: number}[] }; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/stats/summary`, {
+        cache: 'no-store',
+        headers: getAuth()
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, data: { totalRepairs: 0, pendingRepairs: 0, totalRevenue: 0, recentRepairs: [], avgCompletionHours: "0", workers: [] }, error: "Stats fetch failed" };
+    }
+  },
+
   /** Delete repair */
   async delete(id: string | number): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
