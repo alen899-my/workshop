@@ -46,7 +46,7 @@ const NAV_MAIN = [
       { href: "/app/roles", icon: ShieldHalf, title: "Roles", permission: "view:role" },
       { href: "/app/permissions", icon: ShieldCheck, title: "Permissions", permission: "view:permission" },
       { href: "/app/invoices", icon: Receipt, title: "Invoices", permission: "view:invoices" },
-      { href: "/app/reports", icon: BarChart2, title: "Reports", permission: "view:reports" },
+
       { href: "/app/settings", icon: Settings, title: "Settings", permission: "manage:settings" },
     ],
   },

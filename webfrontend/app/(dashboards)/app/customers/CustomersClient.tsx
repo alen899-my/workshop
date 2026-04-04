@@ -15,6 +15,8 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { vehicleService } from "@/services/vehicle.service";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 export function CustomersClient({ initialData = [] }: { initialData?: Customer[] }) {
   const [customers, setCustomers] = useState<Customer[]>(initialData);
@@ -291,17 +293,17 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Contact Number</label>
-                <div className="relative group">
-                  <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors z-10" />
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g. +91 9876543210"
-                    className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-3 text-sm outline-none focus:bg-background focus:border-primary/40 transition-all font-semibold placeholder:font-normal"
-                  />
-                </div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Contact Phone Number</label>
+                <PhoneInput
+                  country="in"
+                  value={formData.phone}
+                  onChange={(phone) => setFormData(f => ({ ...f, phone: `+${phone}` }))}
+                  containerClass="!w-full"
+                  inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                  buttonClass="!bg-background !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted"
+                  dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
+                  searchClass="!bg-muted !border !border-border !text-foreground"
+                />
               </div>
             </div>
           </div>

@@ -114,7 +114,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
     <ModuleForm
       title={initialBill ? "Update Bill Details" : "Finalize Service Bill"}
       subtitle={`Detail final costs for vehicle ${initialRepair?.vehicle_number} — ${initialRepair?.model_name}.`}
-      backUrl={`/app/repairs/${id}`}
+      backUrl={`/app/repairs`}
       onSubmit={handleSubmit}
       loading={loading}
     >

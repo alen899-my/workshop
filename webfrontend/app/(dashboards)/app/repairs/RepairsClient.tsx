@@ -179,9 +179,10 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
       message: `Delete repair record for ${row.vehicle_number}? This will NOT delete the vehicle or customer from your registry.`,
       onConfirm: async () => {
         if (!pendingDeleteRef.current) return;
-        const res = await repairService.delete(pendingDeleteRef.current.id);
+        const targetId = pendingDeleteRef.current.id; // Capture id before nullifying
+        const res = await repairService.delete(targetId);
         if (res.success) {
-          setRepairs((prev: Repair[]) => prev.filter((r: Repair) => r && pendingDeleteRef.current && r.id !== pendingDeleteRef.current.id));
+          setRepairs((prev: Repair[]) => prev.filter((r: Repair) => r && r.id !== targetId));
           toast({ type: "success", title: "Deleted", description: "Repair record deleted successfully." });
         } else {
           toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });

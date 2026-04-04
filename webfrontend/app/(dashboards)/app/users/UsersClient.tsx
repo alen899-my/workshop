@@ -139,9 +139,10 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       message: `Are you sure you want to delete user: ${row.name}?`,
       onConfirm: async () => {
         if (!pendingDeleteRef.current) return;
-        const res = await userService.delete(pendingDeleteRef.current.id);
+        const targetId = pendingDeleteRef.current.id;
+        const res = await userService.delete(targetId);
         if (res.success) {
-          setUsers(prev => prev.filter(u => u.id !== pendingDeleteRef.current!.id));
+          setUsers(prev => prev.filter(u => u.id !== targetId));
           toast({ type: "success", title: "Deleted", description: "User deleted successfully." });
         } else {
           toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });

@@ -85,8 +85,27 @@ export function RepairDetailsModal({
       });
       const data = await res.json();
       if (!res.ok || !data.success || !data.url) throw new Error("Failed");
-      const text = encodeURIComponent(`Here is the receipt for your vehicle repair: ${data.url}`);
-      window.open(`https://wa.me/?text=${text}`, '_blank');
+
+      let shopName = "our workshop";
+      const sessionStr = localStorage.getItem("workshop_user");
+      if (sessionStr) {
+        try {
+          const user = JSON.parse(sessionStr);
+          if (user.shop_name) shopName = user.shop_name;
+        } catch (e) {}
+      }
+
+      let phoneStr = repair.phone_number || repair.owner_phone || "";
+      let phoneClean = phoneStr.replace(/\D/g, '');
+
+      let amountStr = "";
+      if (selectedBill && selectedBill.total_amount) {
+        amountStr = `The total amount is ${symbol}${Number(selectedBill.total_amount).toFixed(2)}. `;
+      }
+
+      const text = encodeURIComponent(`Hello! Your repair at ${shopName} is completed. ${amountStr}The detailed bill is attached to the link below:\n\n${data.url}\n\nPlease come to pick up your vehicle as soon as possible. Thank you!`);
+      const whatsappUrl = phoneClean ? `https://wa.me/${phoneClean}?text=${text}` : `https://wa.me/?text=${text}`;
+      window.open(whatsappUrl, '_blank');
     } catch (e) {
       console.error("Share failed", e);
     } finally {

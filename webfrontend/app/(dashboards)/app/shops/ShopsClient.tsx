@@ -124,9 +124,10 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
       message: `Are you sure you want to delete shop: ${row.name}?`,
       onConfirm: async () => {
         if (!pendingDeleteRef.current) return;
-        const res = await shopService.delete(pendingDeleteRef.current.id);
+        const targetId = pendingDeleteRef.current.id;
+        const res = await shopService.delete(targetId);
         if (res.success) {
-          setShops(prev => prev.filter(s => s.id !== pendingDeleteRef.current!.id));
+          setShops(prev => prev.filter(s => s.id !== targetId));
           toast({ type: "success", title: "Deleted", description: "Shop deleted successfully." });
         } else {
           toast({ type: "error", title: "Error", description: res.error || "Failed to delete" });
