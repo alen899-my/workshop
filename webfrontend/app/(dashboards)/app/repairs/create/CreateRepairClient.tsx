@@ -13,6 +13,7 @@ import {
   Search, ChevronRight, MoreHorizontal, Loader2, Trash2
 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { VEHICLE_CONFIG, MAIN_VEHICLES } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
@@ -549,13 +550,14 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                     <div className="flex flex-col gap-1.5">
-                      <select
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Service Type</label>
+                      <WorkshopInlineSelect
                         value={block.type}
-                        onChange={(e) => updateBlockType(bIdx, e.target.value)}
-                        className="w-full bg-background border border-border text-sm rounded-none px-4 py-3 focus:outline-none focus:border-primary transition-all font-bold text-foreground h-[48px]"
-                      >
-                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
-                      </select>
+                        onChange={(val) => updateBlockType(bIdx, val)}
+                        options={SERVICE_TYPES.map(st => ({ value: st, label: st }))}
+                        wrapperClassName="w-full min-w-0"
+                        className="w-full bg-background border-border text-sm px-4 py-3 font-bold text-foreground normal-case tracking-normal"
+                      />
                     </div>
                   </div>
 
@@ -696,16 +698,18 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
 
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-muted-foreground mb-1 block">Status</label>
-          <select
+          <WorkshopInlineSelect
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="w-full bg-card border border-border text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-primary/50 transition-all"
-          >
-            <option value="Pending">Pending</option>
-            <option value="Started">Started</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-          </select>
+            onChange={(val) => setForm({ ...form, status: val })}
+            options={[
+              { value: "Pending", label: "Pending" },
+              { value: "Started", label: "Started" },
+              { value: "In Progress", label: "In Progress" },
+              { value: "Completed", label: "Completed" },
+            ]}
+            wrapperClassName="w-full min-w-0"
+            className="w-full bg-card border-border text-sm px-4 py-3 font-bold normal-case tracking-normal"
+          />
         </div>
       </div>
       <WorkshopModal

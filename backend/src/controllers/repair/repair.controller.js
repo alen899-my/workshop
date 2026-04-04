@@ -22,7 +22,9 @@ exports.getRepairs = async (req, res) => {
         COALESCE(v.vehicle_image, r.vehicle_image) as vehicle_image,
         s.name AS shop_name,
         aw.name AS attending_worker_name,
-        sb.name AS submitted_by_name
+        sb.name AS submitted_by_name,
+        rb.id AS bill_id,
+        rb.payment_status
     `;
     const from = `
       FROM repairs r
@@ -31,24 +33,59 @@ exports.getRepairs = async (req, res) => {
       LEFT JOIN shops s ON r.shop_id = s.id
       LEFT JOIN users aw ON r.attending_worker_id = aw.id
       LEFT JOIN users sb ON r.submitted_by_id = sb.id
+      LEFT JOIN repair_bills rb ON rb.repair_id = r.id AND rb.deleted_at IS NULL
     `;
 
-    const { status, workerId } = req.query;
-    const statusFilter = status === 'Inactive' ? 'r.deleted_at IS NOT NULL' : 'r.deleted_at IS NULL';
-    const workerFilter = workerId ? `AND r.attending_worker_id = $${isSuperAdmin ? 1 : 2}` : '';
+    const { recordStatus, status, serviceType, vehicleType, worker, workerId, search } = req.query;
+    const rStatusFilter = (recordStatus === 'Inactive' || req.query.status === 'Inactive') 
+      ? 'r.deleted_at IS NOT NULL' 
+      : 'r.deleted_at IS NULL';
 
-    if (isSuperAdmin) {
-      const query = select + from + ` WHERE ${statusFilter} ${workerFilter} ORDER BY r.created_at DESC`;
-      const result = await db.query(query, workerId ? [workerId] : []);
-      return res.status(200).json({ success: true, data: result.rows });
-    } else {
-      if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned' });
-      const query = select + from + ` WHERE r.shop_id = $1 AND ${statusFilter} ${workerFilter} ORDER BY r.created_at DESC`;
-      const params = [shopId];
-      if (workerId) params.push(workerId);
-      const result = await db.query(query, params);
-      return res.status(200).json({ success: true, data: result.rows });
+    let whereClauses = [rStatusFilter];
+    let queryParams = [];
+    let paramIndex = 1;
+
+    if (!isSuperAdmin) {
+       whereClauses.push(`r.shop_id = $${paramIndex}`);
+       queryParams.push(shopId);
+       paramIndex++;
     }
+
+    if (search) {
+       whereClauses.push(`(r.vehicle_number ILIKE $${paramIndex} OR r.owner_name ILIKE $${paramIndex})`);
+       queryParams.push(`%${search}%`);
+       paramIndex++;
+    }
+    if (status && status !== 'Active' && status !== 'Inactive') {
+       whereClauses.push(`r.status = $${paramIndex}`);
+       queryParams.push(status);
+       paramIndex++;
+    }
+    if (serviceType) {
+       whereClauses.push(`r.service_type = $${paramIndex}`);
+       queryParams.push(serviceType);
+       paramIndex++;
+    }
+    if (vehicleType) {
+       whereClauses.push(`r.vehicle_type = $${paramIndex}`);
+       queryParams.push(vehicleType);
+       paramIndex++;
+    }
+    if (worker) {
+       whereClauses.push(`aw.name = $${paramIndex}`);
+       queryParams.push(worker);
+       paramIndex++;
+    }
+    if (workerId) {
+       whereClauses.push(`r.attending_worker_id = $${paramIndex}`);
+       queryParams.push(workerId);
+       paramIndex++;
+    }
+
+    const query = select + from + ` WHERE ` + whereClauses.join(' AND ') + ` ORDER BY r.created_at DESC`;
+    const result = await db.query(query, queryParams);
+    
+    return res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     console.error('getRepairs Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
@@ -69,13 +106,16 @@ exports.getRepairById = async (req, res) => {
         c.name AS c_name, c.phone AS c_phone,
         s.name AS shop_name,
         aw.name AS attending_worker_name,
-        sb.name AS submitted_by_name
+        sb.name AS submitted_by_name,
+        rb.id AS bill_id,
+        rb.payment_status
       FROM repairs r
       LEFT JOIN vehicles v ON r.vehicle_id = v.id
       LEFT JOIN customers c ON v.customer_id = c.id
       LEFT JOIN shops s ON r.shop_id = s.id
       LEFT JOIN users aw ON r.attending_worker_id = aw.id
       LEFT JOIN users sb ON r.submitted_by_id = sb.id
+      LEFT JOIN repair_bills rb ON rb.repair_id = r.id AND rb.deleted_at IS NULL
       WHERE r.id = $1 AND r.deleted_at IS NULL
     `;
     const result = await db.query(select, [req.params.id]);

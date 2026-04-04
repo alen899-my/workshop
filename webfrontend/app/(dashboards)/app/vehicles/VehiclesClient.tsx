@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/WorkshopToast";
 import { useRBAC } from "@/lib/rbac";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -22,6 +23,8 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [recordStatus, setRecordStatus] = useState("Active");
+  const [filterType, setFilterType] = useState("");
+  const [filterMake, setFilterMake] = useState("");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const pendingDeleteRef = useRef<Vehicle | null>(null);
@@ -154,12 +157,37 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
   };
 
   const filtered = useMemo(() => {
-    return vehicles.filter(v =>
-      v.vehicle_number.toLowerCase().includes(search.toLowerCase()) ||
-      v.model_name.toLowerCase().includes(search.toLowerCase()) ||
-      v.owner_name?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [vehicles, search]);
+    return vehicles.filter(v => {
+      const q = search.toLowerCase();
+      const inSearch = v.vehicle_number.toLowerCase().includes(q) ||
+        v.model_name.toLowerCase().includes(q) ||
+        v.owner_name?.toLowerCase().includes(q);
+      const inType = filterType ? v.vehicle_type === filterType : true;
+      
+      const modelPrefix = v.model_name.split(' ')[0] || v.model_name;
+      const inMake = filterMake ? modelPrefix === filterMake : true;
+
+      return inSearch && inType && inMake;
+    });
+  }, [vehicles, search, filterType, filterMake]);
+
+  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterType, filterMake].filter(Boolean).length;
+
+  const uniqueMakes = useMemo(() => {
+    const seen = new Set<string>();
+    return vehicles
+      .map(v => v.model_name.split(' ')[0] || v.model_name)
+      .filter((m): m is string => !!m && !seen.has(m) && !!seen.add(m))
+      .map(m => ({ value: m, label: m }));
+  }, [vehicles]);
+
+  const uniqueTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return vehicles
+      .map(v => v.vehicle_type)
+      .filter((t): t is string => !!t && !seen.has(t) && !!seen.add(t))
+      .map(t => ({ value: t, label: t }));
+  }, [vehicles]);
 
   const columns: ColumnDef<Vehicle>[] = [
     {
@@ -249,11 +277,28 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
           searchPlaceholder="Search number, model, or owner..."
           search={search}
           onSearchChange={setSearch}
+          activeFilterCount={activeFilterCount}
           onReset={() => {
             setSearch("");
             setRecordStatus("Active");
+            setFilterType("");
+            setFilterMake("");
           }}
         >
+          <FilterSelect
+            label="Category"
+            value={filterType}
+            onChange={setFilterType}
+            options={uniqueTypes}
+            placeholder="All Categories"
+          />
+          <FilterSelect
+            label="Make / Brand"
+            value={filterMake}
+            onChange={setFilterMake}
+            options={uniqueMakes}
+            placeholder="All Brands"
+          />
            <FilterSelect
             label="Record Status"
             value={recordStatus}
@@ -298,32 +343,28 @@ export function VehiclesClient({ initialVehicles = [], initialCustomers = [] }: 
           {/* Owner Selection */}
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle Owner</label>
-            <div className="relative group">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors z-10" />
-              <select
-                value={formData.customer_id}
-                onChange={e => setFormData({ ...formData, customer_id: e.target.value ? Number(e.target.value) : "" })}
-                className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-background focus:border-primary/40 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)] transition-all cursor-pointer appearance-none"
-              >
-                <option value="">Select Owner...</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>)}
-              </select>
-            </div>
+            <WorkshopInlineSelect
+              value={String(formData.customer_id)}
+              onChange={(val) => setFormData({ ...formData, customer_id: val ? Number(val) : "" })}
+              options={[
+                { value: "", label: "Select Owner..." },
+                ...customers.map(c => ({ value: String(c.id), label: `${c.name} (${c.phone})` }))
+              ]}
+              wrapperClassName="w-full min-w-0"
+              className="w-full bg-muted/40 border-border px-4 py-2.5 text-sm font-medium normal-case tracking-normal"
+            />
           </div>
 
           {/* Type Selection */}
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle Category</label>
-            <div className="relative group">
-              <Car size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors z-10" />
-              <select
-                value={formData.vehicle_type}
-                onChange={e => setFormData({ ...formData, vehicle_type: e.target.value })}
-                className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:bg-background focus:border-primary/40 focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)] transition-all cursor-pointer appearance-none"
-              >
-                {VEHICLE_CONFIG.map(v => <option key={v.id} value={v.id}>{v.id}</option>)}
-              </select>
-            </div>
+            <WorkshopInlineSelect
+              value={formData.vehicle_type}
+              onChange={(val) => setFormData({ ...formData, vehicle_type: val })}
+              options={VEHICLE_CONFIG.map(v => ({ value: v.id, label: v.label }))}
+              wrapperClassName="w-full min-w-0"
+              className="w-full bg-muted/40 border-border px-4 py-2.5 text-sm font-medium normal-case tracking-normal"
+            />
           </div>
 
           {/* Plate Number */}

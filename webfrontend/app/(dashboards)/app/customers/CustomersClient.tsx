@@ -15,6 +15,7 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { vehicleService } from "@/services/vehicle.service";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
@@ -23,6 +24,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [recordStatus, setRecordStatus] = useState("Active");
+  const [filterHasVehicles, setFilterHasVehicles] = useState("");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
@@ -134,13 +136,20 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
   };
 
   const filtered = useMemo(() => {
-    if (!search) return customers;
-    const q = search.toLowerCase();
-    return customers.filter(c =>
-      (c.name?.toLowerCase().includes(q) ?? false) ||
-      (c.phone?.includes(search) ?? false)
-    );
-  }, [customers, search]);
+    return customers.filter(c => {
+      const q = search.toLowerCase();
+      const inSearch = (c.name?.toLowerCase().includes(q) ?? false) ||
+        (c.phone?.includes(search) ?? false);
+      const vehicleCount = c.vehicles?.length || c.vehicle_count || 0;
+      const inVehicles = filterHasVehicles 
+        ? (filterHasVehicles === "yes" ? vehicleCount > 0 : vehicleCount === 0)
+        : true;
+        
+      return inSearch && inVehicles;
+    });
+  }, [customers, search, filterHasVehicles]);
+
+  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterHasVehicles].filter(Boolean).length;
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -219,11 +228,23 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
           searchPlaceholder="Search by name or phone..."
           search={search}
           onSearchChange={setSearch}
+          activeFilterCount={activeFilterCount}
           onReset={() => {
             setSearch("");
             setRecordStatus("Active");
+            setFilterHasVehicles("");
           }}
         >
+          <FilterSelect
+            label="Vehicles Linked"
+            value={filterHasVehicles}
+            onChange={setFilterHasVehicles}
+            options={[
+              { value: "yes", label: "Has Vehicles" },
+              { value: "no", label: "No Vehicles" },
+            ]}
+            placeholder="All Customers"
+          />
           <FilterSelect
             label="Record Status"
             value={recordStatus}
@@ -372,25 +393,24 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
                   {vh.mode === 'existing' ? (
                     <div className="flex flex-col gap-2">
                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1 text-primary">Search & Select Vehicle</label>
-                       <select
-                         value={vh.id}
-                         onChange={e => {
-                           const vId = Number(e.target.value);
+                       <WorkshopInlineSelect
+                         value={String(vh.id || 0)}
+                         onChange={(val) => {
+                           const vId = Number(val);
                            const found = allVehicles.find(v => v.id === vId);
                            const newVehicles = [...formData.vehicles];
                            newVehicles[idx] = { ...newVehicles[idx], id: vId, vehicle_number: found?.vehicle_number || "" };
                            setFormData({ ...formData, vehicles: newVehicles });
                          }}
-                         className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/40 appearance-none font-bold tracking-tight cursor-pointer shadow-sm"
-                       >
-                          <option value={0}>Choose a vehicle from shop database...</option>
-                          {allVehicles
-                            .filter(v => !formData.vehicles.some(fv => fv.id === v.id && fv !== vh)) 
-                            .map(v => (
-                              <option key={v.id} value={v.id}>{v.vehicle_number} — {v.model_name}</option>
-                            ))
-                          }
-                       </select>
+                         options={[
+                           { value: "0", label: "Choose a vehicle from shop database..." },
+                           ...allVehicles
+                             .filter(v => !formData.vehicles.some(fv => fv.id === v.id && fv !== vh))
+                             .map(v => ({ value: String(v.id), label: `${v.vehicle_number} — ${v.model_name}` }))
+                         ]}
+                         wrapperClassName="w-full min-w-0"
+                         className="w-full bg-background border-border px-4 py-3 text-sm font-bold normal-case tracking-normal"
+                       />
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4">
@@ -411,17 +431,17 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
                         </div>
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Vehicle Type</label>
-                          <select
+                          <WorkshopInlineSelect
                             value={vh.vehicle_type}
-                            onChange={e => {
+                            onChange={(val) => {
                               const newVehicles = [...formData.vehicles];
-                              newVehicles[idx].vehicle_type = e.target.value;
+                              newVehicles[idx].vehicle_type = val;
                               setFormData({ ...formData, vehicles: newVehicles });
                             }}
-                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 cursor-pointer font-bold"
-                          >
-                            {VEHICLE_CONFIG.map(v => <option key={v.id} value={v.id}>{v.id}</option>)}
-                          </select>
+                            options={VEHICLE_CONFIG.map(v => ({ value: v.id, label: v.label }))}
+                            wrapperClassName="w-full min-w-0"
+                            className="w-full bg-background border-border px-4 py-2.5 text-sm font-bold normal-case tracking-normal"
+                          />
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">

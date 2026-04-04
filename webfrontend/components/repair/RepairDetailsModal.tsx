@@ -181,6 +181,16 @@ export function RepairDetailsModal({
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Owner Name</p>
             <p className="text-sm font-bold text-foreground">{repair.owner_name || 'N/A'}</p>
           </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Payment Status</p>
+            <WorkshopBadge 
+              variant={(repair.payment_status || 'Unpaid') === 'Paid' ? 'success' : 'warning'} 
+              size="xs"
+              dot
+            >
+              {repair.payment_status || 'Unpaid'}
+            </WorkshopBadge>
+          </div>
           {!isBillOnly && (
             <>
               <div>

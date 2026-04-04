@@ -55,7 +55,7 @@ export default function UserDetailPage() {
           router.push("/app/users");
           return;
         }
-        const repairsRes = await repairService.getAll("Active", userId);
+        const repairsRes = await repairService.getAll({ recordStatus: "Active", workerId: userId });
         if (repairsRes.success) {
           setRepairs(repairsRes.data);
         }
@@ -150,17 +150,26 @@ export default function UserDetailPage() {
       key: "status",
       header: "Status",
       renderCell: (repair) => (
-        <div className="flex items-center gap-1.5 flex-nowrap">
-          {getStatusIcon(repair.status)}
+        <div className="flex flex-col gap-1.5 min-w-[100px]">
+          <div className="flex items-center gap-1.5 flex-nowrap">
+            {getStatusIcon(repair.status)}
+            <WorkshopBadge
+              variant={
+                repair.status === "Completed" ? "success"
+                : repair.status === "Pending" ? "warning"
+                : "info"
+              }
+              size="xs"
+            >
+              {repair.status}
+            </WorkshopBadge>
+          </div>
           <WorkshopBadge
-            variant={
-              repair.status === "Completed" ? "success"
-              : repair.status === "Pending" ? "warning"
-              : "info"
-            }
+            variant={(repair.payment_status || "Unpaid") === "Paid" ? "success" : "warning"}
             size="xs"
+            dot
           >
-            {repair.status}
+            {repair.payment_status || "Unpaid"}
           </WorkshopBadge>
         </div>
       ),

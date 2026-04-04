@@ -34,6 +34,7 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
   const [search, setSearch] = useState("");
   const [recordStatus, setRecordStatus] = useState("Active");
   const [filterRole, setFilterRole] = useState("");
+  const [filterAccountStatus, setFilterAccountStatus] = useState("");
 
   // Fetch data when recordStatus changes
   useEffect(() => {
@@ -56,16 +57,22 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       const q = search.toLowerCase();
       if (search && !u.name?.toLowerCase().includes(q) && !u.phone?.toLowerCase().includes(q)) return false;
       if (filterRole && u.role !== filterRole) return false;
+      if (filterAccountStatus && u.status !== filterAccountStatus) return false;
       return true;
     });
-  }, [users, search, filterRole]);
+  }, [users, search, filterRole, filterAccountStatus]);
 
-  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterRole].filter(Boolean).length;
+  const activeFilterCount = [
+    recordStatus === 'Active' ? '' : 'Archived', 
+    filterRole,
+    filterAccountStatus
+  ].filter(Boolean).length;
 
   const handleReset = () => {
     setSearch("");
     setRecordStatus("Active");
     setFilterRole("");
+    setFilterAccountStatus("");
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -175,6 +182,16 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
             { value: "Active", label: "Active" },
             { value: "Inactive", label: "Archived" },
           ]}
+        />
+        <FilterSelect
+          label="Account Status"
+          value={filterAccountStatus}
+          onChange={setFilterAccountStatus}
+          options={[
+            { value: "active", label: "Active" },
+            { value: "suspended", label: "Suspended" },
+          ]}
+          placeholder="All Accounts"
         />
         <FilterSelect
           label="Role"

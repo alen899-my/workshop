@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Search, SlidersHorizontal, X, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WorkshopInlineSelect } from "./../ui/WorkshopInlineSelect";
 
 interface FilterBarProps {
   /** current search query */
@@ -30,7 +31,7 @@ export function FilterBar({
   const totalActive = activeFilterCount + (search.trim() ? 1 : 0);
 
   return (
-    <div className="flex flex-col gap-0 rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden mb-5 transition-all">
+    <div className="flex flex-col gap-0 rounded-xl border border-border/50 bg-card shadow-sm mb-5 transition-all">
       {/* ── Top bar ── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 py-3 border-b border-border/40">
         {/* Search */}
@@ -93,7 +94,7 @@ export function FilterBar({
 
       {/* ── Collapsible filter panel ── */}
       {children && open && (
-        <div className="px-4 py-4 bg-muted/20 border-b border-border/30 flex flex-wrap gap-4 items-end">
+        <div className="relative z-[150] px-4 py-4 bg-muted/20 border-b border-border/30 flex flex-wrap gap-4 items-end">
           {children}
         </div>
       )}
@@ -123,23 +124,26 @@ export function FilterSelect({
       <label className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 ml-1">
         {label}
       </label>
-      <select
+      <WorkshopInlineSelect
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        options={[
+          { value: "", label: placeholder },
+          ...options
+        ]}
+        wrapperClassName="min-w-[170px]"
         className={cn(
-          "rounded-xl border border-border/60 bg-card px-4 py-2.5",
-          "text-[13px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300",
+          "w-full rounded-xl border-border/60 bg-card px-4 py-2.5",
+          "text-[12px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300 normal-case tracking-normal",
           "focus:border-primary/50 focus:ring-4 focus:ring-primary/5 shadow-sm",
           !value && "text-muted-foreground/60"
         )}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        activeClassName={cn(
+          "w-full rounded-xl border-primary/50 bg-card px-4 py-2.5",
+          "text-[12px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300 normal-case tracking-normal",
+          "ring-4 ring-primary/5 shadow-sm"
+        )}
+      />
     </div>
   );
 }

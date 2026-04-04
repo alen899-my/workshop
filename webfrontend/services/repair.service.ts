@@ -25,15 +25,20 @@ export interface Repair {
   shop_name?: string;
   attending_worker_name?: string;
   submitted_by_name?: string;
+  bill_id?: number | null;
+  payment_status?: string | null;
 }
 
 export const repairService = {
-  /** Fetch all repairs (optional status filter: Active/Inactive, optional workerId filter) */
-  async getAll(status?: string, workerId?: string | number): Promise<{ success: boolean; data: Repair[]; error?: string }> {
+  /** Fetch all repairs (optional status filter: Active/Inactive, and dynamic filters) */
+  async getAll(filters?: Record<string, string>): Promise<{ success: boolean; data: Repair[]; error?: string }> {
     try {
       const params = new URLSearchParams();
-      if (status) params.append('status', status);
-      if (workerId) params.append('workerId', workerId.toString());
+      if (filters) {
+        Object.entries(filters).forEach(([key, val]) => {
+          if (val) params.append(key, val);
+        });
+      }
       
       const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
       const res = await fetch(url, { 

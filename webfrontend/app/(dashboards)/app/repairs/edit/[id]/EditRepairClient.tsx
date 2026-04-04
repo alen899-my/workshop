@@ -6,12 +6,14 @@ import { ModuleForm } from "@/components/forms/ModuleForm";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { repairService } from "@/services/repair.service";
+import { billService } from "@/services/bill.service";
 import { User } from "@/services/user.service";
 import {
   Car, Phone, User as UserIcon, Calendar, Plus, X, ShieldCheck, Tag, Wrench,
   Search, ChevronRight, MoreHorizontal, Loader2, Trash2, ExternalLink
 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { VEHICLE_CONFIG, MAIN_VEHICLES } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
@@ -41,7 +43,8 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
     vehicle_type: initialRepair.vehicle_type || "Car",
     repair_date: initialRepair.repair_date ? new Date(initialRepair.repair_date).toISOString().substring(0, 10) : "",
     attending_worker_id: initialRepair.attending_worker_id ? initialRepair.attending_worker_id.toString() : "",
-    status: initialRepair.status || "Pending"
+    status: initialRepair.status || "Pending",
+    payment_status: initialRepair.payment_status || "Unpaid"
   });
 
   const [serviceBlocks, setServiceBlocks] = useState<{ type: string, tasks: { text: string, fixed: boolean }[] }[]>(() => {
@@ -215,6 +218,9 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
     setLoading(false);
 
     if (res.success) {
+      if (initialRepair.bill_id && form.payment_status !== initialRepair.payment_status) {
+        await billService.updatePaymentStatus(initialRepair.bill_id, form.payment_status);
+      }
       toast({ type: "success", title: "Repair Updated", description: `Record for ${form.vehicle_number} updated successfully.` });
       router.push("/app/repairs");
     } else {
@@ -451,13 +457,14 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                     <div className="flex flex-col gap-1.5">
-                      <select
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Service Type</label>
+                      <WorkshopInlineSelect
                         value={block.type}
-                        onChange={(e) => updateBlockType(bIdx, e.target.value)}
-                        className="w-full bg-background border border-border text-sm rounded-none px-4 py-3 focus:outline-none focus:border-primary transition-all font-bold text-foreground h-[48px]"
-                      >
-                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
-                      </select>
+                        onChange={(val) => updateBlockType(bIdx, val)}
+                        options={SERVICE_TYPES.map(st => ({ value: st, label: st }))}
+                        wrapperClassName="w-full min-w-0"
+                        className="w-full bg-background border-border text-sm px-4 py-3 font-bold text-foreground normal-case tracking-normal"
+                      />
                     </div>
                   </div>
 
@@ -577,17 +584,37 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Status</label>
-          <select
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Repair Status</label>
+          <WorkshopInlineSelect
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="w-full bg-card border border-border text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-primary/50 transition-all font-bold text-foreground"
-          >
-            <option value="Pending">Pending</option>
-            <option value="Started">Started</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-          </select>
+            onChange={(val) => setForm({ ...form, status: val })}
+            options={[
+              { value: "Pending", label: "Pending" },
+              { value: "Started", label: "Started" },
+              { value: "In Progress", label: "In Progress" },
+              { value: "Completed", label: "Completed" },
+            ]}
+            wrapperClassName="w-full min-w-0"
+            className="w-full bg-card border-border text-sm px-4 py-3 font-bold normal-case tracking-normal"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Payment Status</label>
+          <WorkshopInlineSelect
+            value={form.payment_status}
+            onChange={(val) => setForm({ ...form, payment_status: val })}
+            options={[
+              { value: "Unpaid", label: "Unpaid" },
+              { value: "Paid", label: "Paid" },
+            ]}
+            wrapperClassName="w-full min-w-0"
+            className={cn(
+               "w-full border-border text-sm px-4 py-3 font-bold normal-case tracking-normal transition-colors",
+               form.payment_status === "Paid" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+            )}
+            activeClassName="bg-card text-foreground border-primary"
+          />
         </div>
       </div>
     </ModuleForm>

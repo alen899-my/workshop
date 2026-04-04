@@ -229,21 +229,28 @@ export default function WorkshopDashboard() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <WorkshopBadge
-                      variant={r.status === "Completed" ? "success" : "warning"}
-                      size="xs"
-                    >
-                      {r.status}
-                    </WorkshopBadge>
-                    <Link
-                      href={`/app/repairs/${r.id}`}
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                      title="View repair details"
-                    >
-                      <Eye size={17} />
-                    </Link>
-                  </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <WorkshopBadge
+                        variant={r.status === "Completed" ? "success" : "warning"}
+                        size="xs"
+                      >
+                        {r.status}
+                      </WorkshopBadge>
+                      <WorkshopBadge
+                        variant={(r.payment_status || "Unpaid") === "Paid" ? "success" : "warning"}
+                        size="xs"
+                        dot
+                      >
+                        {r.payment_status || "Unpaid"}
+                      </WorkshopBadge>
+                      <Link
+                        href={`/app/repairs/${r.id}`}
+                        className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center pt-0.5"
+                        title="View repair details"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                    </div>
                 </div>
               ))
             )}

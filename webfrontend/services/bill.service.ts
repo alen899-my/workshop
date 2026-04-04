@@ -31,6 +31,7 @@ export interface Bill {
   tax_total?: number;
   subtotal_before_tax?: number;
   total_amount: number;
+  payment_status?: string;
   // Joined fields from repairs
   vehicle_number?: string;
   owner_name?: string;
@@ -46,10 +47,16 @@ export interface Bill {
 }
 
 export const billService = {
-  /** Fetch all bills (optional status filter: Active/Inactive) */
-  async getAll(status?: string): Promise<{ success: boolean; data?: Bill[]; error?: string }> {
+  /** Fetch all bills (optional status filter: Active/Inactive, and dynamic filters) */
+  async getAll(filters?: Record<string, string>): Promise<{ success: boolean; data?: Bill[]; error?: string }> {
     try {
-      const url = status ? `${API_URL}?status=${status}` : API_URL;
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, val]) => {
+          if (val) params.append(key, val);
+        });
+      }
+      const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
       const res = await fetch(url, {
         cache: 'no-store',
         headers: getAuth()
@@ -104,6 +111,23 @@ export const billService = {
       return await res.json();
     } catch (error) {
       return { success: false, error: "Network error" };
+    }
+  },
+
+  /** Update bill payment status */
+  async updatePaymentStatus(id: string | number, payment_status: string): Promise<{ success: boolean; data?: Bill; error?: string }> {
+    try {
+      const res = await fetch(`${API_URL}/${id}/payment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuth() as any
+        },
+        body: JSON.stringify({ payment_status })
+      });
+      return await res.json();
+    } catch (error) {
+      return { success: false, error: "Update failed" };
     }
   }
 };

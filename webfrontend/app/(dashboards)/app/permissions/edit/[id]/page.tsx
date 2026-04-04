@@ -7,6 +7,7 @@ import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { permissionService } from "@/services/permission.service";
 import { Shield } from "lucide-react";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 
 /** Page to Refine an Existing Permission Record */
 export default function EditPermissionPage() {
@@ -91,14 +92,16 @@ export default function EditPermissionPage() {
             />
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold uppercase tracking-widest text-foreground font-mono">Current Status</label>
-              <select
+              <WorkshopInlineSelect
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                className="w-full bg-card border-2 border-border text-sm font-medium rounded-sm px-4 py-3 font-mono focus:outline-none focus:border-primary transition-all"
-              >
-                <option value="active">Active Access</option>
-                <option value="inactive">Restricted / Inactive</option>
-              </select>
+                onChange={(val) => setForm({ ...form, status: val as any })}
+                options={[
+                  { value: "active", label: "Active Access" },
+                  { value: "inactive", label: "Restricted / Inactive" },
+                ]}
+                wrapperClassName="w-full min-w-0"
+                className="w-full bg-card border-border text-sm px-4 py-3 font-medium normal-case tracking-normal"
+              />
             </div>
           </div>
 

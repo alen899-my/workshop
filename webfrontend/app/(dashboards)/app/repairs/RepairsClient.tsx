@@ -52,32 +52,69 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [recordStatus, setRecordStatus] = useState("Active");
+  const [filterServiceType, setFilterServiceType] = useState("");
+  const [filterVehicleType, setFilterVehicleType] = useState("");
+  const [filterWorker, setFilterWorker] = useState("");
 
-  // Fetch data when recordStatus changes
+  // Fetch data when filters change (with slight debounce for search)
   useEffect(() => {
     const fetchFiltered = async () => {
-      const res = await repairService.getAll(recordStatus);
+      const res = await repairService.getAll({
+        recordStatus,
+        status: filterStatus,
+        serviceType: filterServiceType,
+        vehicleType: filterVehicleType,
+        worker: filterWorker,
+        search
+      });
       if (res.success) setRepairs(res.data);
     };
-    fetchFiltered();
-  }, [recordStatus]);
 
-  const filtered = useMemo(() => {
-    return repairs.filter((r: Repair) => {
-      if (!r) return false;
-      const q = search.toLowerCase();
-      if (search && !r.vehicle_number?.toLowerCase().includes(q) && !r.owner_name?.toLowerCase().includes(q)) return false;
-      if (filterStatus && r.status !== filterStatus) return false;
-      return true;
-    });
-  }, [repairs, search, filterStatus]);
+    const timeoutId = setTimeout(fetchFiltered, 300);
+    return () => clearTimeout(timeoutId);
+  }, [recordStatus, filterStatus, filterServiceType, filterVehicleType, filterWorker, search]);
 
-  const activeFilterCount = [filterStatus, recordStatus === 'Active' ? '' : 'Archived'].filter(Boolean).length;
+  const filtered = repairs; // Data is already filtered by backend
+
+  const activeFilterCount = [
+    filterStatus, 
+    recordStatus === 'Active' ? '' : 'Archived',
+    filterServiceType,
+    filterVehicleType,
+    filterWorker
+  ].filter(Boolean).length;
+
+  const uniqueWorkers = useMemo(() => {
+    const seen = new Set<string>();
+    return repairs
+      .map(r => r.attending_worker_name)
+      .filter((w): w is string => !!w && !seen.has(w) && !!seen.add(w))
+      .map(w => ({ value: w, label: w }));
+  }, [repairs]);
+
+  const uniqueServiceTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return repairs
+      .map(r => r.service_type)
+      .filter((s): s is string => !!s && !seen.has(s) && !!seen.add(s))
+      .map(s => ({ value: s, label: s }));
+  }, [repairs]);
+
+  const uniqueVehicleTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return repairs
+      .map(r => r.vehicle_type)
+      .filter((v): v is string => !!v && !seen.has(v) && !!seen.add(v))
+      .map(v => ({ value: v, label: v }));
+  }, [repairs]);
 
   const handleReset = () => {
     setSearch("");
     setFilterStatus("");
     setRecordStatus("Active");
+    setFilterServiceType("");
+    setFilterVehicleType("");
+    setFilterWorker("");
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -111,7 +148,7 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
     },
     {
       key: "status",
-      header: "Status",
+      header: "Repair Status",
       sortable: true,
       renderCell: (row) => {
         const statusMap: Record<string, any> = {
@@ -121,12 +158,28 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
           "Completed": "success"
         };
         return (
-          <WorkshopBadge 
-            variant={statusMap[row.status] || "muted"} 
-            size="xs"
-          >
-            {row.status}
-          </WorkshopBadge>
+          <div className="flex flex-col gap-1.5 items-start">
+            <WorkshopBadge 
+              variant={statusMap[row.status] || "muted"} 
+              size="xs"
+            >
+              {row.status}
+            </WorkshopBadge>
+
+            {row.bill_id ? (
+              <WorkshopBadge 
+                variant={(row.payment_status || 'Unpaid') === 'Paid' ? "success" : "warning"}
+                size="xs"
+                dot
+              >
+                {row.payment_status || 'Unpaid'}
+              </WorkshopBadge>
+            ) : (
+              <WorkshopBadge variant="muted" size="xs">
+                No Bill
+              </WorkshopBadge>
+            )}
+          </div>
         );
       }
     },
@@ -218,6 +271,27 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
             { value: "Completed", label: "Completed" },
           ]}
           placeholder="All Statuses"
+        />
+        <FilterSelect
+          label="Service Type"
+          value={filterServiceType}
+          onChange={setFilterServiceType}
+          options={uniqueServiceTypes}
+          placeholder="All Services"
+        />
+        <FilterSelect
+          label="Vehicle Type"
+          value={filterVehicleType}
+          onChange={setFilterVehicleType}
+          options={uniqueVehicleTypes}
+          placeholder="All Types"
+        />
+        <FilterSelect
+          label="Worker Assigned"
+          value={filterWorker}
+          onChange={setFilterWorker}
+          options={uniqueWorkers}
+          placeholder="Any Worker"
         />
         <FilterSelect
           label="Record Status"

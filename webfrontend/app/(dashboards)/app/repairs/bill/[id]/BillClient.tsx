@@ -19,6 +19,7 @@ import {
   Percent,
 } from "lucide-react";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import { cn } from "@/lib/utils";
 
 interface BillClientProps {
@@ -38,6 +39,9 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
   const [items, setItems] = useState<BillItem[]>(initialBill?.items || []);
   const [serviceCharge, setServiceCharge] = useState<number>(
     Number(initialBill?.service_charge) || 0
+  );
+  const [paymentStatus, setPaymentStatus] = useState<string>(
+    initialBill?.payment_status || "Unpaid"
   );
 
   const [availableTaxes, setAvailableTaxes] = useState<TaxSetting[]>([]);
@@ -98,6 +102,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
       service_charge: serviceCharge,
       tax_snapshot: taxSnapshot,
       tax_total: taxTotal,
+      payment_status: paymentStatus
     } as any);
 
     setLoading(false);
@@ -442,6 +447,29 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                 </div>
               </div>
             )}
+
+            {/* Payment Status Dropdown */}
+            <div className="flex justify-between items-center px-1 pt-2 border-t border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-widest text-foreground">
+                  Payment Status
+                </span>
+              </div>
+              <WorkshopInlineSelect
+                value={paymentStatus}
+                onChange={(newVal) => setPaymentStatus(newVal)}
+                options={[
+                  { value: "Unpaid", label: "Unpaid" },
+                  { value: "Paid", label: "Payment Received (Paid)" }
+                ]}
+                className={
+                  paymentStatus === 'Paid' 
+                    ? "bg-success/10 text-success-foreground border-success/30 hover:bg-success/20" 
+                    : "bg-warning/10 text-warning border-warning/30 hover:bg-warning/20"
+                }
+                activeClassName="bg-card text-foreground border-primary"
+              />
+            </div>
 
             {/* Grand Total */}
             <div className="flex flex-col min-[480px]:flex-row min-[480px]:justify-between min-[480px]:items-end gap-2 pt-4 sm:pt-5 border-t-2 border-foreground/10">

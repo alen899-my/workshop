@@ -14,6 +14,7 @@ import { useRBAC } from "@/lib/rbac";
 import { useCurrency } from "@/lib/currency";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { cn } from "@/lib/utils";
@@ -165,12 +166,21 @@ export default function CustomerDetailPage() {
         },
         {
             key: "status",
-            header: "Status",
+            header: "Status / Payment",
             sortable: true,
             renderCell: (repair) => (
-                <div className="flex items-center gap-2">
-                    {getStatusIcon(repair.status)}
-                    <span className="text-sm font-medium capitalize text-foreground">{repair.status}</span>
+                <div className="flex flex-col gap-1.5 min-w-[100px]">
+                    <div className="flex items-center gap-2">
+                        {getStatusIcon(repair.status)}
+                        <span className="text-sm font-medium capitalize text-foreground">{repair.status || 'Pending'}</span>
+                    </div>
+                    <WorkshopBadge
+                        variant={(repair.payment_status || "Unpaid") === "Paid" ? "success" : "warning"}
+                        size="xs"
+                        dot
+                    >
+                        {repair.payment_status || "Unpaid"}
+                    </WorkshopBadge>
                 </div>
             )
         },

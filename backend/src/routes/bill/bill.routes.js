@@ -16,4 +16,7 @@ router.get('/', authenticate, authorize('view:invoices'), billController.getAllB
 // @route   DELETE /api/bills/:id
 router.delete('/:id', authenticate, authorize('edit:repair'), billController.deleteBill);
 
+// @route   PUT /api/bills/:id/payment
+router.put('/:id/payment', authenticate, authorize('edit:repair'), billController.updatePaymentStatus);
+
 module.exports = router;

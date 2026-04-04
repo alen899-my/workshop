@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/WorkshopToast";
 import { permissionService } from "@/services/permission.service";
 import { Plus, Trash2, Shield } from "lucide-react";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 
 interface PermissionItem {
   permission_name: string;
@@ -140,14 +141,16 @@ export default function CreatePermissionPage() {
 
               <div className="md:col-span-4 flex flex-col gap-2">
                  <label className="text-xs font-semibold text-muted-foreground">Status</label>
-                 <select
+                 <WorkshopInlineSelect
                    value={item.status}
-                   onChange={(e) => updateItem(idx, 'status', e.target.value as any)}
-                   className="w-full bg-card border border-border text-sm rounded-md px-4 py-3 focus:outline-none focus:border-primary/50 transition-all"
-                 >
-                   <option value="active">Active</option>
-                   <option value="inactive">Inactive</option>
-                 </select>
+                   onChange={(val) => updateItem(idx, 'status', val)}
+                   options={[
+                     { value: "active", label: "Active" },
+                     { value: "inactive", label: "Inactive" },
+                   ]}
+                   wrapperClassName="w-full min-w-0"
+                   className="w-full bg-card border-border text-sm px-4 py-3 font-medium normal-case tracking-normal"
+                 />
               </div>
 
               <div className="md:col-span-12">

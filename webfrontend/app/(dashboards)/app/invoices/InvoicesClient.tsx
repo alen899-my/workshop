@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useRBAC } from "@/lib/rbac";
 import { useCurrency } from "@/lib/currency";
-import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
+import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { RepairDetailsModal } from "@/components/repair/RepairDetailsModal";
 
@@ -34,15 +34,25 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
   const [search, setSearch] = useState("");
   const [recordStatus, setRecordStatus] = useState("Active");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState("");
 
-  // Fetch when recordStatus changes
+  // Fetch when filters change
   React.useEffect(() => {
     const fetchFiltered = async () => {
-      const res = await billService.getAll(recordStatus);
+      const res = await billService.getAll({
+        recordStatus,
+        payment_status: filterPaymentStatus,
+        status: filterStatus,
+        search
+      });
       if (res.success && res.data) setBills(res.data);
     };
-    fetchFiltered();
-  }, [recordStatus]);
+    const timeout = setTimeout(fetchFiltered, 300);
+    return () => clearTimeout(timeout);
+  }, [recordStatus, search, filterStatus, filterMonth, filterPaymentStatus]);
+
+  const filtered = bills; // Pre-filtered by backend, month logic skipped for now to avoid date parsing in SQL in this iteration.
 
   // Modal states
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
@@ -50,27 +60,34 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
   const pendingDeleteIdRef = useRef<number | null>(null);
 
-  const filtered = useMemo(() => {
-    return bills.filter((b) => {
-      const q = search.toLowerCase();
-      const inSearch = 
-        !search || 
-        b.vehicle_number?.toLowerCase().includes(q) || 
-        b.owner_name?.toLowerCase().includes(q) || 
-        b.id?.toString().includes(q);
-      
-      const inStatus = !filterStatus || b.status === filterStatus;
-      
-      return inSearch && inStatus;
-    });
-  }, [bills, search, filterStatus]);
+  const activeFilterCount = [
+    recordStatus === 'Active' ? '' : 'Archived', 
+    filterStatus,
+    filterMonth,
+    filterPaymentStatus
+  ].filter(Boolean).length;
 
-  const activeFilterCount = [recordStatus === 'Active' ? '' : 'Archived', filterStatus].filter(Boolean).length;
+  const uniqueMonths = useMemo(() => {
+    const seen = new Set<string>();
+    return bills
+      .filter(b => b.created_at)
+      .map(b => {
+        const d = new Date(b.created_at!);
+        return {
+          key: `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`,
+          label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
+        };
+      })
+      .filter(m => !seen.has(m.key) && !!seen.add(m.key))
+      .map(m => ({ value: m.key, label: m.label }));
+  }, [bills]);
 
   const handleReset = () => {
     setSearch("");
     setRecordStatus("Active");
     setFilterStatus("");
+    setFilterMonth("");
+    setFilterPaymentStatus("");
   };
 
   const columns: ColumnDef<Bill>[] = [
@@ -117,6 +134,20 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
         <span className="text-sm font-bold text-success-foreground bg-success/10 px-2 py-0.5 rounded border border-success/20">
           {format(row.total_amount)}
         </span>
+      )
+    },
+    {
+      key: "payment_status",
+      header: "Payment",
+      sortable: true,
+      renderCell: (row) => (
+        <WorkshopBadge 
+          variant={(row.payment_status || 'Unpaid') === 'Paid' ? 'success' : 'warning'} 
+          size="xs"
+          dot
+        >
+          {row.payment_status || 'Unpaid'}
+        </WorkshopBadge>
       )
     }
   ];
@@ -195,6 +226,23 @@ export default function InvoicesClient({ initialData, currencyCode = 'INR' }: In
             { value: "Completed", label: "Completed" },
           ]}
           placeholder="All Statuses"
+        />
+        <FilterSelect
+          label="Issue Month"
+          value={filterMonth}
+          onChange={setFilterMonth}
+          options={uniqueMonths}
+          placeholder="All Time"
+        />
+        <FilterSelect
+          label="Payment Status"
+          value={filterPaymentStatus}
+          onChange={setFilterPaymentStatus}
+          options={[
+            { value: "Unpaid", label: "Unpaid" },
+            { value: "Paid", label: "Paid" },
+          ]}
+          placeholder="Any Status"
         />
         <FilterSelect
           label="Record Status"

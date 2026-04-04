@@ -10,6 +10,7 @@ import { roleService, Role } from "@/services/role.service";
 import { shopService, Shop } from "@/services/shop.service";
 import { Shield, Phone, User as UserIcon, Building2 } from "lucide-react";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
@@ -192,14 +193,16 @@ export default function EditUserPage() {
           <label className="text-xs font-semibold text-muted-foreground ml-0.5">
             Status
           </label>
-          <select
+          <WorkshopInlineSelect
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-            className="w-full bg-card border border-border text-sm rounded-md px-4 py-2.5 focus:outline-none focus:border-primary/50 transition-all font-medium"
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            onChange={(val) => setForm({ ...form, status: val as any })}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+            wrapperClassName="w-full min-w-0"
+            className="w-full bg-card border-border text-sm px-4 py-2.5 font-medium normal-case tracking-normal"
+          />
         </div>
 
         <div className="md:col-span-2 mt-4">
