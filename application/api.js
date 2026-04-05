@@ -15,7 +15,7 @@ if (Platform.OS === 'web') {
     BASE_URL = `http://${ipAddress}:5000`;
   } else {
     // Ultimate fallback for physical devices if Expo Canary hides the host config
-    BASE_URL = 'http://172.16.106.145:5000';
+    BASE_URL = 'http://10.248.106.145:5000';
   }
 }
 

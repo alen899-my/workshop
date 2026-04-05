@@ -3,34 +3,44 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   StatusBar,
-  Image,
-  useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
-import { Colors } from '../constants/Colors';
 import { z } from 'zod';
 import { useToast } from '../components/ui/WorkshopToast';
 import { API_URL } from '../api';
 import { useAuth } from '../lib/auth';
-import { Phone, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
-import { WorkshopButton } from '../components/ui/WorkshopButton';
+import { Lock, Eye, EyeOff, ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { PhoneField } from '../components/ui/PhoneField';
 
-const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
-const theme = Colors.light;
+const FONT = Platform.OS === 'ios' ? 'System' : 'sans-serif';
 
 const loginSchema = z.object({
-  phone: z.string().min(1, 'Phone is required').transform(v => v.replace(/[\s\-+]/g, '')).pipe(z.string().regex(/^\d{7,15}$/, 'Invalid phone')),
+  phone: z.string().min(8, 'Enter a valid phone number'),
   password: z.string().min(6, 'Min 6 characters'),
 });
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function Label({ children }) {
+  return (
+    <Text style={[s.label, { fontFamily: FONT }]}>{children}</Text>
+  );
+}
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return <Text style={[s.fieldError, { fontFamily: FONT }]}>{message}</Text>;
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
+
 export default function LoginScreen({ navigation }) {
-  const { width, height } = useWindowDimensions();
-  const [phone, setPhone] = useState('');
+  const [formattedPhone, setFormattedPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,13 +48,8 @@ export default function LoginScreen({ navigation }) {
   const { toast } = useToast();
   const { login } = useAuth();
 
-  // Responsive calculations
-  const isSmallScreen = height < 700;
-  const headerHeight = height * (isSmallScreen ? 0.32 : 0.4);
-  const cardOverlap = isSmallScreen ? -40 : -50;
-
   const handleLogin = async () => {
-    const valid = loginSchema.safeParse({ phone, password });
+    const valid = loginSchema.safeParse({ phone: formattedPhone || phone, password });
     if (!valid.success) {
       const errs = {};
       valid.error.issues.forEach(i => (errs[i.path[0]] = i.message));
@@ -57,7 +62,7 @@ export default function LoginScreen({ navigation }) {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ phone: formattedPhone || phone, password }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -65,141 +70,119 @@ export default function LoginScreen({ navigation }) {
         setLoading(false);
         return;
       }
-      
       await login(data.token, data.data);
       setLoading(false);
       toast({ type: 'success', title: 'Welcome Back!', description: 'Connecting successfully...' });
     } catch (err) {
-      console.error(err);
       setLoading(false);
-      toast({ type: 'error', title: 'Network Error', description: 'Could not connect to the backend server.' });
+      toast({ type: 'error', title: 'Network Error', description: 'Could not connect to the server.' });
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={s.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      {/* Decorative Top Area */}
-      <View style={[styles.topShapeArea, { height: headerHeight + 60 }]}>
-        <Image 
-          source={require('../assets/authpageimage1.jpg')}
-          style={styles.bgImage}
-          blurRadius={2}
-        />
-        <View style={styles.overlay} />
-      </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scroll}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={[styles.header, { height: headerHeight }]}>
-            <TouchableOpacity 
+          {/* ── Dark Header ─────────────────────────────────────────────── */}
+          <View style={[s.header, { paddingTop: Platform.OS === 'android' ? 52 : 60 }]}>
+            {/* Back button */}
+            <TouchableOpacity
               onPress={() => navigation.navigate('Landing')}
               activeOpacity={0.7}
+              style={s.backBtn}
             >
-              <Text style={styles.logoText}>
-                VEH<Text style={{ color: '#63B3ED' }}>REP</Text>
+              <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+            </TouchableOpacity>
+
+            {/* Logo */}
+            <Text style={[s.logoText, { fontFamily: FONT }]}>
+              VEH<Text style={{ color: '#7AB4CC' }}>REP</Text>
+            </Text>
+
+            <Text style={[s.headerTag, { fontFamily: FONT }]}>WELCOME BACK</Text>
+            <Text style={[s.headerTitle, { fontFamily: FONT }]}>Sign In</Text>
+            <Text style={[s.headerSub, { fontFamily: FONT }]}>Access your workshop dashboard</Text>
+          </View>
+
+          {/* ── Form Card ───────────────────────────────────────────────── */}
+          <View style={s.card}>
+
+            {/* Phone Number */}
+            <View style={s.fieldGroup}>
+              <Label>Phone Number</Label>
+              <PhoneField
+                defaultCountry="IN"
+                onChangeFormattedText={text => setFormattedPhone(text)}
+                error={errors.phone}
+              />
+              <FieldError message={errors.phone} />
+            </View>
+
+            {/* Password */}
+            <View style={s.fieldGroup}>
+              <View style={s.labelRow}>
+                <Label>Password</Label>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={[s.forgotText, { fontFamily: FONT }]}>Forgot password?</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[s.inputRow, errors.password && s.inputError]}>
+                <Lock size={18} color={errors.password ? '#F87171' : '#94A3B8'} strokeWidth={2} />
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#A0AEC0"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  underlineColorAndroid="transparent"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(p => !p)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  {showPassword
+                    ? <EyeOff size={18} color="#94A3B8" strokeWidth={2} />
+                    : <Eye size={18} color="#94A3B8" strokeWidth={2} />}
+                </TouchableOpacity>
+              </View>
+              <FieldError message={errors.password} />
+            </View>
+
+            {/* Submit */}
+            <TouchableOpacity
+              onPress={handleLogin}
+              activeOpacity={0.85}
+              disabled={loading}
+              style={[s.submitBtn, loading && { opacity: 0.7 }]}
+            >
+              <Text style={[s.submitBtnText, { fontFamily: FONT }]}>
+                {loading ? 'Signing In…' : 'Sign In'}
+              </Text>
+              {!loading && <ArrowRight size={18} color="#FFF" strokeWidth={2.5} />}
+            </TouchableOpacity>
+
+            {/* Register link */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Register')}
+              activeOpacity={0.7}
+              style={s.switchLink}
+            >
+              <Text style={[s.switchText, { fontFamily: FONT }]}>
+                Don't have an account?{' '}
+                <Text style={s.switchTextBold}>Register here</Text>
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.headerGreeting, { fontSize: isSmallScreen ? 28 : 32 }]}>Welcome Back</Text>
-           
-          </View>
 
-          {/* Form Card */}
-          <View style={[styles.formCard, { marginTop: cardOverlap }]}>
-            <View style={styles.inputSection}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>PHONE NUMBER</Text>
-                <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-                  <Phone size={18} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter phone number"
-                    placeholderTextColor="#A0AEC0"
-                    keyboardType="phone-pad"
-                    value={phone}
-                    onChangeText={setPhone}
-                    autoCapitalize="none"
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.phone && <Text style={styles.errorLabel}>{errors.phone}</Text>}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>PASSWORD</Text>
-                  <TouchableOpacity activeOpacity={0.7}>
-                    <Text style={styles.forgotText}>FORGOT?</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                  <Lock size={18} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter password"
-                    placeholderTextColor="#A0AEC0"
-                    secureTextEntry={!showPassword}
-                    value={password}
-                    onChangeText={setPassword}
-                    underlineColorAndroid="transparent"
-                  />
-                  <TouchableOpacity 
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} color="#718096" strokeWidth={2} />
-                    ) : (
-                      <Eye size={18} color="#718096" strokeWidth={2} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-                {errors.password && <Text style={styles.errorLabel}>{errors.password}</Text>}
-              </View>
-
-              <WorkshopButton
-                variant="primary"
-                size="xl"
-                loading={loading}
-                onPress={handleLogin}
-                fullWidth={true}
-                icon={<ArrowRight size={20} color="#FFF" strokeWidth={2.5} />}
-                iconPosition="right"
-                style={{ marginTop: 10 }}
-              >
-                SIGN IN
-              </WorkshopButton>
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>New here?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.footerLink}>Register Your Shop</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          <View style={styles.bottomDecoration}>
-            <View style={styles.diamond} />
-            <View style={styles.diamondLine} />
-            <View style={styles.diamond} />
-          </View>
-
-          <View style={styles.bottomImageContainer}>
-            <Image 
-              source={require('../assets/authpageimage1.jpg')}
-              style={styles.bottomImage}
-            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -207,182 +190,151 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const s = StyleSheet.create({
+  root: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
-  topShapeArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    overflow: 'hidden',
-    borderBottomLeftRadius: 60,
-    borderBottomRightRadius: 60,
-  },
-  bgImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(22, 60, 99, 0.85)',
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  // Header
   header: {
-    justifyContent: 'center',
+    backgroundColor: '#0A2220',
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
-    paddingTop: 40,
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   logoText: {
-    fontFamily: FONT,
+    color: '#FFFFFF',
     fontWeight: '900',
-    fontSize: 28,
-    letterSpacing: 6,
+    fontSize: 16,
+    letterSpacing: 5,
+    marginBottom: 24,
+  },
+  headerTag: {
+    color: '#7AB4CC',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  headerTitle: {
     color: '#FFFFFF',
-    marginBottom: 10,
+    fontWeight: '800',
+    fontSize: 32,
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  headerGreeting: {
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: FONT,
+  headerSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    lineHeight: 20,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: FONT,
-    marginTop: 4,
-  },
-  formCard: {
+  // Card
+  card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    padding: 30,
-    elevation: 8,
-    ...Platform.select({
-      web: { boxShadow: '0 10px 20px rgba(0,0,0,0.1)' },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      }
-    }),
+    marginHorizontal: 16,
+    marginTop: -16,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#0A2220',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+    marginBottom: 32,
   },
-  inputSection: {
-    gap: 20,
+  // Field
+  fieldGroup: {
+    marginBottom: 20,
   },
-  inputGroup: {
-    gap: 8,
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  label: {
-    fontSize: 11,
-    fontFamily: FONT,
-    fontWeight: '900',
-    color: theme.foreground,
-    letterSpacing: 1.2,
-    marginLeft: 4,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    color: theme.foreground,
-    fontFamily: FONT,
-    fontSize: 12,
-    height: '100%',
-    outlineWidth: 0,
-    outlineStyle: 'none',
-  },
-  eyeIcon: {
-    marginLeft: 10,
-  },
-  inputError: {
-    backgroundColor: '#FFF5F5',
-  },
-  errorLabel: {
-    fontSize: 12,
-    color: '#E53E3E',
-    fontFamily: FONT,
-    marginTop: 2,
-    marginLeft: 4,
+    marginBottom: 8,
   },
   forgotText: {
-    fontSize: 11,
-    fontFamily: FONT,
-    fontWeight: 'bold',
-    color: theme.primary,
-    letterSpacing: 0.5,
-  },
-  footer: {
-    marginTop: 24,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerText: {
     fontSize: 12,
-    fontFamily: FONT,
-    color: '#718096',
+    fontWeight: '600',
+    color: '#3D7A78',
   },
-  footerLink: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: theme.primary,
-    fontFamily: FONT,
-  },
-  bottomDecoration: {
+  // Input
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 40,
-    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 52,
   },
-  diamond: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#CBD5E0',
-    transform: [{ rotate: '45deg' }],
+  inputError: {
+    borderColor: '#F87171',
+    backgroundColor: '#FEF2F2',
   },
-  diamondLine: {
-    width: 40,
-    height: 1,
-    backgroundColor: '#E2E8F0',
-  },
-  bottomImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: 'hidden',
-    alignSelf: 'center',
-    marginTop: 30,
-    opacity: 0.3,
-    borderWidth: 2,
-    borderColor: '#CBD5E0',
-  },
-  bottomImage: {
-    width: '100%',
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1E293B',
+    marginHorizontal: 10,
     height: '100%',
-    resizeMode: 'cover',
+  },
+  fieldError: {
+    fontSize: 11,
+    color: '#EF4444',
+    marginTop: 5,
+    marginLeft: 2,
+  },
+
+  // Submit
+  submitBtn: {
+    backgroundColor: '#3D7A78',
+    borderRadius: 14,
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  // Switch
+  switchLink: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  switchText: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  switchTextBold: {
+    color: '#3D7A78',
+    fontWeight: '700',
   },
 });

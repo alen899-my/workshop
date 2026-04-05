@@ -12,53 +12,65 @@ function buildTheme(isDark) {
   return {
     isDark,
 
-    // ── backgrounds
-    bg:         c.background,
-    surface:    c.card,
-    surfaceAlt: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
+    // ── backgrounds ────────────────────────────────────────────────────────
+    bg:         c.background,   // light: #FAFDFE  dark: #000000
+    surface:    c.card,         // light: #FFFFFF  dark: #0D0D0D
+    surfaceAlt: c.sidebar,      // light: #F2FAF9 (teal-white)  dark: #000000
 
-    // ── borders
-    border:       c.border,
-    borderStrong: isDark ? 'rgba(255,255,255,0.18)' : '#CBD5E1',
+    // ── borders ─────────────────────────────────────────────────────────────
+    border:       c.border,     // light: #DAEAEC  dark: #262626
+    borderStrong: c.ring,       // light: #5F9899  dark: #3D7A78
 
-    // ── brand
-    primary:      c.primary,
-    primaryLight: isDark ? 'rgba(91,135,205,0.18)' : '#EBF1F8',
-    primaryText:  c.primaryForeground,
+    // ── brand ───────────────────────────────────────────────────────────────
+    primary:      c.primary,         // light: #3D7A78 (teal facade)   dark: #37BFBA (glowing teal)
+    primaryLight: isDark
+      ? 'rgba(55,191,186,0.15)'      // subtle glow tint in dark
+      : '#D6EFEE',                   // soft teal tint in light
+    primaryText:  c.primaryForeground, // light: #EBF5F5  dark: #0D0D0D
 
-    // ── text
-    text:       c.foreground,
-    textMuted:  c.mutedForeground,
-    textFaint:  isDark ? 'rgba(255,255,255,0.28)' : '#94A3B8',
+    // ── accent ──────────────────────────────────────────────────────────────
+    accent:      c.accent,           // light: #7AB4CC (sky blue door)  dark: #4DD4CF (bright teal)
+    secondary:   c.secondary,        // light: #8FB8A8 (sage wall)      dark: #1E1E1E
 
-    // ── semantic
+    // ── text ────────────────────────────────────────────────────────────────
+    text:       c.foreground,        // light: #0F2321  dark: #FAFAFA
+    textMuted:  c.mutedForeground,   // light: #6B8585  dark: #A3A3A3
+    textFaint:  isDark ? 'rgba(255,255,255,0.28)' : '#92AAAA',
+
+    // ── destructive ──────────────────────────────────────────────────────────
+    destructive: c.destructive,      // light: #C0272D (signal red)  dark: #CF4534
+
+    // ── semantic ─────────────────────────────────────────────────────────────
     success:       '#16A34A',
     successBg:     isDark ? 'rgba(22,163,74,0.15)'  : '#F0FDF4',
     successBorder: isDark ? 'rgba(22,163,74,0.35)'  : '#BBF7D0',
 
-    danger:       '#DC2626',
-    dangerBg:     isDark ? 'rgba(220,38,38,0.15)'   : '#FEF2F2',
-    dangerBorder: isDark ? 'rgba(220,38,38,0.35)'   : '#FECACA',
+    danger:       c.destructive,
+    dangerBg:     isDark ? 'rgba(207,69,52,0.15)'   : '#FEF2F2',
+    dangerBorder: isDark ? 'rgba(207,69,52,0.35)'   : '#FECACA',
 
-    warning:      '#D97706',
-    warningBg:    isDark ? 'rgba(217,119,6,0.15)'   : '#FFFBEB',
-    warningBorder:isDark ? 'rgba(217,119,6,0.35)'   : '#FDE68A',
+    warning:      c.chart4,          // #D4A017 – amber lift post
+    warningBg:    isDark ? 'rgba(212,160,23,0.15)'  : '#FFFBEB',
+    warningBorder:isDark ? 'rgba(212,160,23,0.35)'  : '#FDE68A',
 
-    // ── misc
-    rowHover: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+    // ── misc ────────────────────────────────────────────────────────────────
+    rowHover: isDark ? 'rgba(255,255,255,0.05)' : c.muted, // #EDF0F4
 
-    // ── typography
+    // ── typography ──────────────────────────────────────────────────────────
+    // Fira Mono on web; Menlo/monospace on device (closest native equivalent)
     font:     FONT,
     fontMono: FONT,
 
-    // ── radii
-    radius:   10,
-    radiusSm: 7,
-    radiusLg: 16,
+    // ── radii (matching --radius: 5px base) ──────────────────────────────────
+    radius:   5,   // base
+    radiusSm: 3,
+    radiusMd: 4,
+    radiusLg: 7,
+    radiusXl: 9,
 
-    // ── shadows (subtle in dark mode)
+    // ── shadows ─────────────────────────────────────────────────────────────
     shadow: isDark ? {} : {
-      shadowColor: '#000',
+      shadowColor: Colors.light.primary, // teal-tinted shadow
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.06,
       shadowRadius: 4,
@@ -67,20 +79,20 @@ function buildTheme(isDark) {
     shadowMd: isDark ? {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
+      shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 6,
     } : {
-      shadowColor: '#000',
+      shadowColor: Colors.light.primary, // teal-tinted shadow
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
+      shadowOpacity: 0.10,
       shadowRadius: 8,
       elevation: 3,
     },
 
-    // ── tab / nav bar
-    tabBarBg:     isDark ? '#161C24' : '#FFFFFF',
-    tabBarBorder: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+    // ── tab / nav bar ───────────────────────────────────────────────────────
+    tabBarBg:     isDark ? '#000000'      : '#FFFFFF',
+    tabBarBorder: isDark ? 'rgba(255,255,255,0.08)' : c.border, // #DAEAEC
   };
 }
 

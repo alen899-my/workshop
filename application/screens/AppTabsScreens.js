@@ -27,6 +27,5 @@ const styles = StyleSheet.create({
 });
 
 export const RepairsScreen = () => <PlaceholderScreen title="Repairs" />;
-export const VehiclesScreen = () => <PlaceholderScreen title="Vehicles" />;
 export const JobsScreen = () => <PlaceholderScreen title="Job Cards" />;
 export const SettingsScreen = () => <PlaceholderScreen title="Settings" />;

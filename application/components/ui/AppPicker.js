@@ -38,33 +38,42 @@ export function AppPicker({
         style={[
           s.trigger,
           {
-            backgroundColor: disabled ? T.bg : T.surfaceAlt,
-            borderColor: error ? T.danger : T.border,
-            opacity: disabled ? 0.8 : 1,
+            backgroundColor: error ? '#FEF2F2' : '#F8FAFC',
+            borderColor: error ? '#F87171' : '#E2E8F0',
+            opacity: disabled ? 0.5 : 1,
           },
-          error && { backgroundColor: T.dangerBg },
         ]}
         onPress={() => !disabled && setVisible(true)}
         activeOpacity={disabled ? 1 : 0.7}
       >
         <Text style={[
           s.valueText,
-          { color: selectedOption ? T.text : T.textFaint, fontFamily: T.font },
+          { color: selectedOption ? '#1E293B' : '#A0AEC0', fontFamily: T.font },
         ]}>
           {displayText}
         </Text>
-        {!disabled && <ChevronDown size={18} color={T.textMuted} />}
+        {!disabled && <ChevronDown size={18} color="#94A3B8" />}
       </TouchableOpacity>
 
       {error ? <Text style={[s.errorTxt, { color: T.danger }]}>{error}</Text> : null}
 
-      <AppModal visible={visible} onClose={() => setVisible(false)} title={label || 'Select Option'}>
-        <View style={s.listContainer}>
-          {options.map((item) => {
+      <AppModal visible={visible} onClose={() => setVisible(false)} title={label || 'Select Option'} scroll={false}>
+        <FlatList
+          style={{ maxHeight: 400 }}
+          data={options}
+          keyExtractor={(item, index) => String(item.id) + index}
+          contentContainerStyle={s.listContainer}
+          showsVerticalScrollIndicator={true}
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+          windowSize={5}
+          ListEmptyComponent={
+            <Text style={[s.emptyTxt, { color: T.textMuted }]}>No options available</Text>
+          }
+          renderItem={({ item }) => {
             const isSelected = String(item.id) === String(value);
             return (
               <TouchableOpacity
-                key={item.id}
                 style={[
                   s.optionItem,
                   { borderRadius: T.radius },
@@ -82,11 +91,8 @@ export function AppPicker({
                 {isSelected && <Check size={16} color={T.primary} strokeWidth={3} />}
               </TouchableOpacity>
             );
-          })}
-          {options.length === 0 && (
-            <Text style={[s.emptyTxt, { color: T.textMuted }]}>No options available</Text>
-          )}
-        </View>
+          }}
+        />
       </AppModal>
     </View>
   );
@@ -103,10 +109,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 50,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 52,
   },
   valueText: {
     fontSize: 14,

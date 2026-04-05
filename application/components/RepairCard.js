@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
 import { ChevronRight, Calendar, Clock } from 'lucide-react-native';
 import { useTheme } from '../lib/theme';
 import { getVehicleColor, VehicleIcon } from '../constants/Vehicles';
@@ -35,8 +35,12 @@ export function RepairCard({ item, onPress }) {
       onPress={onPress} 
     >
       <View style={s.cardMain}>
-         <View style={[s.iconCircle, { backgroundColor: getVehicleColor(item.vehicle_type) + (T.isDark ? '30' : '10') }]}>
-            <VehicleIcon typeId={item.vehicle_type} size={22} />
+         <View style={[s.iconCircle, { backgroundColor: getVehicleColor(item.vehicle_type) + (T.isDark ? '30' : '10'), overflow: 'hidden' }]}>
+            {item.vehicle_image ? (
+              <Image source={{ uri: item.vehicle_image }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+            ) : (
+              <VehicleIcon typeId={item.vehicle_type} size={22} />
+            )}
          </View>
          
          <View style={s.cardInfo}>

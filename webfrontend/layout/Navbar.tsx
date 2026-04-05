@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,10 +42,9 @@ export function NavbarWhite() {
       >
         <nav className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
 
-          {/* ── Logo (text only) ── */}
           <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="font-mono font-bold text-sm tracking-[0.2em] text-foreground uppercase">
-              Veh<span className="text-primary">Rep</span>
+            <span className="font-mono text-xl font-black tracking-[0.2em] text-primary uppercase ">
+              REPAIRO
             </span>
           </Link>
 

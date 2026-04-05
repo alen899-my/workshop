@@ -135,7 +135,7 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     // Validate with Zod
     const result = signupSchema.safeParse(form);
     if (!result.success) {
@@ -150,13 +150,13 @@ export default function SignupPage() {
 
     setErrors({});
     setLoading(true);
-    
+
     try {
       // Map form fields to backend expectations
       // Using location = city for backend compatibility if needed
       const payload = {
         ...form,
-        location: form.city, 
+        location: form.city,
       };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register-shop`, {
@@ -182,161 +182,163 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="h-screen flex bg-background font-mono overflow-hidden">
-      {/* ── LEFT: Form panel ── */}
-      <div className="flex flex-col justify-start w-full lg:w-1/2 px-6 sm:px-12 py-12 relative z-10 overflow-y-auto h-full no-scrollbar">
-        
-        {/* Brand Header */}
-        <div className="absolute top-8 left-8 sm:top-12 sm:left-12">
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="font-mono font-bold text-xl tracking-[0.2em] text-foreground uppercase">
-              Veh<span className="text-primary">Rep</span>
+    <div className="min-h-screen relative flex sm:items-center justify-center font-mono sm:p-8 sm:py-20">
+      {/* ── BACKGROUND: Full screen image ── */}
+      <div className="absolute inset-0 z-0 hidden sm:block">
+        <Image
+          src="/images/auth/auth.jpg"
+          alt="Workshop Background"
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
+        {/* Background Image Only */}
+      </div>
+
+      {/* ── CENTERED: Form panel ── */}
+      <div className="relative z-10 w-full sm:max-w-[700px]">
+        {/* Card Container */}
+        <div className="bg-background sm:bg-white dark:sm:bg-card border-0 sm:border sm:border-border/50 shadow-none sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-none sm:rounded-3xl p-6 py-12 sm:p-10 relative overflow-hidden min-h-screen sm:min-h-0 flex flex-col justify-center">
+          {/* Logo inside card */}
+          <div className="flex justify-center w-full mb-8 lg:mb-10">
+            <span className="font-mono font-black text-3xl sm:text-4xl tracking-widest text-primary uppercase  text-center">
+              REPAIRO
             </span>
-          </Link>
-        </div>
+          </div>
+          {/* Subtle accent line at top */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-100 sm:opacity-50" />
+          
+          <AuthFormWrapper
+            badge="Setup Account"
+            title="Register Workshop"
+            subtitle="Register Your Workshop To continue"
+            footer={
+              <span className="text-muted-foreground/80">
+                Already registered?{" "}
+                <Link
+                  href="/login"
+                  className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+                >
+                  Sign in
+                </Link>
+              </span>
+            }
+          >
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="sm:col-span-1">
+                  <AuthFormField
+                    label="Shop Name"
+                    type="text"
+                    placeholder="Speed Auto Works"
+                    value={form.shopName}
+                    onChange={set("shopName")}
+                    error={errors.shopName}
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <AuthFormField
+                    label="Owner Name"
+                    type="text"
+                    placeholder="Rajan K."
+                    value={form.ownerName}
+                    onChange={set("ownerName")}
+                    error={errors.ownerName}
+                  />
+                </div>
 
-        <div className="mt-20 my-auto">
-            <AuthFormWrapper
-              badge="Setup Account"
-              title="Register Workshop"
-              subtitle="Register Your Workshop To continuet"
-              footer={
-                <span>
-                  Already registered?{" "}
-                  <Link
-                    href="/login"
-                    className="font-bold text-primary underline underline-offset-4 hover:opacity-80 transition-colors"
-                  >
-                    Sign in
-                  </Link>
-                </span>
-              }
-            >
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="sm:col-span-1">
-                    <AuthFormField
-                      label="Shop Name"
-                      type="text"
-                      placeholder="Speed Auto Works"
-                      value={form.shopName}
-                      onChange={set("shopName")}
-                      error={errors.shopName}
+                <div className="sm:col-span-2">
+                  <WorkshopRegionSelects
+                    country={form.country}
+                    state={form.state}
+                    city={form.city}
+                    onChange={(res) => {
+                      const code = res.country;
+                      const curr = (countryToCurrency as any)[code] || "USD";
+                      setForm(f => ({
+                        ...f,
+                        ...res,
+                        currency: curr
+                      }));
+                    }}
+                    errors={{
+                      country: errors.country,
+                      state: errors.state,
+                      city: errors.city
+                    }}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <AuthFormField
+                    label="Full Address / Location Details"
+                    type="text"
+                    placeholder="Avenue Road, MG Corner, Kochi..."
+                    value={form.address}
+                    onChange={set("address")}
+                    error={errors.address}
+                    icon={<MapPin size={16} />}
+                  />
+                </div>
+
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/80 ml-1">Phone Number</label>
+                    <PhoneInput
+                      country={form.country.toLowerCase()}
+                      value={form.phone}
+                      onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
+                      containerClass="!w-full"
+                      inputClass="!w-full !h-[48px] !bg-background/50 !backdrop-blur-sm !border !border-border/50 !text-foreground !text-sm !rounded-xl !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/20"
+                      buttonClass="!bg-background/50 !border !border-border/50 !border-r-0 !rounded-l-xl hover:!bg-muted/50"
+                      dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
+                      searchClass="!bg-muted !border !border-border !text-foreground"
                     />
+                    {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
                   </div>
-                  <div className="sm:col-span-1">
+
+                  <div className="flex flex-col gap-6">
                     <AuthFormField
-                      label="Owner Name"
-                      type="text"
-                      placeholder="Rajan K."
-                      value={form.ownerName}
-                      onChange={set("ownerName")}
-                      error={errors.ownerName}
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <WorkshopRegionSelects
-                      country={form.country}
-                      state={form.state}
-                      city={form.city}
-                      onChange={(res) => {
-                        const code = res.country;
-                        const curr = (countryToCurrency as any)[code] || "USD";
-                        setForm(f => ({ 
-                           ...f, 
-                           ...res,
-                           currency: curr
-                        }));
-                      }}
-                      errors={{
-                        country: errors.country,
-                        state: errors.state,
-                        city: errors.city
-                      }}
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <AuthFormField
-                      label="Full Address / Location Details"
-                      type="text"
-                      placeholder="Avenue Road, MG Corner, Kochi..."
-                      value={form.address}
-                      onChange={set("address")}
-                      error={errors.address}
-                      icon={<MapPin size={16} />}
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Phone Number</label>
-                      <PhoneInput
-                        country={form.country.toLowerCase()}
-                        value={form.phone}
-                        onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
-                        containerClass="!w-full"
-                        inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
-                        buttonClass="!bg-background !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted"
-                        dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
-                        searchClass="!bg-muted !border !border-border !text-foreground"
-                      />
-                      {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
-                    </div>
-
-                    <div className="flex flex-col gap-6">
-                      <AuthFormField
-                        label="Password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={form.password}
-                        onChange={set("password")}
-                        error={errors.password}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <AuthFormField
-                      label="Confirm Password"
+                      label="Password"
                       type="password"
                       placeholder="••••••••"
-                      value={form.confirmPassword}
-                      onChange={set("confirmPassword")}
-                      error={errors.confirmPassword}
+                      value={form.password}
+                      onChange={set("password")}
+                      error={errors.password}
                     />
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <WorkshopButton
-                    type="submit"
-                    variant="primary"
-                    size="xl"
-                    fullWidth
-                    loading={loading}
-                  >
-                   Sign Up
-                  </WorkshopButton>
+                <div className="sm:col-span-2">
+                  <AuthFormField
+                    label="Confirm Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.confirmPassword}
+                    onChange={set("confirmPassword")}
+                    error={errors.confirmPassword}
+                  />
                 </div>
-              </form>
-            </AuthFormWrapper>
+              </div>
+
+              <div className="mt-4">
+                <WorkshopButton
+                  type="submit"
+                  variant="primary"
+                  size="xl"
+                  fullWidth
+                  loading={loading}
+                  className="h-[52px] rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                >
+                  Sign Up
+                </WorkshopButton>
+              </div>
+            </form>
+          </AuthFormWrapper>
         </div>
       </div>
-
-      {/* ── RIGHT: Image panel ── */}
-      <div className="hidden lg:flex flex-1 relative bg-muted">
-        <Image
-          src="/images/auth/authpageimage1.jpg"
-          alt="Auto repair workshop"
-          fill
-          className="object-cover object-center"
-          priority
-          sizes="50vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none" />
-      </div>
     </div>
+
   );
 }

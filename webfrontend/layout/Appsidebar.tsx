@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -131,18 +132,18 @@ export function AppSidebar() {
       {/* Brand */}
       <div
         className={cn(
-          "flex items-center border-b border-sidebar-border px-4 py-4",
+          "flex shrink-0 items-center border-b border-sidebar-border px-4 h-14",
           isCollapsed ? "justify-center" : "justify-between"
         )}
       >
         {!isCollapsed && (
-          <span className="font-mono text-base font-bold tracking-[4px] text-sidebar-foreground">
-            VEH<span className="text-sidebar-primary">REP</span>
+          <span className="font-mono text-xl font-black tracking-[0.2em] text-sidebar-primary uppercase ">
+            REPAIRO
           </span>
         )}
         {isCollapsed && (
-          <span className="font-mono text-sm font-bold tracking-widest text-sidebar-primary">
-            VR
+          <span className="font-mono text-lg font-black tracking-widest text-sidebar-primary uppercase">
+            RO
           </span>
         )}
 

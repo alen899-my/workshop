@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, TextInput, ActivityIndicator,
-  Linking, Platform, Image
+  Linking, Platform, Image, ScrollView, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Settings, Phone, Search, Plus, SlidersHorizontal,
-  X, ChevronRight, Wrench, Calendar, FileText, CheckCircle2,
-  XCircle, Clock, CheckCircle, Receipt, Pencil, Trash2, Key,
-  ShieldCheck
+  Search, Plus, SlidersHorizontal,
+  X, ChevronRight, Wrench, Calendar, FileText, 
+  CheckCircle, Receipt, Pencil, Trash2, ShieldCheck
 } from 'lucide-react-native';
 import { AppModal } from '../../components/ui/AppModal';
 import { AppButton } from '../../components/ui/AppButton';
+import { AppPicker } from '../../components/ui/AppPicker';
 import { useRBAC } from '../../lib/rbac';
 import { useToast } from '../../components/ui/WorkshopToast';
 import { repairService, billService } from '../../services/repair.service';
@@ -24,17 +23,7 @@ import { RepairCard } from '../../components/RepairCard';
 import { VehicleIcon } from '../../constants/Vehicles';
 import { useTheme } from '../../lib/theme';
 
-/* ── Filter pill ── */
-const Pill = ({ label, on, onPress, T }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.75}
-    style={[pl.wrap, { backgroundColor: T.surface, borderColor: T.border }, on && { backgroundColor: T.primary, borderColor: T.primary }]}>
-    <Text style={[pl.txt, { color: on ? T.primaryText : T.textMuted }]}>{label}</Text>
-  </TouchableOpacity>
-);
-const pl = StyleSheet.create({
-  wrap: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, borderWidth: 1 },
-  txt: { fontSize: 13, fontWeight: '500' },
-});
+const FONT = Platform.OS === 'ios' ? 'System' : 'sans-serif';
 
 export default function RepairsScreen({ navigation }) {
   const [repairs, setRepairs] = useState([]);
@@ -43,6 +32,10 @@ export default function RepairsScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
+  const [recordStatus, setRecordStatus] = useState('Active');
+  const [filterServiceType, setFilterServiceType] = useState('');
+  const [filterVehicleType, setFilterVehicleType] = useState('');
+  const [filterWorker, setFilterWorker] = useState('');
 
   const [viewRepair, setViewRepair] = useState(null);
   const [viewBill, setViewBill] = useState(null);
@@ -55,25 +48,74 @@ export default function RepairsScreen({ navigation }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await repairService.getAll();
+    const res = await repairService.getAll({
+        recordStatus,
+        status: filterStatus,
+        serviceType: filterServiceType,
+        vehicleType: filterVehicleType,
+        worker: filterWorker,
+        search
+    });
     if (res.success) setRepairs(res.data || []);
     setLoading(false);
-  }, []);
+  }, [recordStatus, filterStatus, filterServiceType, filterVehicleType, filterWorker, search]);
 
-  useFocusEffect(
-    useCallback(() => {
+  useEffect(() => {
+    const timeoutId = setTimeout(load, 300);
+    return () => clearTimeout(timeoutId);
+  }, [load]);
+
+  useEffect(() => {
+    if (!navigation) return;
+    const unsubscribe = navigation.addListener('focus', () => {
       load();
-    }, [load])
-  );
+    });
+    return unsubscribe;
+  }, [navigation, load]);
 
-  const displayData = useMemo(() => repairs.filter(r => {
-    const q = search.toLowerCase();
-    if (q && !r.vehicle_number?.toLowerCase().includes(q) && !r.owner_name?.toLowerCase().includes(q)) return false;
-    if (filterStatus && r.status !== filterStatus) return false;
-    return true;
-  }), [repairs, search, filterStatus]);
+  const activeFilters = [
+    filterStatus, 
+    recordStatus === 'Active' ? '' : 'Archived',
+    filterServiceType,
+    filterVehicleType,
+    filterWorker
+  ].filter(Boolean).length;
 
-  const activeFilters = filterStatus ? 1 : 0;
+  const uniqueWorkers = useMemo(() => {
+    const seen = new Set();
+    const opts = repairs
+      .map(r => r.attending_worker_name)
+      .filter(w => !!w && !seen.has(w) && !!seen.add(w))
+      .map(w => ({ id: w, name: w }));
+    return [{id: '', name: 'Any Worker'}, ...opts];
+  }, [repairs]);
+
+  const uniqueServiceTypes = useMemo(() => {
+    const seen = new Set();
+    const opts = repairs
+      .map(r => r.service_type)
+      .filter(s => !!s && !seen.has(s) && !!seen.add(s))
+      .map(s => ({ id: s, name: s }));
+    return [{id: '', name: 'All Services'}, ...opts];
+  }, [repairs]);
+
+  const uniqueVehicleTypes = useMemo(() => {
+    const seen = new Set();
+    const opts = repairs
+      .map(r => r.vehicle_type)
+      .filter(v => !!v && !seen.has(v) && !!seen.add(v))
+      .map(v => ({ id: v, name: v }));
+    return [{id: '', name: 'All Types'}, ...opts];
+  }, [repairs]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setFilterStatus("");
+    setRecordStatus("Active");
+    setFilterServiceType("");
+    setFilterVehicleType("");
+    setFilterWorker("");
+  };
 
   const handleView = async (repair) => {
     setViewRepair(repair);
@@ -86,15 +128,28 @@ export default function RepairsScreen({ navigation }) {
     setBillLoading(false);
   };
 
-  const handleDelete = async (r) => {
-    const res = await repairService.delete(r.id);
-    if (res.success) {
-      setRepairs(p => p.filter(x => x.id !== r.id));
-      setViewRepair(null);
-      toast({ type: 'success', title: 'Deleted', description: 'Repair removed.' });
-    } else {
-      toast({ type: 'error', title: 'Error', description: res.error || 'Failed.' });
-    }
+  const handleDelete = (r) => {
+    Alert.alert(
+      "Delete Repair Record",
+      `Delete repair record for ${r.vehicle_number}? This will NOT delete the vehicle or customer from your registry.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            const res = await repairService.delete(r.id);
+            if (res.success) {
+              setRepairs(p => p.filter(x => x.id !== r.id));
+              setViewRepair(null);
+              toast({ type: 'success', title: 'Deleted', description: 'Repair removed.' });
+            } else {
+              toast({ type: 'error', title: 'Error', description: res.error || 'Failed.' });
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleShareWhatsApp = async () => {
@@ -141,7 +196,7 @@ export default function RepairsScreen({ navigation }) {
         <View style={s.topLeft}>
           <Text style={[s.screenTitle, { color: T.text }]} numberOfLines={1}>Repairs</Text>
           <View style={[s.countBadge, { backgroundColor: T.surfaceAlt }]}>
-            <Text style={[s.countTxt, { color: T.textMuted }]}>{displayData.length}</Text>
+            <Text style={[s.countTxt, { color: T.textMuted }]}>{repairs.length}</Text>
           </View>
         </View>
         {can('create:repair') && (
@@ -188,22 +243,61 @@ export default function RepairsScreen({ navigation }) {
       </View>
 
       {showFilters && (
-        <View style={[s.filterPanel, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
-          <Text style={[s.filterHeading, { color: T.textFaint }]}>Status</Text>
-          <View style={s.pillRow}>
-            {['', 'Pending', 'Started', 'In Progress', 'Completed'].map(v => (
-              <Pill key={v || 'all'} label={v || 'All'} on={filterStatus === v} onPress={() => setFilterStatus(v)} T={T} />
-            ))}
+        <ScrollView style={[s.filterPanel, { backgroundColor: T.surface, borderBottomColor: T.border }]} nestedScrollEnabled>
+          <Text style={[s.filterHeading, { color: T.textFaint }]}>Refine Results</Text>
+          <View style={{ gap: 8, paddingBottom: 16 }}>
+            <AppPicker 
+              label="Status" 
+              value={filterStatus} 
+              onSelect={setFilterStatus} 
+              options={[
+                { id: '', name: 'All Statuses' }, 
+                { id: 'Pending', name: 'Pending' }, 
+                { id: 'Started', name: 'Started' }, 
+                { id: 'In Progress', name: 'In Progress' }, 
+                { id: 'Completed', name: 'Completed' }
+              ]} 
+            />
+            <AppPicker 
+              label="Service Type" 
+              value={filterServiceType} 
+              onSelect={setFilterServiceType} 
+              options={uniqueServiceTypes} 
+            />
+            <AppPicker 
+              label="Vehicle Type" 
+              value={filterVehicleType} 
+              onSelect={setFilterVehicleType} 
+              options={uniqueVehicleTypes} 
+            />
+            <AppPicker 
+              label="Worker Assigned" 
+              value={filterWorker} 
+              onSelect={setFilterWorker} 
+              options={uniqueWorkers} 
+            />
+            <AppPicker 
+              label="Record Status" 
+              value={recordStatus} 
+              onSelect={setRecordStatus} 
+              options={[
+                { id: "Active", name: "Active" }, 
+                { id: "Inactive", name: "Archived" }
+              ]} 
+            />
+            {(activeFilters > 0 || search.length > 0) && (
+              <AppButton title="Reset Filters" variant="outline" onPress={handleResetFilters} style={{marginTop: 8}} />
+            )}
           </View>
-        </View>
+        </ScrollView>
       )}
 
       {/* ── List ── */}
-      {loading ? (
+      {loading && repairs.length === 0 ? (
         <View style={s.loadWrap}><ActivityIndicator size="large" color={T.primary} /></View>
       ) : (
         <FlatList
-          data={displayData}
+          data={repairs}
           keyExtractor={u => String(u.id)}
           renderItem={renderItem}
           ItemSeparatorComponent={() => <View style={s.sep} />}
@@ -211,9 +305,14 @@ export default function RepairsScreen({ navigation }) {
             <View style={s.emptyWrap}>
               <Wrench size={32} color={T.textFaint} />
               <Text style={[s.emptyTitle, { color: T.textMuted }]}>No repairs found</Text>
+              {activeFilters > 0 && (
+                <TouchableOpacity onPress={handleResetFilters}>
+                  <Text style={{color: T.primary, marginTop: 10}}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
-          contentContainerStyle={displayData.length === 0 ? s.flatEmpty : s.flatContent}
+          contentContainerStyle={repairs.length === 0 ? s.flatEmpty : s.flatContent}
           showsVerticalScrollIndicator={false}
           refreshing={loading}
           onRefresh={load}
@@ -269,26 +368,44 @@ export default function RepairsScreen({ navigation }) {
               <View style={[s.complaintBox, { backgroundColor: T.surfaceAlt }]}>
                  <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 10}}>
                    <FileText size={12} color={T.textMuted} style={{marginRight: 6}}/>
-                    <Text style={[s.detailHeading, { color: T.textFaint }]}>Complaints Checklist</Text>
+                    <Text style={[s.detailHeading, { color: T.textFaint }]}>Service Checklist</Text>
                   </View>
                   {Array.isArray(viewRepair.complaints) && viewRepair.complaints.length > 0 ? (
-                    viewRepair.complaints.map((c, i) => (
-                      <View key={i} style={{flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, backgroundColor: c.fixed ? T.successBg : 'transparent', padding: c.fixed ? 6 : 0, borderRadius: 8}}>
-                        <View style={{ 
-                          width: 18, height: 18, borderRadius: 9, 
-                          backgroundColor: c.fixed ? T.success : T.surface,
-                          alignItems: 'center', justifyContent: 'center',
-                          borderWidth: c.fixed ? 0 : 1.5, borderColor: T.border
-                        }}>
-                           {c.fixed && <ShieldCheck size={10} color="#FFF" />}
-                        </View>
-                        <Text style={[s.detailValBase, { color: T.text }, c.fixed && { textDecorationLine: 'line-through', color: T.textFaint }]}>
-                          {typeof c === 'string' ? c : c.text}
-                        </Text>
-                      </View>
-                    ))
+                     viewRepair.complaints[0]?.tasks !== undefined ? (
+                        // Multi-Block Format
+                        viewRepair.complaints.map((block, bIdx) => (
+                           <View key={`b-${bIdx}`} style={{ marginBottom: 12 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: T.primary, marginBottom: 6, textTransform: 'uppercase' }}>
+                                 {bIdx + 1}. {block.type}
+                              </Text>
+                              {block.tasks.length === 0 && <Text style={[s.detailValBase, { color: T.textFaint, fontStyle: 'italic' }]}>No items.</Text>}
+                              {block.tasks.map((c, cIdx) => (
+                                 <View key={`t-${bIdx}-${cIdx}`} style={{flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, backgroundColor: c.fixed ? T.successBg : 'transparent', padding: c.fixed ? 6 : 0, borderRadius: 8}}>
+                                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: c.fixed ? T.success : T.surface, alignItems: 'center', justifyContent: 'center', borderWidth: c.fixed ? 0 : 1.5, borderColor: T.border }}>
+                                       {c.fixed && <ShieldCheck size={8} color="#FFF" />}
+                                    </View>
+                                    <Text style={[s.detailValBase, { color: T.text, fontSize: 12 }, c.fixed && { textDecorationLine: 'line-through', color: T.textFaint }]}>
+                                       {c.text}
+                                    </Text>
+                                 </View>
+                              ))}
+                           </View>
+                        ))
+                     ) : (
+                        // Legacy Format
+                        viewRepair.complaints.map((c, i) => (
+                          <View key={i} style={{flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, backgroundColor: c.fixed ? T.successBg : 'transparent', padding: c.fixed ? 6 : 0, borderRadius: 8}}>
+                            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.fixed ? T.success : T.surface, alignItems: 'center', justifyContent: 'center', borderWidth: c.fixed ? 0 : 1.5, borderColor: T.border }}>
+                               {c.fixed && <ShieldCheck size={10} color="#FFF" />}
+                            </View>
+                            <Text style={[s.detailValBase, { color: T.text }, c.fixed && { textDecorationLine: 'line-through', color: T.textFaint }]}>
+                              {typeof c === 'string' ? c : c.text}
+                            </Text>
+                          </View>
+                        ))
+                     )
                   ) : (
-                    <Text style={[s.detailValBase, { color: T.text }]}>No complaints recorded.</Text>
+                    <Text style={[s.detailValBase, { color: T.text }]}>No service items recorded.</Text>
                   )}
                </View>
 
@@ -427,7 +544,7 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 13, padding: 0, fontWeight: '600' },
   filterBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  filterPanel: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, gap: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  filterPanel: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth, maxHeight: 300 },
   filterHeading: { fontSize: 11, fontWeight: '700', marginBottom: 8, letterSpacing: 0.8 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
 

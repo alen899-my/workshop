@@ -223,9 +223,11 @@ export default function RolesScreen({ navigation }) {
 
       {/* ── Top bar ── */}
       <View style={[s.topBar, { backgroundColor: T.surface, borderBottomColor: T.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[s.backBtn, { backgroundColor: T.surfaceAlt }]} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-          <ChevronLeft size={22} color={T.text} strokeWidth={2.5} />
-        </TouchableOpacity>
+        {navigation.canGoBack() && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[s.backBtn, { backgroundColor: T.surfaceAlt }]} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+            <ChevronLeft size={22} color={T.text} strokeWidth={2.5} />
+          </TouchableOpacity>
+        )}
         <View style={s.topLeft}>
           <Text style={[s.screenTitle, { color: T.text }]}>Roles</Text>
           <View style={[s.countBadge, { backgroundColor: T.surfaceAlt }]}>

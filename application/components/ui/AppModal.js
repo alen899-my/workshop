@@ -9,7 +9,7 @@ import { useTheme } from '../../lib/theme';
 
 const { height: SH } = Dimensions.get('window');
 
-export function AppModal({ visible, onClose, title, subtitle, children, footer }) {
+export function AppModal({ visible, onClose, title, subtitle, children, footer, scroll = true }) {
   const insets = useSafeAreaInsets();
   const T = useTheme();
   const bottomPad = Math.max(insets.bottom, 8);
@@ -43,9 +43,15 @@ export function AppModal({ visible, onClose, title, subtitle, children, footer }
           <View style={[s.divider, { backgroundColor: T.border }]} />
 
           {/* Body */}
-          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-            {children}
-          </ScrollView>
+          {scroll ? (
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={[{ flexShrink: 1 }, s.body]}>
+              {children}
+            </View>
+          )}
 
           {/* Footer */}
           {footer && (

@@ -61,25 +61,15 @@ export function WorkshopButton({
       },
       text: { color: '#FFFFFF' },
     },
+    // 'steel' variant — uses accent (sky-blue roller door from workshop image)
     steel: {
       button: {
-        backgroundColor: T.warning, // mapping steel logic to existing theme colors if applicable, but steel was custom. let's just use T.primary or define steel inline
+        backgroundColor: T.accent || '#7AB4CC',
         borderWidth: 1,
-        borderColor: T.warning,
+        borderColor: T.accent || '#7AB4CC',
       },
-      text: { color: '#F8FAFC' },
+      text: { color: '#FFFFFF' },
     },
-  };
-
-  // Keep steel using original #4E88BA if we don't have secondary accent dynamically defined,
-  // but let's make it respond slightly
-  variantStyles.steel = {
-    button: {
-      backgroundColor: '#4E88BA',
-      borderWidth: 1,
-      borderColor: '#4E88BA',
-    },
-    text: { color: '#FFFFFF' }
   };
 
   const sizeStyles = {

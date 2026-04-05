@@ -1,58 +1,129 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   StatusBar,
-  Image,
-  useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
-import { Colors } from '../constants/Colors';
 import { z } from 'zod';
 import { useToast } from '../components/ui/WorkshopToast';
 import { API_URL } from '../api';
 import { WorkshopButton } from '../components/ui/WorkshopButton';
-import { User, Phone, Lock, Eye, EyeOff, MapPin, Warehouse, ArrowRight } from 'lucide-react-native';
+import {
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  MapPin,
+  Warehouse,
+  ArrowRight,
+  ChevronLeft,
+  ChevronDown,
+} from 'lucide-react-native';
+import { PhoneField } from '../components/ui/PhoneField';
+import { Country, State, City } from 'country-state-city';
+import countryToCurrency from 'country-to-currency';
+import { AppPicker } from '../components/ui/AppPicker';
 
-const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
-const theme = Colors.light;
+const FONT = Platform.OS === 'ios' ? 'System' : 'sans-serif';
 
-const registerSchema = z.object({
-  shopName: z.string().min(1, 'Shop name required'),
-  ownerName: z.string().min(1, 'Owner name required'),
-  location: z.string().min(1, 'Location required'),
-  phone: z.string().min(1, 'Phone required').transform(v => v.replace(/[\s\-+]/g, '')).pipe(z.string().regex(/^\d{7,15}$/, 'Invalid phone')),
-  password: z.string().min(6, 'Min 6 characters'),
-  confirmPassword: z.string().min(1, 'Required'),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    shopName: z.string().min(1, 'Required'),
+    ownerName: z.string().min(1, 'Required'),
+    country: z.string().min(1, 'Select a country'),
+    state: z.string().min(1, 'Select a state'),
+    city: z.string().min(1, 'Select a city'),
+    address: z.string().min(1, 'Required'),
+    phone: z.string().min(8, 'Invalid phone number'),
+    password: z.string().min(6, 'Min 6 characters'),
+    confirmPassword: z.string().min(1, 'Required'),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+// ─── Reusable sub-components ─────────────────────────────────────────────────
+
+function Label({ children }) {
+  return <Text style={[s.label, { fontFamily: FONT }]}>{children}</Text>;
+}
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return <Text style={[s.fieldError, { fontFamily: FONT }]}>{message}</Text>;
+}
+
+function InputRow({ icon, error, children, style }) {
+  return (
+    <View style={[s.inputRow, error && s.inputError, style]}>
+      {icon && <View style={{ marginRight: 10 }}>{icon}</View>}
+      {children}
+    </View>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function RegisterScreen({ navigation }) {
-  const { width, height } = useWindowDimensions();
-  const [form, setForm] = useState({ shopName: '', ownerName: '', location: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({
+    shopName: '',
+    ownerName: '',
+    country: '',
+    state: '',
+    city: '',
+    address: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [formattedPhone, setFormattedPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { toast } = useToast();
 
-  // Responsive calculations
-  const isSmallScreen = height < 700;
-  const headerHeight = height * (isSmallScreen ? 0.25 : 0.3);
-  const cardOverlap = isSmallScreen ? -20 : -30;
+  const countries = useMemo(
+    () => Country.getAllCountries().map(c => ({ id: c.isoCode, name: c.name })),
+    [],
+  );
+
+  const states = useMemo(
+    () =>
+      form.country
+        ? State.getStatesOfCountry(form.country).map(s => ({ id: s.isoCode, name: s.name }))
+        : [],
+    [form.country],
+  );
+
+  const cities = useMemo(
+    () =>
+      form.state
+        ? City.getCitiesOfState(form.country, form.state).map(c => ({ id: c.name, name: c.name }))
+        : [],
+    [form.country, form.state],
+  );
 
   function updateForm(key, value) {
     setForm(f => ({ ...f, [key]: value }));
   }
 
+  function handleCountrySelect(countryCode) {
+    const currency = countryToCurrency[countryCode] || '';
+    setForm(f => ({ ...f, country: countryCode, state: '', city: '', currency }));
+  }
+
   const handleRegister = async () => {
-    const valid = registerSchema.safeParse(form);
+    const submitData = { ...form, phone: formattedPhone || form.phone };
+    const valid = registerSchema.safeParse(submitData);
     if (!valid.success) {
       const errs = {};
       valid.error.issues.forEach(i => (errs[i.path[0]] = i.message));
@@ -60,14 +131,27 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
     setErrors({});
-
     setLoading(true);
     try {
-      const { shopName, ownerName, location, phone, password } = form;
+      const locationString = `${submitData.address}, ${submitData.city}, ${submitData.state}, ${submitData.country}`;
+      const currency = countryToCurrency[submitData.country] || 'USD';
+      const payload = {
+        shopName: submitData.shopName,
+        ownerName: submitData.ownerName,
+        location: locationString,
+        phone: submitData.phone,
+        password: submitData.password,
+        country: submitData.country,
+        state: submitData.state,
+        city: submitData.city,
+        address: submitData.address,
+        currency,
+      };
+
       const response = await fetch(`${API_URL}/auth/register-shop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopName, ownerName, location, phone, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -88,335 +172,387 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={s.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      {/* Decorative Top Area */}
-      <View style={[styles.topShapeArea, { height: headerHeight + 50 }]}>
-        <Image 
-          source={require('../assets/authpageimage1.jpg')}
-          style={styles.bgImage}
-          blurRadius={3}
-        />
-        <View style={styles.overlay} />
-      </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scroll}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={[styles.header, { height: headerHeight }]}>
-            <TouchableOpacity onPress={() => navigation.navigate('Landing')} activeOpacity={0.7}>
-              <Text style={styles.logoText}>
-                VEH<Text style={{ color: '#63B3ED' }}>REP</Text>
+          {/* ── Dark Header ───────────────────────────────────────────── */}
+          <View style={[s.header, { paddingTop: Platform.OS === 'android' ? 52 : 60 }]}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Landing')}
+              activeOpacity={0.7}
+              style={s.backBtn}
+            >
+              <ChevronLeft size={20} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+            </TouchableOpacity>
+
+            <Text style={[s.logoText, { fontFamily: FONT }]}>
+              VEH<Text style={{ color: '#7AB4CC' }}>REP</Text>
+            </Text>
+            <Text style={[s.headerTag, { fontFamily: FONT }]}>SETUP ACCOUNT</Text>
+            <Text style={[s.headerTitle, { fontFamily: FONT }]}>Register Workshop</Text>
+            <Text style={[s.headerSub, { fontFamily: FONT }]}>
+              Create your professional workshop account
+            </Text>
+          </View>
+
+          {/* ── Form Card ─────────────────────────────────────────────── */}
+          <View style={s.card}>
+
+            {/* Shop Name */}
+            <View style={s.fieldGroup}>
+              <Label>Shop Name</Label>
+              <InputRow
+                icon={<Warehouse size={18} color={errors.shopName ? '#F87171' : '#3D7A78'} strokeWidth={2} />}
+                error={errors.shopName}
+              >
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="e.g. Speed Auto Works"
+                  placeholderTextColor="#A0AEC0"
+                  value={form.shopName}
+                  onChangeText={v => updateForm('shopName', v)}
+                  underlineColorAndroid="transparent"
+                />
+              </InputRow>
+              <FieldError message={errors.shopName} />
+            </View>
+
+            {/* Owner Name */}
+            <View style={s.fieldGroup}>
+              <Label>Owner Name</Label>
+              <InputRow
+                icon={<User size={18} color={errors.ownerName ? '#F87171' : '#3D7A78'} strokeWidth={2} />}
+                error={errors.ownerName}
+              >
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="Enter owner full name"
+                  placeholderTextColor="#A0AEC0"
+                  value={form.ownerName}
+                  onChangeText={v => updateForm('ownerName', v)}
+                  underlineColorAndroid="transparent"
+                />
+              </InputRow>
+              <FieldError message={errors.ownerName} />
+            </View>
+
+            {/* Country */}
+            <View style={s.fieldGroup}>
+              <Label>Country</Label>
+              <AppPicker
+                placeholder="Select Country"
+                value={form.country}
+                options={countries}
+                onSelect={handleCountrySelect}
+                error={errors.country}
+              />
+              <FieldError message={errors.country} />
+            </View>
+
+            {/* State */}
+            <View style={s.fieldGroup}>
+              <Label>State / Province</Label>
+              <AppPicker
+                placeholder="Select State"
+                value={form.state}
+                options={states}
+                onSelect={v => { updateForm('state', v); updateForm('city', ''); }}
+                error={errors.state}
+                disabled={!form.country}
+              />
+              <FieldError message={errors.state} />
+            </View>
+
+            {/* City */}
+            <View style={s.fieldGroup}>
+              <Label>City</Label>
+              <AppPicker
+                placeholder="Select City"
+                value={form.city}
+                options={cities}
+                onSelect={v => updateForm('city', v)}
+                error={errors.city}
+                disabled={!form.state}
+              />
+              <FieldError message={errors.city} />
+            </View>
+
+            {/* Address */}
+            <View style={s.fieldGroup}>
+              <Label>Street Address</Label>
+              <InputRow
+                icon={<MapPin size={18} color={errors.address ? '#F87171' : '#3D7A78'} strokeWidth={2} />}
+                error={errors.address}
+              >
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="Street address or block details"
+                  placeholderTextColor="#A0AEC0"
+                  value={form.address}
+                  onChangeText={v => updateForm('address', v)}
+                  underlineColorAndroid="transparent"
+                />
+              </InputRow>
+              <FieldError message={errors.address} />
+            </View>
+
+            {/* Phone */}
+            <View style={s.fieldGroup}>
+              <Label>Phone Number</Label>
+              <PhoneField
+                defaultCountry={form.country || 'IN'}
+                onChangeFormattedText={text => setFormattedPhone(text)}
+                error={errors.phone}
+              />
+              <FieldError message={errors.phone} />
+            </View>
+
+            {/* Password */}
+            <View style={s.fieldGroup}>
+              <Label>Password</Label>
+              <InputRow
+                icon={<Lock size={18} color={errors.password ? '#F87171' : '#3D7A78'} strokeWidth={2} />}
+                error={errors.password}
+              >
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="Min 6 characters"
+                  placeholderTextColor="#A0AEC0"
+                  secureTextEntry={!showPassword}
+                  value={form.password}
+                  onChangeText={v => updateForm('password', v)}
+                  underlineColorAndroid="transparent"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(p => !p)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  {showPassword
+                    ? <EyeOff size={18} color="#94A3B8" strokeWidth={2} />
+                    : <Eye size={18} color="#94A3B8" strokeWidth={2} />}
+                </TouchableOpacity>
+              </InputRow>
+              <FieldError message={errors.password} />
+            </View>
+
+            {/* Confirm Password */}
+            <View style={s.fieldGroup}>
+              <Label>Confirm Password</Label>
+              <InputRow
+                icon={<Lock size={18} color={errors.confirmPassword ? '#F87171' : '#3D7A78'} strokeWidth={2} />}
+                error={errors.confirmPassword}
+              >
+                <TextInput
+                  style={[s.textInput, { fontFamily: FONT }]}
+                  placeholder="Repeat your password"
+                  placeholderTextColor="#A0AEC0"
+                  secureTextEntry={!showConfirmPassword}
+                  value={form.confirmPassword}
+                  onChangeText={v => updateForm('confirmPassword', v)}
+                  underlineColorAndroid="transparent"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(p => !p)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  {showConfirmPassword
+                    ? <EyeOff size={18} color="#94A3B8" strokeWidth={2} />
+                    : <Eye size={18} color="#94A3B8" strokeWidth={2} />}
+                </TouchableOpacity>
+              </InputRow>
+              <FieldError message={errors.confirmPassword} />
+            </View>
+
+            {/* Submit */}
+            <TouchableOpacity
+              onPress={handleRegister}
+              activeOpacity={0.85}
+              disabled={loading}
+              style={[s.submitBtn, loading && { opacity: 0.7 }]}
+            >
+              <Text style={[s.submitBtnText, { fontFamily: FONT }]}>
+                {loading ? 'Creating Account…' : 'Create Workshop'}
+              </Text>
+              {!loading && <ArrowRight size={18} color="#FFF" strokeWidth={2.5} />}
+            </TouchableOpacity>
+
+            {/* Sign in link */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.7}
+              style={s.switchLink}
+            >
+              <Text style={[s.switchText, { fontFamily: FONT }]}>
+                Already have an account?{' '}
+                <Text style={s.switchTextBold}>Sign In</Text>
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.headerGreeting, { fontSize: isSmallScreen ? 24 : 28 }]}>Register Workshop</Text>
-            <Text style={styles.headerSubtitle}>Set up your digital workplace</Text>
+
           </View>
 
-          {/* Form Card */}
-          <View style={[styles.formCard, { marginTop: cardOverlap }]}>
-            <View style={styles.inputSection}>
-              {/* Shop Name */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>SHOP NAME</Text>
-                <View style={[styles.inputWrapper, errors.shopName && styles.inputError]}>
-                  <Warehouse size={18} color={errors.shopName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Speed Auto Works"
-                    placeholderTextColor="#A0AEC0"
-                    value={form.shopName}
-                    onChangeText={v => updateForm('shopName', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.shopName && <Text style={styles.errorLabel}>{errors.shopName}</Text>}
-              </View>
+          {/* Footer */}
+          <Text style={[s.footerText, { fontFamily: FONT }]}>
+            By registering, you agree to our Terms of Service.
+          </Text>
 
-              {/* Owner Name */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>OWNER NAME</Text>
-                <View style={[styles.inputWrapper, errors.ownerName && styles.inputError]}>
-                  <User size={18} color={errors.ownerName ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter owner name"
-                    placeholderTextColor="#A0AEC0"
-                    value={form.ownerName}
-                    onChangeText={v => updateForm('ownerName', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.ownerName && <Text style={styles.errorLabel}>{errors.ownerName}</Text>}
-              </View>
-
-              {/* Location */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>LOCATION</Text>
-                <View style={[styles.inputWrapper, errors.location && styles.inputError]}>
-                  <MapPin size={18} color={errors.location ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Kochi, Kerala"
-                    placeholderTextColor="#A0AEC0"
-                    value={form.location}
-                    onChangeText={v => updateForm('location', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.location && <Text style={styles.errorLabel}>{errors.location}</Text>}
-              </View>
-
-              {/* Phone */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>PHONE NUMBER</Text>
-                <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-                  <Phone size={18} color={errors.phone ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="09876543210"
-                    placeholderTextColor="#A0AEC0"
-                    keyboardType="phone-pad"
-                    value={form.phone}
-                    onChangeText={v => updateForm('phone', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.phone && <Text style={styles.errorLabel}>{errors.phone}</Text>}
-              </View>
-
-              {/* Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>PASSWORD</Text>
-                <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                  <Lock size={18} color={errors.password ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Min 6 characters"
-                    placeholderTextColor="#A0AEC0"
-                    secureTextEntry={!showPassword}
-                    value={form.password}
-                    onChangeText={v => updateForm('password', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                    {showPassword ? <EyeOff size={18} color="#718096" /> : <Eye size={18} color="#718096" />}
-                  </TouchableOpacity>
-                </View>
-                {errors.password && <Text style={styles.errorLabel}>{errors.password}</Text>}
-              </View>
-
-              {/* Confirm Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>CONFIRM PASSWORD</Text>
-                <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-                  <Lock size={18} color={errors.confirmPassword ? '#E53E3E' : theme.primary} strokeWidth={2} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Repeat password"
-                    placeholderTextColor="#A0AEC0"
-                    secureTextEntry={!showPassword}
-                    value={form.confirmPassword}
-                    onChangeText={v => updateForm('confirmPassword', v)}
-                    underlineColorAndroid="transparent"
-                  />
-                </View>
-                {errors.confirmPassword && <Text style={styles.errorLabel}>{errors.confirmPassword}</Text>}
-              </View>
-
-              <WorkshopButton
-                variant="primary"
-                size="xl"
-                loading={loading}
-                onPress={handleRegister}
-                fullWidth={true}
-                icon={<ArrowRight size={20} color="#FFF" strokeWidth={2.5} />}
-                iconPosition="right"
-                style={{ marginTop: 10 }}
-              >
-                CREATE WORKSHOP
-              </WorkshopButton>
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.footerLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          <View style={styles.bottomDecoration}>
-            <View style={styles.diamond} />
-            <Text style={styles.termsText}>
-              By registering, you agree to the Terms of Service.
-            </Text>
-            <View style={styles.diamond} />
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const s = StyleSheet.create({
+  root: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
-  topShapeArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    overflow: 'hidden',
-    borderBottomLeftRadius: 60,
-    borderBottomRightRadius: 60,
-  },
-  bgImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(22, 60, 99, 0.82)',
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  // Header
   header: {
-    justifyContent: 'center',
+    backgroundColor: '#0A2220',
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
-    paddingTop: 40,
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   logoText: {
-    fontFamily: FONT,
+    color: '#FFFFFF',
     fontWeight: '900',
-    fontSize: 24,
-    letterSpacing: 4,
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: 16,
+    letterSpacing: 5,
+    marginBottom: 24,
   },
-  headerGreeting: {
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: FONT,
+  headerTag: {
+    color: '#7AB4CC',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    marginBottom: 6,
   },
-  headerSubtitle: {
+  headerTitle: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 30,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  headerSub: {
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontFamily: FONT,
-    marginTop: 2,
+    lineHeight: 20,
   },
-  formCard: {
+  // Card
+  card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 32,
+    marginHorizontal: 16,
+    marginTop: -16,
+    borderRadius: 24,
     padding: 24,
-    elevation: 8,
-    ...Platform.select({
-      web: { boxShadow: '0 10px 20px rgba(0,0,0,0.1)' },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      }
-    }),
+    shadowColor: '#0A2220',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+    marginBottom: 16,
   },
-  inputSection: {
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 6,
+
+  // Field
+  fieldGroup: {
+    marginBottom: 16,
   },
   label: {
-    fontSize: 10,
-    fontFamily: FONT,
-    fontWeight: '900',
-    color: theme.foreground,
-    letterSpacing: 1,
-    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  inputWrapper: {
+  // Input
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     borderRadius: 14,
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    color: theme.foreground,
-    fontFamily: FONT,
-    fontSize: 12,
-    height: '100%',
-    outlineWidth: 0,
-    outlineStyle: 'none',
-  },
-  eyeIcon: {
-    marginLeft: 10,
+    paddingHorizontal: 14,
+    height: 52,
   },
   inputError: {
-    backgroundColor: '#FFF5F5',
+    borderColor: '#F87171',
+    backgroundColor: '#FEF2F2',
   },
-  errorLabel: {
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    height: '100%',
+  },
+  fieldError: {
     fontSize: 11,
-    color: '#E53E3E',
-    fontFamily: FONT,
-    marginTop: 1,
-    marginLeft: 4,
+    color: '#EF4444',
+    marginTop: 5,
+    marginLeft: 2,
   },
-  footer: {
-    marginTop: 20,
+
+  // Submit
+  submitBtn: {
+    backgroundColor: '#3D7A78',
+    borderRadius: 14,
+    height: 56,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
   },
-  footerText: {
-    fontSize: 12,
-    fontFamily: FONT,
-    color: '#718096',
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  footerLink: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: theme.primary,
-    fontFamily: FONT,
-  },
-  bottomDecoration: {
-    flexDirection: 'row',
+  // Switch
+  switchLink: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 30,
-    gap: 10,
+    paddingVertical: 14,
+    marginTop: 4,
   },
-  diamond: {
-    width: 6,
-    height: 6,
-    backgroundColor: '#CBD5E0',
-    transform: [{ rotate: '45deg' }],
+  switchText: {
+    fontSize: 13,
+    color: '#64748B',
   },
-  termsText: {
-    fontSize: 10,
-    color: '#A0AEC0',
-    fontFamily: FONT,
+  switchTextBold: {
+    color: '#3D7A78',
+    fontWeight: '700',
+  },
+  // Footer
+  footerText: {
     textAlign: 'center',
+    fontSize: 11,
+    color: '#94A3B8',
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    lineHeight: 18,
   },
 });
-

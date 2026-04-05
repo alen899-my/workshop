@@ -8,12 +8,16 @@ import { AppButton } from '../../components/ui/AppButton';
 import { repairService, billService } from '../../services/repair.service';
 import { useToast } from '../../components/ui/WorkshopToast';
 import { useTheme } from '../../lib/theme';
+import { useCurrency } from '../../lib/currency';
+import { useAuth } from '../../lib/auth';
 
 const FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 export default function RepairBillScreen({ navigation, route }) {
   const repairId = route.params?.id;
   const T = useTheme();
+  const { user } = useAuth();
+  const { format } = useCurrency(user);
 
   const [items, setItems] = useState([]);
   const [serviceCharge, setServiceCharge] = useState('0');
@@ -169,7 +173,7 @@ export default function RepairBillScreen({ navigation, route }) {
                       
                       <View style={s.totalCol}>
                          <Text style={[s.inputLabel, { color: T.textMuted }]}>SUBTOTAL</Text>
-                         <Text style={[s.lineTotal, { color: T.primary }]}>{(Number(item.cost || 0) * Number(item.qty || 1)).toFixed(0)}</Text>
+                         <Text style={[s.lineTotal, { color: T.primary }]}>{format(Number(item.cost || 0) * Number(item.qty || 1))}</Text>
                       </View>
                    </View>
                 </View>
@@ -185,7 +189,7 @@ export default function RepairBillScreen({ navigation, route }) {
         <View style={[s.card, { backgroundColor: T.surface, borderColor: T.border }]}>
            <View style={s.summaryRow}>
               <Text style={[s.summaryLabel, { color: T.textMuted }]}>Items Subtotal</Text>
-              <Text style={[s.summaryVal, { color: T.text }]}>{subtotal.toFixed(2)}</Text>
+              <Text style={[s.summaryVal, { color: T.text }]}>{format(subtotal)}</Text>
            </View>
            
            <View style={[s.divider, { backgroundColor: T.border }]} />
@@ -207,7 +211,7 @@ export default function RepairBillScreen({ navigation, route }) {
            
            <View style={s.totalRow}>
               <Text style={[s.totalLabel, { color: T.primary }]}>TOTAL AMOUNT</Text>
-              <Text style={[s.totalVal, { color: T.primary }]}>{total.toFixed(2)}</Text>
+              <Text style={[s.totalVal, { color: T.primary }]}>{format(total)}</Text>
            </View>
         </View>
 

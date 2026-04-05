@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, LogOut, UserCog, User as UserIcon, Clock, CalendarDays } from "lucide-react";
+import { ChevronDown, LogOut, UserCog, User as UserIcon, Clock, CalendarDays, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useRBAC } from "@/lib/rbac";
 import { useRouter } from "next/navigation";
@@ -69,7 +70,11 @@ export function AppHeader() {
       {/* ── Left: date & time ── */}
       <div className="flex items-center gap-4">
         {/* Mobile spacer for sidebar hamburger */}
-        <div className="w-8 md:hidden" />
+        <div className="md:hidden flex items-center gap-2">
+          <span className="font-mono text-lg font-black tracking-[0.1em] text-primary uppercase ">
+            REPAIRO
+          </span>
+        </div>
 
         {/* Date — sm and up */}
         <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
