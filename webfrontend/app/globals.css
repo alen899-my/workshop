@@ -1,27 +1,33 @@
-/* Fira Mono Font */
-@import url('https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&display=swap');
+/* Google Sans Font */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
 
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Fira Mono utility classes */
-.fira-mono-regular {
-  font-family: "Fira Mono", monospace;
+/* Utility classes just map back to standard now, kept for backward compatibility */
+.google-sans-regular {
+  font-family: "Google Sans", sans-serif;
+  font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
+  font-variation-settings: "GRAD" 0;
 }
 
-.fira-mono-medium {
-  font-family: "Fira Mono", monospace;
+.google-sans-medium {
+  font-family: "Google Sans", sans-serif;
+  font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
+  font-variation-settings: "GRAD" 0;
 }
 
-.fira-mono-bold {
-  font-family: "Fira Mono", monospace;
+.google-sans-bold {
+  font-family: "Google Sans", sans-serif;
+  font-optical-sizing: auto;
   font-weight: 700;
   font-style: normal;
+  font-variation-settings: "GRAD" 0;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -151,8 +157,9 @@
 }
 
 @theme inline {
-    --font-sans: "Fira Mono", monospace;
-    --font-heading: "Fira Mono", monospace;
+    --font-sans: "Google Sans", sans-serif;
+    --font-heading: "Google Sans", sans-serif;
+    --font-mono: "Google Sans", sans-serif;
 
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -200,10 +207,10 @@
     }
     body {
         @apply bg-background text-foreground;
-        font-family: "Fira Mono", monospace;
+        font-family: "Google Sans", sans-serif;
     }
     html {
-        font-family: "Fira Mono", monospace;
+        font-family: "Google Sans", sans-serif;
     }
     /* Smooth dark/light mode transition */
     html:not(.no-transition) * {

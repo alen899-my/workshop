@@ -55,7 +55,7 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
   const filtered = useMemo(() => {
     return users.filter((u) => {
       const q = search.toLowerCase();
-      if (search && !u.name?.toLowerCase().includes(q) && !u.phone?.toLowerCase().includes(q)) return false;
+      if (search && !u.name?.toLowerCase().includes(q) && !u.phone?.toLowerCase().includes(q) && !u.email?.toLowerCase().includes(q)) return false;
       if (filterRole && u.role !== filterRole) return false;
       if (filterAccountStatus && u.status !== filterAccountStatus) return false;
       return true;
@@ -77,6 +77,20 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
 
   // ── Columns ────────────────────────────────────────────────────────────────
   const columns: ColumnDef<User>[] = [
+    {
+      key: "profile_image",
+      header: "",
+      className: "w-12",
+      renderCell: (row) => (
+        <div className="h-10 w-10 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center flex-shrink-0">
+          {row.profile_image ? (
+            <img src={row.profile_image} alt={row.name} className="h-full w-full object-cover" />
+          ) : (
+            <Shield size={18} className="text-muted-foreground/40" />
+          )}
+        </div>
+      )
+    },
     {
       key: "name",
       header: "Name",
@@ -101,9 +115,14 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
       key: "phone",
       header: "Contact",
       renderCell: (row) => (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Phone size={12} className="opacity-60" />
-          <span className="text-sm">{row.phone}</span>
+        <div className="flex flex-col gap-1 text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Phone size={12} className="opacity-60" />
+            <span className="text-sm">{row.phone}</span>
+          </div>
+          {row.email && (
+            <span className="text-xs">{row.email}</span>
+          )}
         </div>
       )
     },
@@ -135,8 +154,8 @@ export default function UsersClient({ initialData, shopId }: UsersClientProps) {
   ];
 
   const handleCreate = () => router.push("/app/users/create");
-  const handleEdit = (row: User) => router.push(`/app/users/edit/${row.id}`);
-  const handleView = (row: User) => router.push(`/app/users/${row.id}`);
+  const handleEdit = (row: User) => router.push(`/app/users/edit/${row.id}?mode=edit`);
+  const handleView = (row: User) => router.push(`/app/users/edit/${row.id}`);
 
   const handleDelete = (row: User) => {
     pendingDeleteRef.current = row;

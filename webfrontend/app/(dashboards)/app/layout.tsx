@@ -62,8 +62,8 @@ export default function DashboardLayout({
             {/* Subtle Background Identity Shapes */}
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="max-w-7xl mx-auto pt-6 sm:pt-0">
+
+            <div className="max-w-10xl mx-auto pt-6 sm:pt-0">
               {children}
             </div>
           </main>

@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  Wrench, 
-  PlusCircle, 
-  Car, 
-  Users, 
-  Clock, 
-  ArrowRight, 
+import {
+  Wrench,
+  PlusCircle,
+  Car,
+  Users,
+  Clock,
   DollarSign,
   Eye,
   UserCheck,
-  Zap
+  Activity,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { repairService, Repair } from "@/services/repair.service";
@@ -27,7 +27,7 @@ export default function WorkshopDashboard() {
     totalRevenue: 0,
     avgCompletionHours: "0",
     recentRepairs: [] as Repair[],
-    workers: [] as {id: number; name: string; role: string; active_jobs: number}[]
+    workers: [] as { id: number; name: string; role: string; active_jobs: number }[]
   });
   const [loading, setLoading] = useState(true);
 
@@ -44,276 +44,306 @@ export default function WorkshopDashboard() {
 
   const formatCurrency = (val: number) => {
     const symbol = user?.shopCurrency || "INR";
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: symbol.length === 3 ? symbol : 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: symbol.length === 3 ? symbol : "INR",
     }).format(val);
   };
 
-  const dashboardCards = [
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    if (hour < 21) return "Good evening";
+    return "Good night";
+  };
+
+  const statCards = [
     {
-      title: "Total Earnings",
+      title: "Total Revenue",
       value: formatCurrency(stats.totalRevenue),
+      description: "Billed to customers",
       icon: DollarSign,
-      // solid emerald card
-      cardBg: "bg-emerald-600",
-      description: "Revenue billed to customers"
+      bg: "bg-emerald-600",
     },
     {
-      title: "Jobs in Progress",
+      title: "In Progress",
       value: stats.pendingRepairs,
-      icon: Clock,
-      // solid amber card
-      cardBg: "bg-amber-500",
-      description: "Repairs currently being worked on"
+      description: "Active repair jobs",
+      icon: Activity,
+      bg: "bg-amber-500",
     },
     {
-      title: "Average Time per Job",
-      value: `${stats.avgCompletionHours} hrs`,
-      icon: Zap,
-      // solid indigo card
-      cardBg: "bg-indigo-600",
-      description: "How long each repair takes on average"
+      title: "Avg. Completion",
+      value: `${stats.avgCompletionHours}h`,
+      description: "Per repair job",
+      icon: Clock,
+      bg: "bg-primary",
     },
     {
       title: "Vehicles Serviced",
       value: stats.totalRepairs,
+      description: "All time total",
       icon: Car,
-      // solid slate card
-      cardBg: "bg-slate-700",
-      description: "Total number of vehicles seen so far"
-    }
+      bg: "bg-violet-600",
+    },
+  ];
+
+  const quickLinks = [
+    { label: "New Repair", href: "/app/repairs/create", icon: PlusCircle, primary: true },
+    { label: "All Repairs", href: "/app/repairs", icon: Wrench },
+    { label: "Vehicles", href: "/app/vehicles", icon: Car },
+    { label: "Invoices", href: "/app/invoices", icon: DollarSign },
   ];
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-8 animate-pulse p-4">
-        <div className="h-10 w-48 bg-muted rounded-lg" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[1,2,3,4].map(i => <div key={i} className="h-32 bg-muted rounded-xl" />)}
+      <div className="flex flex-col gap-8 animate-pulse">
+        <div className="flex flex-col gap-2">
+          <div className="h-8 w-56 bg-muted rounded-lg" />
+          <div className="h-4 w-72 bg-muted/60 rounded-md" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <div className="lg:col-span-2 h-96 bg-muted rounded-xl" />
-           <div className="h-96 bg-muted rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-muted rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-80 bg-muted rounded-xl" />
+          <div className="h-80 bg-muted rounded-xl" />
         </div>
       </div>
     );
   }
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    if (hour < 21) return "Good Evening";
-    return "Good Night";
-  };
-
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-8 pb-12">
 
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">
-            {getGreeting()}! 👋
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1.5">
+            Overview
+          </p>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            {getGreeting()}, {user?.name?.split(" ")[0] ?? "there"} 👋
           </h1>
-          <p className="text-sm text-muted-foreground font-medium mt-0.5">
+          <p className="text-sm text-muted-foreground mt-1">
             Here's what's happening at{" "}
-            <span className="font-bold text-foreground">{user?.shopName}</span> today.
+            <span className="font-semibold text-foreground">{user?.shopName}</span> today.
           </p>
         </div>
        
       </div>
 
-      {/* ── Solid Color Stats Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {dashboardCards.map((card, i) => (
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((card, i) => (
           <div
             key={i}
             className={cn(
-              "rounded-xl p-5 flex flex-col justify-between gap-6 text-white shadow-md",
-              card.cardBg
+              "rounded-xl p-5 flex flex-col justify-between gap-5 text-white shadow-sm",
+              "hover:shadow-md hover:brightness-105 transition-all duration-200",
+              card.bg
             )}
           >
-            {/* top row: label + icon */}
             <div className="flex items-start justify-between">
-              <p className="text-sm font-semibold opacity-90 leading-snug">
+              <p className="text-xs font-semibold opacity-85 uppercase tracking-wider leading-snug">
                 {card.title}
               </p>
-              <div className="p-2 rounded-lg bg-white/20">
-                <card.icon className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                <card.icon className="w-4 h-4 text-white" />
               </div>
             </div>
-
-            {/* bottom: value + description */}
             <div>
-              <h3 className="text-3xl font-black tracking-tight">{card.value}</h3>
-              <p className="text-xs font-medium opacity-75 mt-1">{card.description}</p>
+              <p className="text-2xl font-bold tracking-tight">{card.value}</p>
+              <p className="text-xs opacity-70 mt-0.5">{card.description}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* ── Quick Actions ── */}
-      <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-bold text-muted-foreground">
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
           Quick Actions
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: "New Repair", href: "/app/repairs/create", icon: PlusCircle, variant: "primary" },
-            { label: "All Repairs", href: "/app/repairs", icon: Wrench, variant: "secondary" },
-            { label: "Vehicles", href: "/app/vehicles", icon: Car, variant: "secondary" },
-            { label: "Invoices", href: "/app/invoices", icon: DollarSign, variant: "secondary" },
-          ].map((link, i) => (
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {quickLinks.map((link, i) => (
             <Link
               key={i}
               href={link.href}
               className={cn(
-                "group flex flex-col items-center justify-center gap-3 p-5 rounded-xl border transition-all duration-200 active:scale-95",
-                link.variant === "primary"
-                  ? "bg-primary border-primary text-white shadow-lg shadow-primary/10 hover:brightness-110"
-                  : "bg-card border-border hover:border-primary/40 hover:bg-primary/5"
+                "group flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-150 active:scale-95",
+                link.primary
+                  ? "bg-primary border-primary text-primary-foreground shadow-sm hover:brightness-110"
+                  : "bg-card border-border text-foreground hover:border-primary/40 hover:bg-primary/5"
               )}
             >
               <link.icon
                 className={cn(
-                  "w-6 h-6 transition-transform group-hover:scale-110",
-                  link.variant === "primary" ? "text-white" : "text-primary"
+                  "w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110",
+                  link.primary ? "text-primary-foreground" : "text-primary"
                 )}
               />
-              <span className="text-xs font-semibold">{link.label}</span>
+              {link.label}
             </Link>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* ── Main Content Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ── Recent Repairs ── */}
-        <div className="lg:col-span-2 flex flex-col gap-5">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Wrench size={15} className="text-primary" /> Recent Repairs
-            </h3>
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden shadow-xs">
+          {/* Table header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Wrench size={14} className="text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Recent Repairs</h3>
+              {stats.recentRepairs.length > 0 && (
+                <span className="text-xs bg-muted text-muted-foreground font-medium px-2 py-0.5 rounded-full">
+                  {stats.recentRepairs.length}
+                </span>
+              )}
+            </div>
             <Link
               href="/app/repairs"
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
             >
-              See all <ArrowRight size={12} />
+              View all
+              <ChevronRight size={12} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
-            {stats.recentRepairs.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                No repairs recorded yet.
-              </p>
-            ) : (
-              stats.recentRepairs.map((r) => (
+          {/* Table body */}
+          {stats.recentRepairs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <Wrench size={18} className="text-muted-foreground/40" />
+              </div>
+              <p className="text-sm text-muted-foreground">No repairs recorded yet.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {stats.recentRepairs.map((r) => (
                 <div
                   key={r.id}
-                  className="p-4 bg-card border border-border rounded-xl hover:border-primary/40 transition-all group flex items-center justify-between gap-4"
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/40 transition-colors group"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center border border-border overflow-hidden flex-shrink-0">
-                      {r.vehicle_image
-                        ? <img src={r.vehicle_image} className="w-full h-full object-cover" alt={r.vehicle_number} />
-                        : <Car size={18} className="text-muted-foreground/40" />
-                      }
+                  {/* Left: vehicle info */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center flex-shrink-0">
+                      {r.vehicle_image ? (
+                        <img
+                          src={r.vehicle_image}
+                          className="w-full h-full object-cover"
+                          alt={r.vehicle_number}
+                        />
+                      ) : (
+                        <Car size={15} className="text-muted-foreground/40" />
+                      )}
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{r.vehicle_number}</h4>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {r.vehicle_number}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {r.model_name} &mdash; {r.owner_name}
                       </p>
                     </div>
                   </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <WorkshopBadge
-                        variant={r.status === "Completed" ? "success" : "warning"}
-                        size="xs"
-                      >
-                        {r.status}
-                      </WorkshopBadge>
-                      <WorkshopBadge
-                        variant={(r.payment_status || "Unpaid") === "Paid" ? "success" : "warning"}
-                        size="xs"
-                        dot
-                      >
-                        {r.payment_status || "Unpaid"}
-                      </WorkshopBadge>
-                      <Link
-                        href={`/app/repairs/${r.id}`}
-                        className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-center pt-0.5"
-                        title="View repair details"
-                      >
-                        <Eye size={16} />
-                      </Link>
-                    </div>
+
+                  {/* Right: badges + action */}
+                  <div className="flex items-center gap-2.5 flex-shrink-0 ml-3">
+                    <WorkshopBadge
+                      variant={r.status === "Completed" ? "success" : "warning"}
+                      size="xs"
+                    >
+                      {r.status}
+                    </WorkshopBadge>
+                    <WorkshopBadge
+                      variant={(r.payment_status || "Unpaid") === "Paid" ? "success" : "warning"}
+                      size="xs"
+                      dot
+                    >
+                      {r.payment_status || "Unpaid"}
+                    </WorkshopBadge>
+                    <Link
+                      href={`/app/repairs/${r.id}`}
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      title="View repair"
+                    >
+                      <Eye size={14} />
+                    </Link>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Staff on Duty ── */}
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <UserCheck size={15} className="text-primary" /> Staff on Duty
-            </h3>
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-xs">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+            <UserCheck size={14} className="text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Staff on Duty</h3>
+            {stats.workers.length > 0 && (
+              <span className="text-xs bg-muted text-muted-foreground font-medium px-2 py-0.5 rounded-full ml-auto">
+                {stats.workers.length}
+              </span>
+            )}
           </div>
 
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {stats.workers.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                No staff assigned to this workshop yet.
+          {stats.workers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <Users size={18} className="text-muted-foreground/40" />
               </div>
-            ) : (
-              stats.workers.map((worker, i) => (
+              <p className="text-sm text-muted-foreground text-center px-6">
+                No staff assigned yet.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {stats.workers.map((worker) => (
                 <Link
                   key={worker.id}
                   href={`/app/users/${worker.id}`}
-                  className={cn(
-                    "flex items-center justify-between p-4 hover:bg-primary/5 transition-colors active:bg-primary/10",
-                    i !== stats.workers.length - 1 && "border-b border-border/50"
-                  )}
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/40 transition-colors group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs flex-shrink-0">
                       {worker.name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{worker.name}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {worker.name}
+                      </p>
                       <p className="text-xs text-muted-foreground capitalize">
                         {worker.role.replace("_", " ")}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs font-bold text-primary">
-                      {worker.active_jobs} active {worker.active_jobs === 1 ? "job" : "jobs"}
-                    </span>
-                    {/* Simple workload dots */}
-                    <div className="flex gap-1">
-                      {[...Array(3)].map((_, idx) => (
-                        <div
-                          key={idx}
-                          className={cn(
-                            "w-3 h-1 rounded-full",
-                            idx < worker.active_jobs ? "bg-primary" : "bg-muted"
-                          )}
-                        />
-                      ))}
-                    </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {worker.active_jobs > 0 && (
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {worker.active_jobs} job{worker.active_jobs !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {worker.active_jobs === 0 && (
+                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        Idle
+                      </span>
+                    )}
+                    <ChevronRight size={13} className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
                   </div>
                 </Link>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-
       </div>
     </div>
   );

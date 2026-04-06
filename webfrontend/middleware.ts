@@ -38,7 +38,7 @@ export function middleware(request: NextRequest) {
       '/app/invoices': 'view:invoices',
       '/app/reports': 'view:reports',
       '/app/settings': 'manage:settings',
-      '/app/profile': 'view:profile' // Basic self-access usually allowed, but explicitly listed
+      // /app/profile intentionally excluded — every authenticated user can access their own profile
     };
 
     // Sorted descending by length to match specific sub-paths first

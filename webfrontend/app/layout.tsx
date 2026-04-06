@@ -1,14 +1,6 @@
 import type { Metadata } from "next";
-import { Fira_Mono } from "next/font/google";
 import "@/app/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-
-const firaMono = Fira_Mono({
-  weight: ["400", "500", "700"],
-  subsets: ["latin"],
-  variable: "--font-fira-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "WorkshopPro — Vehicle Repair Management",
@@ -25,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={firaMono.variable} suppressHydrationWarning>
-      <body className={`${firaMono.className} antialiased`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <WorkshopToastProvider>
             {children}

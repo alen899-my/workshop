@@ -10,11 +10,13 @@ router.get('/', authenticate, authorize('view:shops'), shopController.getShops);
 // @route   GET /api/shops/:id
 router.get('/:id', authenticate, authorize('view:shops'), shopController.getShopById);
 
+const { upload } = require('../../middleware/upload');
+
 // @route   POST /api/shops
-router.post('/', authenticate, authorize('create:shops'), shopController.createShop);
+router.post('/', authenticate, authorize('create:shops'), upload.single('shop_image'), shopController.createShop);
 
 // @route   PUT /api/shops/:id
-router.put('/:id', authenticate, authorize('edit:shops'), shopController.updateShop);
+router.put('/:id', authenticate, authorize('edit:shops'), upload.single('shop_image'), shopController.updateShop);
 
 // @route   DELETE /api/shops/:id
 router.delete('/:id', authenticate, authorize('delete:shops'), shopController.deleteShop);

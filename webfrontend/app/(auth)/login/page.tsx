@@ -44,11 +44,7 @@ function AuthFormWrapper({
         </p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-border" />
-        <div className="w-2 h-2 bg-primary rotate-45 flex-shrink-0" />
-        <div className="flex-1 h-px bg-border" />
-      </div>
+
 
       <div className="w-full">{children}</div>
 
@@ -129,7 +125,7 @@ export default function LoginPage() {
       document.cookie = `workshop_role=${data.data.role}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `workshop_permissions=${perms}; path=/; max-age=604800; SameSite=Lax`;
 
-      toast({ type: "success", title: "Welcome back", description: "Loading your dashboard..." });
+      toast({ type: "success", title: "Success", description: "" });
       router.push("/app");
 
     } catch (error) {
@@ -157,15 +153,13 @@ export default function LoginPage() {
       {/* ── CENTERED: Form panel ── */}
       <div className="relative z-10 w-full sm:max-w-[500px]">
         {/* Card Container */}
-        <div className="bg-background sm:bg-white dark:sm:bg-card border-0 sm:border sm:border-border/50 shadow-none sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-none sm:rounded-3xl p-6 sm:p-10 relative group min-h-screen sm:min-h-0 flex flex-col justify-center">
+        <div className="bg-background sm:bg-card border-0 sm:border sm:border-border shadow-none rounded-none sm:rounded-2xl p-6 sm:p-10 relative min-h-screen sm:min-h-0 flex flex-col justify-center">
           {/* Logo inside card */}
           <div className="flex justify-center w-full mb-8">
-            <span className="font-mono font-black text-3xl sm:text-4xl tracking-widest text-primary uppercase text-center">
+            <span className="font-sans font-bold text-3xl sm:text-4xl tracking-tight text-primary text-center">
               REPAIRO
             </span>
           </div>
-          {/* Subtle accent line at top */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-100 sm:opacity-50" />
 
           <AuthFormWrapper
             badge="Welcome back"
@@ -185,14 +179,14 @@ export default function LoginPage() {
           >
             <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/80 ml-1">Phone Number</label>
+                <label className="text-xs font-normal text-muted-foreground ml-0.5">Phone Number</label>
                 <PhoneInput
                   country="in"
                   value={form.phone}
                   onChange={(phone) => setForm({ ...form, phone: `+${phone}` })}
                   containerClass="!w-full"
-                  inputClass="!w-full !h-[48px] !bg-background/50 !backdrop-blur-sm !border !border-border/50 !text-foreground !text-sm !rounded-xl !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/20"
-                  buttonClass="!bg-background/50 !border !border-border/50 !border-r-0 !rounded-l-xl hover:!bg-muted/50"
+                  inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                  buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"
                   dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
                   searchClass="!bg-muted !border !border-border !text-foreground"
                 />
@@ -224,9 +218,9 @@ export default function LoginPage() {
                 size="xl"
                 fullWidth
                 loading={loading}
-                className="mt-2 h-[52px] rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                className="mt-2 h-[52px] rounded-xl shadow-none"
               >
-                Sign In to Dashboard
+                Sign In
               </WorkshopButton>
 
             </form>

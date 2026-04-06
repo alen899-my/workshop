@@ -59,32 +59,28 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
 
   const variants = {
     success: {
-      bg: "bg-[oklch(0.55_0.15_150)] border-[oklch(0.45_0.15_150)]",
+      bg: "bg-emerald-600 border-emerald-500",
       icon: <CheckCircle2 className="w-5 h-5 text-white" />,
-      titleColor: "text-white",
-      descColor: "text-white/90",
-      closeBtn: "text-white/70 hover:text-white"
+      text: "text-white",
+      desc: "text-emerald-50",
     },
     error: {
-      bg: "bg-[oklch(0.60_0.19_42)] border-[oklch(0.50_0.19_42)]",
+      bg: "bg-destructive border-destructive",
       icon: <AlertCircle className="w-5 h-5 text-white" />,
-      titleColor: "text-white",
-      descColor: "text-white/90",
-      closeBtn: "text-white/70 hover:text-white"
+      text: "text-white",
+      desc: "text-red-50",
     },
     warning: {
-      bg: "bg-[oklch(0.75_0.15_80)] border-[oklch(0.65_0.15_80)]",
-      icon: <AlertTriangle className="w-5 h-5 text-[oklch(0.15_0.025_240)]" />,
-      titleColor: "text-[oklch(0.15_0.025_240)]",
-      descColor: "text-[oklch(0.15_0.025_240)]/80",
-      closeBtn: "text-[oklch(0.15_0.025_240)]/60 hover:text-[oklch(0.15_0.025_240)]"
+      bg: "bg-amber-500 border-amber-400",
+      icon: <AlertTriangle className="w-5 h-5 text-white" />,
+      text: "text-white",
+      desc: "text-amber-50",
     },
     info: {
-      bg: "bg-[oklch(0.38_0.13_248)] border-[oklch(0.28_0.13_248)]",
+      bg: "bg-blue-600 border-blue-500",
       icon: <Info className="w-5 h-5 text-white" />,
-      titleColor: "text-white",
-      descColor: "text-white/90",
-      closeBtn: "text-white/70 hover:text-white"
+      text: "text-white",
+      desc: "text-blue-50",
     },
   };
 
@@ -93,17 +89,17 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start w-full shadow-2xl border rounded-md p-4 font-mono transition-all transform animate-in slide-in-from-top-5",
+        "pointer-events-auto flex items-start w-full border shadow-2xl rounded-xl p-4 transition-all transform animate-in slide-in-from-top-5 duration-300",
         v.bg
       )}
     >
       <div className="flex-shrink-0 mt-0.5">{v.icon}</div>
       <div className="ml-3 flex-1 overflow-hidden">
-        <h3 className={cn("text-xs font-bold uppercase tracking-widest truncate", v.titleColor)}>
+        <h3 className={cn("text-sm font-semibold leading-tight", v.text)}>
           {toast.title}
         </h3>
         {toast.description && (
-          <p className={cn("mt-1 text-sm font-medium leading-relaxed", v.descColor)}>
+          <p className={cn("mt-1 text-sm leading-relaxed opacity-90", v.desc)}>
             {toast.description}
           </p>
         )}
@@ -111,7 +107,10 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
       <button
         type="button"
         onClick={onDismiss}
-        className={cn("ml-4 flex-shrink-0 transition-colors focus:outline-none", v.closeBtn)}
+        className={cn(
+          "ml-4 flex-shrink-0 flex items-center justify-center rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/20",
+          v.text
+        )}
       >
         <X className="w-4 h-4" />
       </button>

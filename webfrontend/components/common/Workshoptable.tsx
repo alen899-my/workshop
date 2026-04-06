@@ -267,8 +267,11 @@ export function WorkshopTable<T>({
                   <tr
                     key={rowKey ? rowKey(row, globalIdx) : globalIdx}
                     className={cn(
-                      "group border-b border-border/40 last:border-0",
-                      "hover:bg-accent/10",
+                      "group border-b border-border/50 last:border-0 transition-colors duration-100",
+                      globalIdx % 2 === 0
+                        ? "bg-card"
+                        : "bg-gray-50 dark:bg-white/[0.03]",
+                      "hover:bg-primary/5 dark:hover:bg-primary/10",
                       rowClassName?.(row, globalIdx)
                     )}
                   >
@@ -283,7 +286,7 @@ export function WorkshopTable<T>({
                       <td
                         key={col.key}
                         className={cn(
-                          "px-5 py-4 text-[13px] text-foreground font-medium tracking-tight whitespace-nowrap border-r border-border/20 last:border-r-0",
+                          "px-5 py-4 text-[13px] text-foreground font-normal whitespace-nowrap",
                           ALIGN_CLASS[col.align ?? "left"],
                           col.className
                         )}

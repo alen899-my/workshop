@@ -52,6 +52,25 @@ const uploadToR2 = async (fileBuffer, fileName, mimeType, contentDisposition = n
 };
 
 /**
+ * Upload base64 string to Cloudflare R2
+ */
+const uploadBase64ToR2 = async (base64String, filePrefix = 'uploads') => {
+  if (!base64String || !base64String.startsWith('data:image')) return null;
+  
+  const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) return null;
+  
+  const mimeType = matches[1];
+  const base64Data = matches[2];
+  const buffer = Buffer.from(base64Data, 'base64');
+  
+  const extension = mimeType.split('/')[1] || 'jpg';
+  const fileName = `${filePrefix}-${Date.now()}.${extension}`;
+  
+  return await uploadToR2(buffer, fileName, mimeType);
+};
+
+/**
  * Delete object from Cloudflare R2
  */
 const deleteFromR2 = async (fileUrl) => {
@@ -71,5 +90,6 @@ const deleteFromR2 = async (fileUrl) => {
 module.exports = {
   upload,
   uploadToR2,
+  uploadBase64ToR2,
   deleteFromR2
 };

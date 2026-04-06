@@ -109,7 +109,7 @@ export default function CreateShopPage() {
         </div>
         
         <div className="md:col-span-1">
-          <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Work Phone Number</label>
+          <label className="text-xs font-normal text-muted-foreground ml-0.5">Work Phone Number</label>
           <PhoneInput
             country={form.country.toLowerCase()}
             value={form.phone}

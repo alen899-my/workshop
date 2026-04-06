@@ -1,5 +1,6 @@
 const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
+const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
 
 // Allowed roles a shop_owner can assign to members of their shop
 const OWNER_ASSIGNABLE_ROLES = ['worker', 'shop_owner'];
@@ -12,7 +13,7 @@ exports.getUsers = async (req, res) => {
   try {
     const select = `
       SELECT 
-        u.id, u.name, u.phone, u.role, 
+        u.id, u.name, u.phone, u.email, u.role, u.profile_image,
         r.name AS role_name, 
         u.status, u.created_at,
         s.name AS shop_name,
@@ -54,7 +55,7 @@ exports.getUserById = async (req, res) => {
   const isSuperAdmin = role === 'super-admin';
   try {
     const result = await db.query(
-      `SELECT u.id, u.name, u.phone, u.role, r.name AS role_name, u.status, u.created_at, u.shop_id,
+      `SELECT u.id, u.name, u.phone, u.email, u.role, u.profile_image, r.name AS role_name, u.status, u.created_at, u.shop_id,
               s.name AS shop_name, s.location AS shop_location
         FROM users u 
         LEFT JOIN roles r ON u.role = r.slug 
@@ -95,7 +96,7 @@ exports.createUser = async (req, res) => {
   const { role: requesterRole, shopId: requesterShopId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
 
-  let { name, phone, password, role, status, shop_id } = req.body;
+  let { name, phone, email, password, role, status, shop_id } = req.body;
 
   // Scope enforcement: shop_owner can only create users in their own shop
   if (!isSuperAdmin) {
@@ -128,8 +129,8 @@ exports.createUser = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const result = await db.query(
-      'INSERT INTO users (shop_id, name, phone, password_hash, role, role_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, phone, role, status',
-      [shop_id, name, phone, passwordHash, assignedRole, roleId, status || 'active']
+      'INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, phone, email, role, status',
+      [shop_id, name, phone, email, passwordHash, assignedRole, roleId, status || 'active']
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -144,10 +145,10 @@ exports.updateUser = async (req, res) => {
   const { role: requesterRole, shopId: requesterShopId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
 
-  const { name, phone, role, status, password, shop_id } = req.body;
+  const { name, phone, email, role, status, password, shop_id, profile_image } = req.body;
   try {
     // Fetch user first to check shop scope
-    const existing = await db.query('SELECT id, shop_id FROM users WHERE id = $1', [req.params.id]);
+    const existing = await db.query('SELECT id, shop_id, profile_image FROM users WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
 
     if (!isSuperAdmin && existing.rows[0].shop_id !== requesterShopId) {
@@ -168,7 +169,14 @@ exports.updateUser = async (req, res) => {
 
     // Password Update Logic (Optional)
     let passwordFragment = '';
-    const params = [name, phone, role, roleId, status];
+    const params = [
+      name ?? null, 
+      phone ?? null, 
+      email ?? null, 
+      role ?? null, 
+      roleId ?? null, 
+      status ?? null
+    ];
 
     if (password && password.length > 0) {
       const salt = await bcrypt.genSalt(10);
@@ -184,14 +192,34 @@ exports.updateUser = async (req, res) => {
        params.push(shop_id);
     }
 
+    let finalProfileImage = existing.rows[0].profile_image;
+    if (req.file) {
+      if (finalProfileImage) await deleteFromR2(finalProfileImage);
+      finalProfileImage = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    } else if (profile_image === "") {
+      if (finalProfileImage) await deleteFromR2(finalProfileImage);
+      finalProfileImage = null;
+    }
+
+    let imageFragment = '';
+    if (finalProfileImage !== undefined) {
+      imageFragment = ', profile_image = $' + (params.length + 1);
+      params.push(finalProfileImage);
+    }
+
     params.push(req.params.id);
     const userIdPlaceholder = '$' + params.length;
 
     const query = `
       UPDATE users 
-      SET name = $1, phone = $2, role = $3, role_id = $4, status = $5 ${passwordFragment} ${shopFragment}
+      SET name = COALESCE($1, name), 
+          phone = COALESCE($2, phone), 
+          email = COALESCE($3, email), 
+          role = COALESCE($4, role), 
+          role_id = COALESCE($5, role_id), 
+          status = COALESCE($6, status) ${passwordFragment} ${shopFragment} ${imageFragment}
       WHERE id = ${userIdPlaceholder} 
-      RETURNING id, name, phone, role, status, shop_id
+      RETURNING id, name, phone, email, role, status, shop_id, profile_image
     `;
 
     const result = await db.query(query, params);

@@ -30,6 +30,7 @@ export default function CreateUserPage() {
   const [form, setForm] = useState({
     name: "",
     phone: "",
+    email: "",
     password: "",
     confirmPassword: "",
     role: "worker",
@@ -70,8 +71,8 @@ export default function CreateUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.phone || !form.password) {
-      toast({ type: "error", title: "Missing Fields", description: "Name, phone, and password are required." });
+    if (!form.name || !form.phone || !form.email || !form.password) {
+      toast({ type: "error", title: "Missing Fields", description: "Name, email, phone, and password are required." });
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -124,7 +125,7 @@ export default function CreateUserPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">Contact Phone Number</label>
+          <label className="text-xs font-normal text-muted-foreground ml-0.5">Contact Phone Number</label>
           <PhoneInput
             country="in"
             value={form.phone}
@@ -136,6 +137,14 @@ export default function CreateUserPage() {
             searchClass="!bg-muted !border !border-border !text-foreground"
           />
         </div>
+
+        <AuthFormField
+          label="Email Address"
+          type="email"
+          placeholder="e.g. user@example.com"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
 
         <AuthFormField
           label="Password"

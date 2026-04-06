@@ -9,7 +9,8 @@ import { z } from "zod";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
-import { WorkshopRegionSelects } from "@/components/ui/WorkshopRegionSelects";
+import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
+import { Country } from "country-state-city";
 import countryToCurrency from 'country-to-currency';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -46,11 +47,7 @@ function AuthFormWrapper({
         </p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-border" />
-        <div className="w-2 h-2 bg-primary rotate-45 flex-shrink-0" />
-        <div className="flex-1 h-px bg-border" />
-      </div>
+
 
       <div className="w-full">{children}</div>
 
@@ -67,26 +64,22 @@ interface FormState {
   shopName: string;
   ownerName: string;
   phone: string;
+  email: string;
   country: string;
-  state: string;
-  city: string;
-  address: string;
+  currency: string;
   password: string;
   confirmPassword: string;
-  currency: string;
 }
 
 const INITIAL: FormState = {
   shopName: "",
   ownerName: "",
   phone: "",
+  email: "",
   country: "IN",
-  state: "",
-  city: "",
-  address: "",
+  currency: "INR",
   password: "",
   confirmPassword: "",
-  currency: "INR",
 };
 
 const signupSchema = z
@@ -94,10 +87,8 @@ const signupSchema = z
     shopName: z.string().min(1, "Required"),
     ownerName: z.string().min(1, "Required"),
     phone: z.string().min(8, "Invalid phone"),
+    email: z.string().email("Invalid email"),
     country: z.string().min(1, "Required"),
-    state: z.string().min(1, "Required"),
-    city: z.string().min(1, "Required"),
-    address: z.string().min(1, "Required"),
     password: z.string().min(6, "Min 6 chars"),
     confirmPassword: z.string().min(1, "Required"),
   })
@@ -124,6 +115,10 @@ export default function SignupPage() {
       setChecking(false);
     }
   }, [router]);
+
+  const countryOptions = React.useMemo(() => 
+    Country.getAllCountries().map(c => ({ value: c.isoCode, label: c.name })),
+  []);
 
   if (checking) return null;
 
@@ -152,11 +147,10 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // Map form fields to backend expectations
-      // Using location = city for backend compatibility if needed
+      // Using location = 'Not Set' for backend compatibility if needed
       const payload = {
         ...form,
-        location: form.city,
+        location: 'Not Set',
       };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register-shop`, {
@@ -199,15 +193,13 @@ export default function SignupPage() {
       {/* ── CENTERED: Form panel ── */}
       <div className="relative z-10 w-full sm:max-w-[700px]">
         {/* Card Container */}
-        <div className="bg-background sm:bg-white dark:sm:bg-card border-0 sm:border sm:border-border/50 shadow-none sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-none sm:rounded-3xl p-6 py-12 sm:p-10 relative overflow-hidden min-h-screen sm:min-h-0 flex flex-col justify-center">
+        <div className="bg-background sm:bg-card border-0 sm:border sm:border-border shadow-none rounded-none sm:rounded-2xl p-6 py-12 sm:p-10 relative overflow-hidden min-h-screen sm:min-h-0 flex flex-col justify-center">
           {/* Logo inside card */}
           <div className="flex justify-center w-full mb-8 lg:mb-10">
-            <span className="font-mono font-black text-3xl sm:text-4xl tracking-widest text-primary uppercase  text-center">
+            <span className="font-sans font-bold text-3xl sm:text-4xl tracking-tight text-primary text-center">
               REPAIRO
             </span>
           </div>
-          {/* Subtle accent line at top */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-100 sm:opacity-50" />
           
           <AuthFormWrapper
             badge="Setup Account"
@@ -227,6 +219,8 @@ export default function SignupPage() {
           >
             <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                {/* Row 1: Shop & Owner Names */}
                 <div className="sm:col-span-1">
                   <AuthFormField
                     label="Shop Name"
@@ -248,69 +242,60 @@ export default function SignupPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2">
-                  <WorkshopRegionSelects
-                    country={form.country}
-                    state={form.state}
-                    city={form.city}
-                    onChange={(res) => {
-                      const code = res.country;
-                      const curr = (countryToCurrency as any)[code] || "USD";
-                      setForm(f => ({
-                        ...f,
-                        ...res,
-                        currency: curr
-                      }));
-                    }}
-                    errors={{
-                      country: errors.country,
-                      state: errors.state,
-                      city: errors.city
-                    }}
+                {/* Row 2: Phone & Email */}
+                <div className="sm:col-span-1 flex flex-col gap-2">
+                  <label className="text-xs font-normal text-muted-foreground ml-0.5">Phone Number</label>
+                  <PhoneInput
+                    country={form.country.toLowerCase()}
+                    value={form.phone}
+                    onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
+                    containerClass="!w-full"
+                    inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                    buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"
+                    dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
+                    searchClass="!bg-muted !border !border-border !text-foreground"
                   />
+                  {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
                 </div>
-
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-1 flex flex-col justify-end">
                   <AuthFormField
-                    label="Full Address / Location Details"
-                    type="text"
-                    placeholder="Avenue Road, MG Corner, Kochi..."
-                    value={form.address}
-                    onChange={set("address")}
-                    error={errors.address}
-                    icon={<MapPin size={16} />}
+                    label="Email Address"
+                    type="email"
+                    placeholder="workshop@example.com"
+                    value={form.email}
+                    onChange={set("email")}
+                    error={errors.email}
                   />
                 </div>
 
-                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/80 ml-1">Phone Number</label>
-                    <PhoneInput
-                      country={form.country.toLowerCase()}
-                      value={form.phone}
-                      onChange={(phone) => setForm(f => ({ ...f, phone: `+${phone}` }))}
-                      containerClass="!w-full"
-                      inputClass="!w-full !h-[48px] !bg-background/50 !backdrop-blur-sm !border !border-border/50 !text-foreground !text-sm !rounded-xl !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/20"
-                      buttonClass="!bg-background/50 !border !border-border/50 !border-r-0 !rounded-l-xl hover:!bg-muted/50"
-                      dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
-                      searchClass="!bg-muted !border !border-border !text-foreground"
-                    />
-                    {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
-                  </div>
-
-                  <div className="flex flex-col gap-6">
-                    <AuthFormField
-                      label="Password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={form.password}
-                      onChange={set("password")}
-                      error={errors.password}
-                    />
-                  </div>
+                {/* Row 3: Country */}
+                <div className="sm:col-span-2">
+                  <WorkshopSearchableSelect
+                    label="Country"
+                    placeholder="Select Country..."
+                    options={countryOptions}
+                    value={form.country}
+                    onChange={(val) => {
+                      const code = String(val);
+                      const curr = (countryToCurrency as any)[code] || "USD";
+                      setForm(f => ({ ...f, country: code, currency: curr }));
+                    }}
+                    error={errors.country}
+                  />
                 </div>
 
-                <div className="sm:col-span-2">
+                {/* Row 4: Password & Confirm */}
+                <div className="sm:col-span-1">
+                  <AuthFormField
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={set("password")}
+                    error={errors.password}
+                  />
+                </div>
+                <div className="sm:col-span-1">
                   <AuthFormField
                     label="Confirm Password"
                     type="password"
@@ -320,6 +305,7 @@ export default function SignupPage() {
                     error={errors.confirmPassword}
                   />
                 </div>
+
               </div>
 
               <div className="mt-4">
@@ -329,7 +315,7 @@ export default function SignupPage() {
                   size="xl"
                   fullWidth
                   loading={loading}
-                  className="h-[52px] rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                  className="h-[52px] rounded-xl shadow-none"
                 >
                   Sign Up
                 </WorkshopButton>

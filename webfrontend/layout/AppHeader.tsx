@@ -1,12 +1,21 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, LogOut, UserCog, User as UserIcon, Clock, CalendarDays, Menu } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  UserCog,
+  User as UserIcon,
+  Clock,
+  CalendarDays,
+  Menu,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useRBAC } from "@/lib/rbac";
 import { useRouter } from "next/navigation";
+import { triggerMobileSidebar } from "@/layout/Appsidebar";
 
 export function AppHeader() {
   const router = useRouter();
@@ -34,7 +43,6 @@ export function AppHeader() {
   const handleLogout = () => {
     localStorage.removeItem("workshop_token");
     localStorage.removeItem("workshop_user");
-    // Remove cookies
     document.cookie = "workshop_token=; path=/; max-age=0; SameSite=Lax";
     document.cookie = "workshop_role=; path=/; max-age=0; SameSite=Lax";
     document.cookie = "workshop_permissions=; path=/; max-age=0; SameSite=Lax";
@@ -65,38 +73,45 @@ export function AppHeader() {
     : "Administrator";
 
   return (
-    <header className="h-14 shrink-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 sticky top-0">
+    <header className="h-14 shrink-0 z-30 flex items-center border-b border-border bg-background px-4 sm:px-6 sticky top-0">
 
-      {/* ── Left: date & time ── */}
-      <div className="flex items-center gap-4">
-        {/* Mobile spacer for sidebar hamburger */}
-        <div className="md:hidden flex items-center gap-2">
-          <span className="font-mono text-lg font-black tracking-[0.1em] text-primary uppercase ">
-            REPAIRO
-          </span>
-        </div>
+      {/* ── Left: hamburger (mobile) ── */}
+      <button
+        onClick={() => triggerMobileSidebar(true)}
+        aria-label="Open menu"
+        className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mr-2"
+      >
+        <Menu size={18} />
+      </button>
 
-        {/* Date — sm and up */}
-        <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
+      {/* ── Mobile: centered logo ── */}
+      <div className="flex-1 flex justify-center md:hidden">
+        <span className="font-mono text-base font-black tracking-[0.18em] text-primary uppercase">
+          REPAIRO
+        </span>
+      </div>
+
+      {/* ── Desktop left: date & time ── */}
+      <div className="hidden md:flex items-center gap-4 flex-1">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <CalendarDays size={14} />
           <span className="text-sm">{dateStr}</span>
         </div>
 
-        <div className="hidden sm:block h-4 w-px bg-border" />
+        <div className="h-4 w-px bg-border" />
 
-        {/* Time */}
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Clock size={14} />
           <span className="text-sm tabular-nums">{timeStr}</span>
         </div>
       </div>
 
-      {/* ── Right: theme + user menu ── */}
-      <div className="flex items-center gap-3" ref={dropdownRef}>
+      {/* ── Right: theme toggle + user menu ── */}
+      <div className="flex items-center gap-2 md:gap-3" ref={dropdownRef}>
 
         <ThemeToggle />
 
-        {/* Shop name & role — md and up */}
+        {/* Shop name & role — desktop only */}
         <div className="hidden md:flex flex-col items-end">
           <span className="text-sm font-semibold text-foreground leading-tight">
             {user?.shopName || "Workshop"}
@@ -106,14 +121,13 @@ export function AppHeader() {
 
         {/* Avatar button */}
         <button
-          onClick={() => setDropdownOpen(v => !v)}
+          onClick={() => setDropdownOpen((v) => !v)}
           aria-label="Open account menu"
           className={cn(
             "flex items-center gap-1.5 rounded-lg border border-border p-1 pr-2 transition-colors",
             dropdownOpen ? "bg-muted" : "hover:bg-muted"
           )}
         >
-          {/* Avatar circle */}
           <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
             {initials}
           </div>
@@ -128,7 +142,7 @@ export function AppHeader() {
 
         {/* ── Dropdown ── */}
         {dropdownOpen && (
-          <div className="absolute right-4 sm:right-6 top-[calc(3.5rem+6px)] w-56 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="fixed right-4 sm:right-6 top-[calc(3.5rem+6px)] w-56 rounded-xl border border-border bg-popover shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
 
             {/* User info */}
             <div className="px-4 py-3 border-b border-border">
@@ -141,27 +155,22 @@ export function AppHeader() {
             {/* Menu items */}
             <div className="p-1">
               {can("edit:shops") && (
-                <button
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    const sid = user?.shopId || user?.shop_id;
-                    if (sid) router.push(`/app/shops/edit/${sid}`);
-                  }}
+                <Link
+                  href={`/app/shops/edit/${user?.shopId || user?.shop_id || ""}`}
+                  onClick={() => setDropdownOpen(false)}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
                   <UserCog size={15} className="text-muted-foreground shrink-0" />
                   <div className="text-left">
-                    <p className="font-medium leading-none">Shop Settings</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Edit your shop details</p>
+                    <p className="font-medium leading-none">Shop Profile</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">View & edit shop details</p>
                   </div>
-                </button>
+                </Link>
               )}
 
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  router.push("/app/profile");
-                }}
+              <Link
+                href="/app/profile"
+                onClick={() => setDropdownOpen(false)}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
                 <UserIcon size={15} className="text-muted-foreground shrink-0" />
@@ -169,18 +178,18 @@ export function AppHeader() {
                   <p className="font-medium leading-none">My Profile</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Account settings</p>
                 </div>
-              </button>
+              </Link>
 
               <div className="my-1 h-px bg-border" />
 
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-destructive/10 transition-colors group"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-destructive/10 transition-colors"
               >
                 <LogOut size={15} className="text-destructive shrink-0" />
                 <div className="text-left">
                   <p className="font-medium text-destructive leading-none">Log Out</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">End your session</p>
+
                 </div>
               </button>
             </div>

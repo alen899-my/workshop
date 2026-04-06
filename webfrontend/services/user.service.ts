@@ -11,8 +11,10 @@ export interface User {
   shop_id: number;
   name: string;
   phone: string;
+  email?: string;
   role: string;
   status?: string;
+  profile_image?: string;
   created_at: string;
 }
 
@@ -50,15 +52,13 @@ export const userService = {
   },
 
   /** Create team member */
-  async create(data: Partial<User> & { password?: string }): Promise<{ success: boolean; data?: User; error?: string }> {
+  async create(data: FormData | Partial<User> & { password?: string }): Promise<{ success: boolean; data?: User; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuth() as any // Cast to any to handle the spread with Content-Type
-        },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {
@@ -67,15 +67,13 @@ export const userService = {
   },
 
   /** Update profile */
-  async update(id: string | number, data: Partial<User>): Promise<{ success: boolean; data?: User; error?: string }> {
+  async update(id: string | number, data: FormData | Partial<User>): Promise<{ success: boolean; data?: User; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuth() as any
-        },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {

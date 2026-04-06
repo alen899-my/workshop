@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -21,7 +20,6 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
-  Menu,
   X,
 } from "lucide-react";
 import { useRBAC } from "@/lib/rbac";
@@ -47,13 +45,23 @@ const NAV_MAIN = [
       { href: "/app/roles", icon: ShieldHalf, title: "Roles", permission: "view:role" },
       { href: "/app/permissions", icon: ShieldCheck, title: "Permissions", permission: "view:permission" },
       { href: "/app/invoices", icon: Receipt, title: "Invoices", permission: "view:invoices" },
-
       { href: "/app/settings", icon: Settings, title: "Settings", permission: "manage:settings" },
     ],
   },
 ];
 
+// ─── Sidebar open context ─────────────────────────────────────────────────────
 
+// Simple module-level event bus so AppHeader can trigger the sidebar open
+type Listener = (open: boolean) => void;
+const listeners: Set<Listener> = new Set();
+export function onMobileSidebarChange(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+export function triggerMobileSidebar(open: boolean) {
+  listeners.forEach((fn) => fn(open));
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,7 +82,7 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
       href={href}
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm",
+        "group relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2.5 text-sm transition-colors",
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active
           ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-md shadow-sidebar-primary/10"
@@ -89,20 +97,18 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
       <Icon
         size={16}
         className={cn(
-          "shrink-0",
-          active ? "opacity-100" : "opacity-80 group-hover:opacity-100"
+          "shrink-0 transition-opacity",
+          active ? "opacity-100" : "opacity-70 group-hover:opacity-100"
         )}
       />
 
       {!collapsed && (
-        <span className="truncate tracking-wide font-mono text-[13px]">
-          {title}
-        </span>
+        <span className="truncate tracking-wide font-mono text-[13px]">{title}</span>
       )}
 
       {/* Tooltip when collapsed */}
       {collapsed && (
-        <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-[var(--radius)] bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg group-hover:opacity-100">
+        <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-[var(--radius)] bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
           {title}
         </span>
       )}
@@ -110,19 +116,21 @@ function NavItem({ href, icon: Icon, title, collapsed, active, onClick }: NavIte
   );
 }
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
+// ─── Sidebar Content ─────────────────────────────────────────────────────────
 
-export function AppSidebar() {
+function SidebarContent({
+  isCollapsed,
+  onItemClick,
+  onClose,
+}: {
+  isCollapsed: boolean;
+  onItemClick?: () => void;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { can, user } = useRBAC();
+  const { can } = useRBAC();
 
-  // Helper to close mobile menu
-  const closeMobile = () => setMobileOpen(false);
-
-  // Sub-component for the actual content to avoid duplication
-  const SidebarContent = ({ isCollapsed, onItemClick }: { isCollapsed: boolean, onItemClick?: () => void }) => (
+  return (
     <div
       className={cn(
         "flex h-full flex-col bg-sidebar text-sidebar-foreground",
@@ -137,7 +145,7 @@ export function AppSidebar() {
         )}
       >
         {!isCollapsed && (
-          <span className="font-mono text-xl font-black tracking-[0.2em] text-sidebar-primary uppercase ">
+          <span className="font-mono text-xl font-black tracking-[0.2em] text-sidebar-primary uppercase">
             REPAIRO
           </span>
         )}
@@ -147,29 +155,23 @@ export function AppSidebar() {
           </span>
         )}
 
-        {/* Desktop collapse toggle */}
-        {!onItemClick && ( // Only show on desktop
+        {/* Close button on mobile drawer */}
+        {onClose && (
           <button
-            onClick={() => setCollapsed(v => !v)}
-            className={cn(
-              "hidden rounded-[var(--radius)] p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground md:flex",
-              isCollapsed && "mx-auto"
-            )}
-            aria-label="Toggle sidebar"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+            aria-label="Close menu"
           >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            <X size={15} />
           </button>
         )}
       </div>
 
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4 no-scrollbar">
         {NAV_MAIN.map((group) => {
-          // Filter items based on permissions
-          const visibleItems = group.items.filter(item => {
-            // 1. If no permission required, show it
+          const visibleItems = group.items.filter((item) => {
             if (!("permission" in item)) return true;
-
-            // 2. Otherwise check explicit permission mapping
             return item.permission && can(item.permission as string);
           });
 
@@ -178,7 +180,7 @@ export function AppSidebar() {
           return (
             <div key={group.label} className="mb-5">
               {!isCollapsed && (
-                <p className="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-sidebar-foreground/60 uppercase">
+                <p className="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-sidebar-foreground/50 uppercase">
                   {group.label}
                 </p>
               )}
@@ -207,31 +209,46 @@ export function AppSidebar() {
           );
         })}
       </nav>
-
-    
     </div>
   );
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+export function AppSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Listen for open trigger from AppHeader
+  React.useEffect(() => {
+    const unsub = onMobileSidebarChange(setMobileOpen);
+    return () => { unsub(); };
+  }, []);
+
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <>
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex h-screen sticky top-0 shrink-0 border-r border-sidebar-border shadow-sm">
-        <SidebarContent isCollapsed={collapsed} />
+        <SidebarContent
+          isCollapsed={collapsed}
+          onItemClick={undefined}
+        />
+        {/* Desktop collapse toggle — at the bottom */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="absolute bottom-4 -right-3 z-10 hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-sidebar border border-sidebar-border text-sidebar-foreground/50 hover:text-sidebar-foreground shadow-sm transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
       </aside>
 
-      {/* ── Mobile hamburger button ── */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex md:hidden items-center justify-center rounded-[var(--radius)] bg-sidebar p-2 text-sidebar-foreground shadow-md"
-        aria-label="Open menu"
-      >
-        <Menu size={18} />
-      </button>
-
-      {/* ── Mobile drawer backdrop ── */}
+      {/* ── Mobile backdrop ── */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px] md:hidden"
           onClick={closeMobile}
         />
       )}
@@ -239,19 +256,15 @@ export function AppSidebar() {
       {/* ── Mobile drawer ── */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-full w-[220px] shadow-xl md:hidden",
+          "fixed left-0 top-0 z-50 h-full shadow-2xl md:hidden transition-transform duration-300 ease-in-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Close button */}
-        <button
-          onClick={closeMobile}
-          className="absolute right-3 top-3.5 z-10 rounded-[var(--radius)] p-1 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-          aria-label="Close menu"
-        >
-          <X size={16} />
-        </button>
-        <SidebarContent isCollapsed={false} onItemClick={closeMobile} />
+        <SidebarContent
+          isCollapsed={false}
+          onItemClick={closeMobile}
+          onClose={closeMobile}
+        />
       </aside>
     </>
   );

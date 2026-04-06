@@ -70,6 +70,20 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
   // ── Columns ────────────────────────────────────────────────────────────────
   const columns: ColumnDef<Shop>[] = [
     {
+      key: "shop_image",
+      header: "",
+      className: "w-14",
+      renderCell: (row) => (
+        <div className="h-10 w-12 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center flex-shrink-0">
+          {row.shop_image ? (
+            <img src={row.shop_image} alt={row.name} className="h-full w-full object-cover" />
+          ) : (
+            <Building2 size={18} className="text-muted-foreground/40" />
+          )}
+        </div>
+      )
+    },
+    {
       key: "name",
       header: "Shop Name",
       sortable: true,
@@ -113,7 +127,7 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
   ];
 
   const handleCreate = () => router.push("/app/shops/create");
-  const handleEdit = (row: Shop) => router.push(`/app/shops/edit/${row.id}`);
+  const handleEdit = (row: Shop) => router.push(`/app/shops/edit/${row.id}?mode=edit`);
   const handleView = (row: Shop) => { setSelectedShop(row); setIsViewModalOpen(true); };
 
   const handleDelete = (row: Shop) => {

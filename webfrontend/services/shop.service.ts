@@ -16,6 +16,8 @@ export interface Shop {
   city?: string;
   owner_name: string;
   phone?: string;
+  owner_phone?: string;
+  shop_image?: string;
   country?: string;
   currency?: string;
   status?: string;
@@ -51,15 +53,13 @@ export const shopService = {
   },
 
   /** Register new shop */
-  async create(data: Partial<Shop>): Promise<{ success: boolean; data?: Shop; error?: string }> {
+  async create(data: FormData | Partial<Shop>): Promise<{ success: boolean; data?: Shop; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuth() as any
-        },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {
@@ -68,15 +68,13 @@ export const shopService = {
   },
 
   /** Update workshop profile */
-  async update(id: string | number, data: Partial<Shop>): Promise<{ success: boolean; data?: Shop; error?: string }> {
+  async update(id: string | number, data: FormData | Partial<Shop>): Promise<{ success: boolean; data?: Shop; error?: string }> {
     try {
+      const isFormData = data instanceof FormData;
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuth() as any
-        },
-        body: JSON.stringify(data),
+        headers: isFormData ? getAuth() : { "Content-Type": "application/json", ...getAuth() as any },
+        body: isFormData ? (data as any) : JSON.stringify(data),
       });
       return await res.json();
     } catch (error) {
