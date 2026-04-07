@@ -3,68 +3,89 @@
 import React from "react";
 import Link from "next/link";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
-import { Percent, ChevronRight, Building2, ShieldCheck, Bell, Palette, Coins } from "lucide-react";
-import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
+import { Percent, Building2, Palette, Coins, User } from "lucide-react";
 import { ThemeSelector } from "@/components/ui/ThemeToggle";
+import { useRBAC } from "@/lib/rbac";
 
-const SETTINGS_SECTIONS = [
+const SHOP_PERMISSION = "can:see:the:shop:details:and:can:edit";
+
+const BILLING_ITEMS = [
   {
-    group: "Billing & Finance",
-    items: [
-      {
-        href: "/app/settings/taxes",
-        icon: Percent,
-        title: "Tax Configuration",
-        description: "Configure GST, VAT, Sales Tax, and global billing conditions.",
-        
-        color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
-      },
-      {
-        href: "/app/settings/currency",
-        icon: Coins,
-        title: "Currency Settings",
-        description: "Set your branch's default currency code for bills and reporting.",
-        
-        color: "text-amber-600 bg-amber-500/10 border-amber-500/20",
-      },
-    ],
+    href: "/app/settings/taxes",
+    icon: Percent,
+    title: "Tax Configuration",
+    description: "Configure GST, VAT, Sales Tax, and global billing conditions.",
+    color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
+  },
+  {
+    href: "/app/settings/currency",
+    icon: Coins,
+    title: "Currency Settings",
+    description: "Set your branch's default currency code for bills and reporting.",
+    color: "text-amber-600 bg-amber-500/10 border-amber-500/20",
   },
 ];
 
+function SettingCard({ href, icon: Icon, title, description, color }: { href: string; icon: React.ElementType; title: string; description: string; color: string }) {
+  return (
+    <Link
+      href={href}
+      className="group p-5 rounded-2xl border border-border bg-card hover:bg-muted/10 transition-colors flex items-start gap-4"
+    >
+      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${color} group-hover:scale-110 transition-transform duration-300`}>
+        <Icon size={18} strokeWidth={2} />
+      </div>
+      <div className="flex flex-col gap-1 flex-1">
+        <span className="text-sm font-bold tracking-tight text-foreground">{title}</span>
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{description}</p>
+      </div>
+    </Link>
+  );
+}
+
 export default function SettingsPage() {
+  const { can } = useRBAC();
+  const canManageShop = can(SHOP_PERMISSION);
+
   return (
     <ModuleLayout
       title="System Settings"
       description="Change settings for your workshop."
     >
       <div className="flex flex-col gap-10 max-w-4xl">
-        {SETTINGS_SECTIONS.map(section => (
-          <div key={section.group} className="flex flex-col gap-4">
-            <h2 className="text-[10px] font-black uppercase tracking-[3px] text-muted-foreground px-1">{section.group}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {section.items.map(item => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="group p-5 rounded-2xl border border-border bg-card hover:bg-muted/10 transition-colors flex items-start gap-4"
-                  >
-                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${item.color} group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon size={18} strokeWidth={2} />
-                    </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold tracking-tight text-foreground">{item.title}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+
+        {/* ── General Information ── */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[3px] text-muted-foreground px-1">General Information</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SettingCard
+              href="/app/settings/profile"
+              icon={User}
+              title="User Profile"
+              description="Manage your personal information, security, and preferences."
+              color="text-blue-600 bg-blue-500/10 border-blue-500/20"
+            />
+            {canManageShop && (
+              <SettingCard
+                href="/app/settings/shop"
+                icon={Building2}
+                title="Shop Details"
+                description="Update workshop name, address, contact details, and brand logo."
+                color="text-indigo-600 bg-indigo-500/10 border-indigo-500/20"
+              />
+            )}
           </div>
-        ))}
+        </div>
+
+        {/* ── Billing & Finance ── */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-[10px] font-black uppercase tracking-[3px] text-muted-foreground px-1">Billing &amp; Finance</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {BILLING_ITEMS.map(item => (
+              <SettingCard key={item.href} {...item} />
+            ))}
+          </div>
+        </div>
 
         {/* ── Appearance ── */}
         <div className="flex flex-col gap-4">
@@ -84,6 +105,7 @@ export default function SettingsPage() {
             <ThemeSelector />
           </div>
         </div>
+
       </div>
     </ModuleLayout>
   );

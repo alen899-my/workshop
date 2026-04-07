@@ -238,40 +238,39 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
       <div className="flex flex-col gap-10">
 
         {/* Info Banner */}
-        <div className="p-6 rounded-none bg-primary/5 border border-primary/20 flex items-start gap-5">
-          <div className="w-12 h-12 rounded-none bg-primary/10 flex items-center justify-center text-primary shrink-0">
+        <div className="p-5 sm:p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
             <Globe size={24} strokeWidth={1.5} />
           </div>
           <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-1.5">
-            <h3 className="text-sm font-bold text-foreground">Understanding Tax Rules</h3>
-            <p className="text-[13px] text-muted-foreground leading-relaxed">
-              We support both <strong>Extra Tax</strong> (added on top of your price) and <strong>Included Tax</strong> (built into the price). 
-              Choose whether the tax applies to just spare parts, just labor work, or the entire bill. 
-              Multiple active taxes will be added together on the final invoice.
-            </p>
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">Understanding Tax Rules</h3>
+              <p className="text-xs sm:text-[13px] text-muted-foreground leading-relaxed">
+                We support both <strong>Extra Tax</strong> (added on top) and <strong>Included Tax</strong> (built-in). 
+                Apply to spare parts, labor, or the entire bill. Multiple active taxes combine on final invoices.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="p-6 rounded-none bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+          <div className="p-5 sm:p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col items-center sm:items-start gap-2 text-center sm:text-left">
             <span className="text-[10px] font-medium uppercase tracking-[2px] text-emerald-600">Active Taxes</span>
-            <span className="text-4xl font-normal text-emerald-600">{activeTaxes.length}</span>
+            <span className="text-3xl sm:text-4xl font-normal text-emerald-600">{activeTaxes.length}</span>
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Applied to every new bill</span>
           </div>
-          <div className="p-6 rounded-none bg-muted/30 border border-border flex flex-col gap-2">
+          <div className="p-5 sm:p-6 rounded-2xl bg-muted/30 border border-border flex flex-col items-center sm:items-start gap-2 text-center sm:text-left">
             <span className="text-[10px] font-medium uppercase tracking-[2px] text-muted-foreground">Inactive Taxes</span>
-            <span className="text-4xl font-normal text-foreground">{inactiveTaxes.length}</span>
+            <span className="text-3xl sm:text-4xl font-normal text-foreground">{inactiveTaxes.length}</span>
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Saved but not applied</span>
           </div>
-          <div className="p-6 rounded-none bg-primary/5 border border-primary/20 flex flex-col gap-2">
+          <div className="p-5 sm:p-6 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col items-center sm:items-start gap-2 text-center sm:text-left">
             <span className="text-[10px] font-medium uppercase tracking-[2px] text-primary">Combined Rate</span>
-            <span className="text-4xl font-normal text-primary">
+            <span className="text-3xl sm:text-4xl font-normal text-primary">
               {activeTaxes.reduce((acc, t) => acc + Number(t.rate), 0).toFixed(1)}%
             </span>
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Total from all active taxes</span>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Total active tax load</span>
           </div>
         </div>
 
@@ -308,7 +307,7 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                   Your bills currently show no taxes. Add a tax rule (like GST, VAT, or Sales Tax) to have it automatically applied on every new bill.
                 </p>
                 {canManage && (
-                  <button onClick={openCreate} className="mt-4 px-5 py-2.5 rounded-none bg-primary text-white text-[10px] font-medium uppercase tracking-[2px] hover:bg-primary/90 transition-colors flex items-center gap-2">
+                  <button onClick={openCreate} className="mt-4 px-6 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-[2px] hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/20">
                     <Plus size={14} /> Create First Tax Rule
                   </button>
                 )}
@@ -369,11 +368,11 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                     key={preset.name}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    className="px-3 py-1.5 rounded-none bg-muted/40 border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-normal flex items-center gap-2"
+                    className="px-4 py-2 rounded-xl bg-muted/40 border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-xs font-medium flex items-center gap-2"
                   >
                     <span className="text-primary font-bold">{preset.rate}%</span>
                     {preset.name}
-                    <span className="text-[9px] text-muted-foreground">{preset.is_inclusive ? "Incl." : "Excl."}</span>
+                    <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{preset.is_inclusive ? "Incl." : "Excl."}</span>
                   </button>
                 ))}
               </div>
@@ -410,7 +409,7 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                   value={form.rate}
                   onChange={e => setForm({ ...form, rate: e.target.value })}
                   placeholder="e.g. 18"
-                  className="w-full bg-background border border-border rounded-none pl-4 pr-10 h-[42px] text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-normal text-right"
+                  className="w-full bg-background border border-border rounded-md pl-4 pr-10 h-[42px] text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-normal text-right"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">%</span>
               </div>
@@ -437,12 +436,12 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                     type="button"
                     onClick={() => setForm({ ...form, applies_to: opt.value as any })}
                     className={cn(
-                      "p-4 rounded-none border flex flex-col items-start gap-2 transition-all text-left",
-                      active ? "border-primary/40 bg-primary/5 text-primary" : "border-border bg-muted/20 text-muted-foreground hover:border-primary/20"
+                      "p-4 rounded-xl border flex flex-col items-center sm:items-start gap-2 transition-all text-center sm:text-left",
+                      active ? "border-primary/40 bg-primary/5 text-primary ring-2 ring-primary/10" : "border-border bg-muted/20 text-muted-foreground hover:border-primary/20"
                     )}
                   >
                     <Icon size={18} />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest">{opt.label}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{opt.label}</span>
                   </button>
                 );
               })}
@@ -457,53 +456,53 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                 type="button"
                 onClick={() => setForm({ ...form, is_inclusive: false })}
                 className={cn(
-                  "p-5 rounded-none border flex flex-col gap-2 transition-all text-left",
-                  !form.is_inclusive ? "border-primary/40 bg-primary/5" : "border-border bg-muted/10 hover:border-primary/20"
+                  "p-5 rounded-2xl border flex flex-col gap-2 transition-all text-left group/btn",
+                  !form.is_inclusive ? "border-primary bg-primary/5 ring-4 ring-primary/5" : "border-border bg-muted/10 hover:border-primary/20"
                 )}
               >
-                <div className={cn("w-8 h-8 rounded-none flex items-center justify-center", !form.is_inclusive ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", !form.is_inclusive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover/btn:bg-primary/10 group-hover/btn:text-primary")}>
                   <Plus size={16} />
                 </div>
-                <span className={cn("text-xs font-medium uppercase tracking-tight", !form.is_inclusive ? "text-primary" : "text-foreground")}>
+                <span className={cn("text-xs font-bold uppercase tracking-tight", !form.is_inclusive ? "text-primary" : "text-foreground")}>
                   Add on Top (Extra)
                 </span>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Tax is calculated and added to your bill total. Used for GST or Sales Tax.
+                  Tax is calculated and added to total. Standard for GST/Sales Tax.
                 </p>
               </button>
               <button
                 type="button"
                 onClick={() => setForm({ ...form, is_inclusive: true })}
                 className={cn(
-                  "p-5 rounded-none border flex flex-col gap-2 transition-all text-left",
-                  form.is_inclusive ? "border-blue-500/30 bg-blue-500/5" : "border-border bg-muted/10 hover:border-blue-500/20"
+                  "p-5 rounded-2xl border flex flex-col gap-2 transition-all text-left group/btn",
+                  form.is_inclusive ? "border-blue-500 bg-blue-500/5 ring-4 ring-blue-500/5" : "border-border bg-muted/10 hover:border-blue-500/20"
                 )}
               >
-                <div className={cn("w-8 h-8 rounded-none flex items-center justify-center", form.is_inclusive ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground")}>
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", form.is_inclusive ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground group-hover/btn:bg-blue-500/10 group-hover/btn:text-blue-500")}>
                   <Layers size={16} />
                 </div>
-                <span className={cn("text-xs font-medium uppercase tracking-tight", form.is_inclusive ? "text-blue-600" : "text-foreground")}>
-                  Built-in (Already in Price)
+                <span className={cn("text-xs font-bold uppercase tracking-tight", form.is_inclusive ? "text-blue-600" : "text-foreground")}>
+                  Built-in (Inclusive)
                 </span>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Price already has tax in it. We calculate what part is tax. Used for VAT.
+                  Price already has tax in it. Simple VAT model.
                 </p>
               </button>
             </div>
           </div>
 
           {/* Active Toggle */}
-          <div className="flex items-center justify-between p-5 rounded-none bg-muted/20 border border-border">
+          <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border">
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-foreground">Apply to All New Bills</span>
-              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                When active, this tax is automatically added every time a bill is created
+              <span className="text-sm font-semibold text-foreground">Auto-Apply to New Bills</span>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-tight">
+                Automatically added to every new generation
               </p>
             </div>
             <button
               type="button"
               onClick={() => setForm({ ...form, is_active: !form.is_active })}
-              className={cn("transition-all", form.is_active ? "text-emerald-500" : "text-muted-foreground")}
+              className={cn("transition-all", form.is_active ? "text-emerald-500 hover:text-emerald-600" : "text-muted-foreground hover:text-primary")}
             >
               {form.is_active ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
             </button>

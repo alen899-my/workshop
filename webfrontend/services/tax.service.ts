@@ -21,9 +21,14 @@ export interface TaxSetting {
 }
 
 export const taxService = {
-  async getAll(status?: string): Promise<{ success: boolean; data: TaxSetting[]; error?: string }> {
+  async getAll(status?: string, shopId?: string | number): Promise<{ success: boolean; data: TaxSetting[]; error?: string }> {
     try {
-      const url = status ? `${API_URL}?status=${status}` : API_URL;
+      let url = API_URL;
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (shopId) params.append('shop_id', String(shopId));
+      if (params.toString()) url += `?${params.toString()}`;
+      
       const res = await fetch(url, { headers: getAuth(), cache: 'no-store' });
       return await res.json();
     } catch {

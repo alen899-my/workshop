@@ -49,7 +49,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
   const [taxesLoading, setTaxesLoading] = useState(true);
 
   useEffect(() => {
-    taxService.getAll().then((res) => {
+    taxService.getAll(undefined, initialRepair?.shop_id).then((res) => {
       if (res.success) {
         setAvailableTaxes(res.data);
         if (initialBill?.tax_snapshot?.length > 0) {
@@ -70,7 +70,8 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
     itemsSubtotal,
     Number(serviceCharge || 0)
   );
-  const grandTotal = preServiceSubtotal + taxTotal;
+  const exclusiveTaxTotal = taxSnapshot.reduce((acc, t) => acc + (t.is_inclusive ? 0 : t.amount), 0);
+  const grandTotal = preServiceSubtotal + exclusiveTaxTotal;
 
   const handleAddItem = () => {
     setItems([...items, { id: Date.now().toString(), name: "", cost: 0, qty: 1 }]);
@@ -132,10 +133,10 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
             <div className="flex flex-col gap-0.5 min-w-0">
               <h3 className="font-bold text-sm tracking-tight flex items-center gap-2 uppercase">
                 <Package size={15} className="text-primary shrink-0" />
-                Parts &amp; Replacements
+                Services &amp; Expenses
               </h3>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                Add all physical parts or products used
+                Add all parts, products, or manual services like washing
               </p>
             </div>
             <WorkshopButton
@@ -145,7 +146,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
               onClick={handleAddItem}
               className="rounded-xl border-dashed self-start min-[480px]:self-auto shrink-0"
             >
-              <Plus size={13} className="mr-1" /> Add Part
+              <Plus size={13} className="mr-1" /> Add Item
             </WorkshopButton>
           </div>
 
@@ -153,7 +154,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
           <div className="flex flex-col border border-border rounded-xl lg:rounded-2xl overflow-hidden shadow-sm">
             {/* Desktop column headers */}
             <div className="hidden md:grid grid-cols-[1fr_72px_112px_112px_44px] bg-muted/50 border-b border-border px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground items-center">
-              <div className="px-2">Part Description</div>
+              <div className="px-2">Item / Service</div>
               <div className="text-center">Qty</div>
               <div className="text-right px-2">Unit Price</div>
               <div className="text-right px-4">Amount</div>
@@ -167,7 +168,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                     <Package size={22} />
                   </div>
                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-center px-4">
-                    No parts yet.{" "}
+                    No items yet.{" "}
                     <span
                       className="text-primary cursor-pointer hover:underline font-black"
                       onClick={handleAddItem}
@@ -186,13 +187,13 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                       <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">
                           <label className="text-[9px] uppercase font-black tracking-widest text-primary mb-1 block">
-                            Part Description
+                            Description
                           </label>
                           <input
                             type="text"
                             value={item.name}
                             onChange={(e) => handleChangeItem(item.id, "name", e.target.value)}
-                            placeholder="e.g. Brake Pads (Front)"
+                            placeholder="e.g. Washing, Engine Oil"
                             className="w-full bg-transparent border-b border-dashed border-border px-1 py-1.5 text-sm focus:outline-none focus:border-primary transition-all font-bold placeholder:font-normal placeholder:text-muted-foreground/60"
                           />
                         </div>
@@ -291,7 +292,7 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                           type="button"
                           onClick={() => handleRemoveItem(item.id)}
                           className="p-2 text-muted-foreground/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                          title="Remove Part"
+                          title="Remove Item"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -395,12 +396,12 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
         <div className="p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-3xl border border-border bg-card shadow-sm">
           <div className="w-full max-w-md ml-auto flex flex-col gap-4 sm:gap-5">
 
-            {/* Parts subtotal */}
+            {/* Items subtotal */}
             <div className="flex justify-between items-center px-1">
               <div className="flex items-center gap-2">
                 <Receipt size={13} className="text-muted-foreground shrink-0" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  Parts Subtotal
+                  Items Subtotal
                 </span>
               </div>
               <span className="text-sm font-bold text-foreground">{format(itemsSubtotal)}</span>

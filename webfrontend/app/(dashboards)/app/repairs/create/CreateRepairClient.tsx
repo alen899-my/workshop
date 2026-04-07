@@ -556,7 +556,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
                         onChange={(val) => updateBlockType(bIdx, val)}
                         options={SERVICE_TYPES.map(st => ({ value: st, label: st }))}
                         wrapperClassName="w-full min-w-0"
-                        className="w-full bg-background border-border text-sm px-4 py-3 font-bold text-foreground normal-case tracking-normal"
+                        className="w-full bg-background border border-border rounded-none text-sm px-4 h-[48px] font-bold text-foreground normal-case tracking-normal"
                       />
                     </div>
                   </div>
@@ -708,7 +708,7 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
               { value: "Completed", label: "Completed" },
             ]}
             wrapperClassName="w-full min-w-0"
-            className="w-full bg-card border-border text-sm px-4 py-3 font-bold normal-case tracking-normal"
+            className="w-full bg-background border border-border rounded-md text-sm px-4 h-[42px] font-semibold text-foreground normal-case tracking-normal"
           />
         </div>
       </div>

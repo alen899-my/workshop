@@ -21,13 +21,15 @@ import {
   ClipboardList,
   Receipt,
   Calculator,
-  Tag
+  Tag,
+  Download,
 } from "lucide-react";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useRBAC } from "@/lib/rbac";
 import { useCurrency } from "@/lib/currency";
+import { generateReceipt } from "@/lib/generateReceipt";
 
 export default function RepairDetailPage() {
   const params = useParams();
@@ -366,6 +368,43 @@ export default function RepairDetailPage() {
               >
                   Edit Service Info
               </WorkshopButton>
+               {bill && (
+                 <WorkshopButton
+                   variant="steel"
+                   className="w-full h-12 text-sm font-bold uppercase tracking-widest"
+                   icon={<Download size={16} />}
+                   onClick={() => {
+                     generateReceipt(
+                       {
+                         shopName: user?.shopName || "Workshop",
+                         shopLocation: undefined,
+                         shopPhone: undefined,
+                         shopCurrency: user?.shopCurrency || "USD",
+                         currencySymbol: symbol,
+                         repairId: repair.id,
+                         repairDate: repair.repair_date,
+                         serviceType: repair.service_type,
+                         status: repair.status,
+                         paymentStatus: bill.payment_status,
+                         vehicleNumber: repair.vehicle_number || "—",
+                         vehicleType: repair.vehicle_type,
+                         modelName: repair.model_name,
+                         ownerName: repair.owner_name || "—",
+                         phoneNumber: repair.phone_number,
+                         workerName: repair.attending_worker_name,
+                         items: bill.items || [],
+                         serviceCharge: Number(bill.service_charge || 0),
+                         taxSnapshot: bill.tax_snapshot || [],
+                         taxTotal: Number(bill.tax_total || 0),
+                         totalAmount: Number(bill.total_amount || 0),
+                       },
+                       repair.complaints
+                     );
+                   }}
+                 >
+                   Download Receipt
+                 </WorkshopButton>
+               )}
            </div>
 
         </div>

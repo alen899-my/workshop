@@ -67,8 +67,8 @@ exports.getUserById = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Scope check
-    if (!isSuperAdmin && user.shop_id !== shopId) {
+    // Scope check: bypass for super-admins OR referencing self
+    if (!isSuperAdmin && user.id !== req.user.id && user.shop_id !== shopId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -151,7 +151,7 @@ exports.updateUser = async (req, res) => {
     const existing = await db.query('SELECT id, shop_id, profile_image FROM users WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
 
-    if (!isSuperAdmin && existing.rows[0].shop_id !== requesterShopId) {
+    if (!isSuperAdmin && existing.rows[0].id !== req.user.id && existing.rows[0].shop_id !== requesterShopId) {
       return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
     }
 

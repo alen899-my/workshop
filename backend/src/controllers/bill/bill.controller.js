@@ -39,12 +39,22 @@ exports.saveBill = async (req, res) => {
     if (repairRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Repair not found' });
     if (!isSuperAdmin && repairRes.rows[0].shop_id !== shopId) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    // Calculate total amount (items + service + taxes)
+    // Calculate total amount (items + service + ONLY exclusive taxes)
     const parsedItems = Array.isArray(items) ? items : [];
     const itemsTotal = parsedItems.reduce((acc, current) => acc + (Number(current.cost) * Number(current.qty)), 0);
-    const parsedTaxTotal = Number(tax_total || 0);
     const subtotalBeforeTax = itemsTotal + Number(service_charge || 0);
-    const totalAmount = subtotalBeforeTax + parsedTaxTotal;
+    
+    let exclusiveTaxSum = 0;
+    if (Array.isArray(tax_snapshot)) {
+      tax_snapshot.forEach(t => {
+        if (!t.is_inclusive) {
+          exclusiveTaxSum += Number(t.amount || 0);
+        }
+      });
+    }
+
+    const parsedTaxTotal = Number(tax_total || 0); // Kept for DB record purposes (represents total of all taxes)
+    const totalAmount = subtotalBeforeTax + exclusiveTaxSum;
 
     const query = `
       INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount, status, payment_status)

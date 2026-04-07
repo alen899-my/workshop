@@ -95,28 +95,28 @@ export default function CurrencyClient() {
 
   return (
     <ModuleLayout title="Currency Settings" description="Set the default currency for your workshop." backUrl="/app/settings">
-      <div className="flex flex-col gap-10 max-w-3xl">
-        <div className="p-8 bg-card border border-border shadow-sm rounded-none flex flex-col gap-8">
+      <div className="flex flex-col gap-6 sm:gap-10 max-w-3xl">
+        <div className="p-4 sm:p-6 md:p-8 bg-card border border-border shadow-sm rounded-2xl flex flex-col gap-6 sm:gap-8">
            
            {/* Shop Info */}
-           <div className="flex items-center gap-4 p-6 bg-muted/40 border border-border rounded-none">
-             <div className="w-12 h-12 bg-primary/15 text-primary rounded-none border border-primary/20 flex items-center justify-center shrink-0">
+           <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 p-5 sm:p-6 bg-muted/40 border border-border rounded-xl">
+             <div className="w-12 h-12 bg-primary/15 text-primary rounded-xl border border-primary/20 flex items-center justify-center shrink-0">
                <Store size={24} strokeWidth={1.5} />
              </div>
              <div className="flex flex-col gap-1">
                <span className="text-[10px] font-medium uppercase tracking-[3px] text-muted-foreground">Active Shop</span>
-               <span className="text-xl font-medium text-foreground uppercase tracking-tight">{shop.name}</span>
+               <span className="text-lg sm:text-xl font-medium text-foreground uppercase tracking-tight">{shop.name}</span>
              </div>
            </div>
 
            {/* BIG WARNING BANNER */}
-           <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-none flex items-start gap-5">
-             <div className="w-12 h-12 rounded-none bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+           <div className="p-5 sm:p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
+             <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 mb-1 sm:mb-0">
                <AlertTriangle size={24} strokeWidth={2} />
              </div>
              <div className="flex flex-col gap-1.5">
                <h3 className="text-sm font-medium uppercase tracking-tight text-amber-700">Critical: Shop Price Consistency</h3>
-               <p className="text-[13px] text-amber-800/80 leading-relaxed font-normal">
+               <p className="text-xs sm:text-[13px] text-amber-800/80 leading-relaxed font-normal">
                  Changing the currency will apply <strong>instantly to all prices</strong> across this Shop. 
                  Existing inventory prices, labor rates, and pending bills will remain as numbers but will be displayed with this new currency symbol.
                </p>
@@ -130,30 +130,31 @@ export default function CurrencyClient() {
                value={currency}
                onChange={(val) => setCurrency(String(val))}
                placeholder="Search and select currency..."
+               className="w-full"
              />
            </div>
 
             {/* LIVE PREVIEW CARD */}
-            <div className="flex flex-col gap-3 p-10 rounded-none bg-primary/[0.03] border border-primary/20 items-center justify-center text-center relative overflow-hidden group">
+            <div className="flex flex-col gap-2 p-6 sm:p-10 rounded-xl bg-primary/[0.03] border border-primary/20 items-center justify-center text-center relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 -mr-16 -mt-16 blur-3xl" />
-              <span className="text-[11px] font-semibold uppercase tracking-[3px] text-primary/60 flex items-center gap-2 relative z-10 mb-2">
+              <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[3px] text-primary/60 flex items-center gap-2 relative z-10 mb-2">
                 <Coins size={14} className="animate-pulse" /> Live Display Preview
               </span>
-              <span className="text-6xl font-normal text-primary tracking-tighter relative z-10 drop-shadow-sm font-mono text-center">
+              <span className="text-4xl sm:text-5xl md:text-6xl font-normal text-primary tracking-tighter relative z-10 drop-shadow-sm font-mono text-center break-all w-full px-2">
                 {new Intl.NumberFormat(undefined, { 
                   style: 'currency', 
                   currency, 
                   minimumFractionDigits: 2 
                 }).format(previewAmount)}
               </span>
-              <div className="mt-4 px-4 py-1 border border-primary/20 bg-primary/5 text-[10px] text-primary relative z-10 font-normal uppercase tracking-widest">
+              <div className="mt-4 px-4 py-1.5 rounded-md border border-primary/20 bg-primary/5 text-[10px] text-primary relative z-10 font-bold uppercase tracking-widest">
                  Currency Code: {currency}
               </div>
             </div>
 
            {canManage && (
-             <div className="flex justify-end pt-4 border-t border-border mt-2">
-               <WorkshopButton loading={saving} onClick={handleSave} variant="primary" icon={<Save size={16} />} className="px-8 shadow-md">
+             <div className="flex justify-end pt-4 sm:pt-6 border-t border-border mt-2 sm:mt-4">
+               <WorkshopButton loading={saving} onClick={handleSave} variant="primary" icon={<Save size={16} />} className="w-full sm:w-auto px-8 shadow-md">
                  Save Currency Settings
                </WorkshopButton>
              </div>

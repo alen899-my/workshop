@@ -11,10 +11,10 @@ router.get('/', authenticate, authorize('view:permission'), permissionController
 router.get('/:id', authenticate, authorize('view:permission'), permissionController.getPermissionById);
 
 // @route   POST /api/permissions
-router.post('/', authenticate, authorize('create:permission'), permissionController.createPermission);
+router.post('/', authenticate, authorize('create:new:permission'), permissionController.createPermission);
 
 // @route   PUT /api/permissions/:id
-router.put('/:id', authenticate, authorize('edit:permission'), permissionController.updatePermission);
+router.put('/:id', authenticate, authorize('edit:permissions'), permissionController.updatePermission);
 
 // @route   DELETE /api/permissions/:id
 router.delete('/:id', authenticate, authorize('delete:permission'), permissionController.deletePermission);

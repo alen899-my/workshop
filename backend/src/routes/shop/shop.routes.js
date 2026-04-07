@@ -8,7 +8,7 @@ const { authorize } = require('../../middleware/rbac.middleware');
 router.get('/', authenticate, authorize('view:shops'), shopController.getShops);
 
 // @route   GET /api/shops/:id
-router.get('/:id', authenticate, authorize('view:shops'), shopController.getShopById);
+router.get('/:id', authenticate, authorize('can:see:the:shop:details:and:can:edit'), shopController.getShopById);
 
 const { upload } = require('../../middleware/upload');
 
@@ -16,7 +16,7 @@ const { upload } = require('../../middleware/upload');
 router.post('/', authenticate, authorize('create:shops'), upload.single('shop_image'), shopController.createShop);
 
 // @route   PUT /api/shops/:id
-router.put('/:id', authenticate, authorize('edit:shops'), upload.single('shop_image'), shopController.updateShop);
+router.put('/:id', authenticate, authorize('can:see:the:shop:details:and:can:edit'), upload.single('shop_image'), shopController.updateShop);
 
 // @route   DELETE /api/shops/:id
 router.delete('/:id', authenticate, authorize('delete:shops'), shopController.deleteShop);

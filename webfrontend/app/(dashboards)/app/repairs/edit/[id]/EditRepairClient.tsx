@@ -463,7 +463,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
                         onChange={(val) => updateBlockType(bIdx, val)}
                         options={SERVICE_TYPES.map(st => ({ value: st, label: st }))}
                         wrapperClassName="w-full min-w-0"
-                        className="w-full bg-background border-border text-sm px-4 py-3 font-bold text-foreground normal-case tracking-normal"
+                        className="w-full bg-background border border-border rounded-none text-sm px-4 h-[48px] font-bold text-foreground normal-case tracking-normal"
                       />
                     </div>
                   </div>
@@ -595,25 +595,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
               { value: "Completed", label: "Completed" },
             ]}
             wrapperClassName="w-full min-w-0"
-            className="w-full bg-card border-border text-sm px-4 py-3 font-bold normal-case tracking-normal"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Payment Status</label>
-          <WorkshopInlineSelect
-            value={form.payment_status}
-            onChange={(val) => setForm({ ...form, payment_status: val })}
-            options={[
-              { value: "Unpaid", label: "Unpaid" },
-              { value: "Paid", label: "Paid" },
-            ]}
-            wrapperClassName="w-full min-w-0"
-            className={cn(
-               "w-full border-border text-sm px-4 py-3 font-bold normal-case tracking-normal transition-colors",
-               form.payment_status === "Paid" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-            )}
-            activeClassName="bg-card text-foreground border-primary"
+            className="w-full bg-background border border-border rounded-md text-sm px-4 h-[42px] font-semibold text-foreground normal-case tracking-normal"
           />
         </div>
       </div>

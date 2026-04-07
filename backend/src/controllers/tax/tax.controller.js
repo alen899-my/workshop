@@ -9,7 +9,7 @@ exports.getTaxSettings = async (req, res) => {
   try {
     let result;
     if (isSuperAdmin && !queryShopId) {
-       // Super admin fetching all shops' taxes
+       // Super admin fetching all shops' taxes (for management view)
         result = await db.query(`
           SELECT t.*, s.name as shop_name 
           FROM tax_settings t 
@@ -18,7 +18,7 @@ exports.getTaxSettings = async (req, res) => {
           ORDER BY t.created_at DESC
         `);
     } else {
-       // Regular shop fetch
+       // Target shop fetch (used on Bill page)
        const targetShopId = isSuperAdmin ? queryShopId : shopId;
        if (!targetShopId) {
           return res.status(200).json({ success: true, data: [] });

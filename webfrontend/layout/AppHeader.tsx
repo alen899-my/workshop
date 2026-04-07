@@ -154,16 +154,16 @@ export function AppHeader() {
 
             {/* Menu items */}
             <div className="p-1">
-              {can("edit:shops") && (
+              {can("can:see:the:shop:details:and:can:edit") && (
                 <Link
-                  href={`/app/shops/edit/${user?.shopId || user?.shop_id || ""}`}
+                  href="/app/settings/shop"
                   onClick={() => setDropdownOpen(false)}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                 >
                   <UserCog size={15} className="text-muted-foreground shrink-0" />
                   <div className="text-left">
                     <p className="font-medium leading-none">Shop Profile</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">View & edit shop details</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">View &amp; edit shop details</p>
                   </div>
                 </Link>
               )}
