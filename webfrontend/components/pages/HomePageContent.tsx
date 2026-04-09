@@ -9,6 +9,7 @@ import { CTASection } from "@/components/pages/Ctasection";
 import { PreviewSection } from "@/components/pages/Previewsection";
 import { MarqueeSection } from "@/components/pages/Marqueesection";
 import { permissionService } from "@/services/permission.service";
+import { Footer } from "@/layout/Footer";
 
 export default function HomePageContent() {
   const router = useRouter();
@@ -48,9 +49,6 @@ export default function HomePageContent() {
           <HeroSection />
         </section>
 
-        <section id="marquee" aria-label="Vehicle Branding Marquee">
-          <MarqueeSection />
-        </section>
     
         <section id="preview" aria-label="Product Preview">
           <PreviewSection />
@@ -64,6 +62,8 @@ export default function HomePageContent() {
           <CTASection />
         </section>
       </article>
+
+      <Footer />
     </main>
   );
 }
