@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
+import { downloadInvoicePDF } from "@/lib/pdfGenerator";
 import { billService } from "@/services/bill.service";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { useCurrency } from "@/lib/currency";
@@ -54,20 +55,20 @@ export function RepairDetailsModal({
     if (!repair?.id) return;
     setPdfLoading(true);
     try {
-      const token = localStorage.getItem("workshop_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/repairs/${repair.id}/pdf?action=download`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt_${repair.id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      let shopData = {};
+      const sessionStr = localStorage.getItem("workshop_user");
+      if (sessionStr) {
+        try {
+          shopData = JSON.parse(sessionStr);
+        } catch (e) {}
+      }
+
+      downloadInvoicePDF({
+        repair,
+        bill: selectedBill,
+        shopData,
+        symbol
+      }, `receipt_${repair.id}.pdf`);
     } catch (e) {
       console.error("PDF download failed", e);
     } finally {

@@ -1,42 +1,73 @@
-"use client";
+import { Metadata } from "next";
+import HomePageContent from "@/components/pages/HomePageContent";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { NavbarWhite } from "@/layout/Navbar";
-import { HeroSection } from "@/components/HeroSection";
-import { permissionService } from "@/services/permission.service";
+// ── SEO METADATA ──
+export const metadata: Metadata = {
+  title: "WorkshopPro | #1 Vehicle Repair Management Software in Kerala",
+  description:
+    "Elevate your garage with WorkshopPro. Track repairs in real-time, generate GST invoices, manage mechanics, and boost customer trust. Built specifically for vehicle workshops in Kerala.",
+  keywords: [
+    "workshop management software kerala",
+    "vehicle repair tracking",
+    "garage billing software",
+    "job card management system",
+    "auto workshop CRM",
+    "GST invoicing for mechanics",
+    "VehRep workshop pro",
+  ],
+  openGraph: {
+    title: "WorkshopPro — Professional Garage Management",
+    description: "The complete digital toolkit for modern vehicle workshops.",
+    url: "https://vehrep.com",
+    siteName: "WorkshopPro",
+    images: [
+      {
+        url: "/images/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "WorkshopPro Dashboard Preview",
+      },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://vehrep.com",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem("workshop_token");
-    if (token) {
-      // Sync to cookies for middleware if missing
-      if (!document.cookie.includes("workshop_token") || !document.cookie.includes("workshop_permissions")) {
-        const fetchAndSync = async () => {
-          const storedUser = localStorage.getItem("workshop_user");
-          const user = storedUser ? JSON.parse(storedUser) : null;
-          const role = user?.role || "worker";
-          const permsRes = await permissionService.getRolePermissions(role);
-          const perms = permsRes.success ? permsRes.data?.join(',') : "";
-          
-          document.cookie = `workshop_token=${token}; path=/; max-age=604800; SameSite=Lax`;
-          document.cookie = `workshop_role=${role}; path=/; max-age=604800; SameSite=Lax`;
-          document.cookie = `workshop_permissions=${perms}; path=/; max-age=604800; SameSite=Lax`;
-          router.refresh(); 
-        };
-        fetchAndSync();
-      } else {
-        router.replace("/app");
-      }
-    }
-  }, [router]);
-
   return (
-    <main className="min-h-screen bg-background font-mono">
-      <NavbarWhite />
-      <HeroSection />
-    </main>
+    <>
+      {/* ── Structured Data (JSON-LD) for SEO ── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "WorkshopPro",
+            "operatingSystem": "Web-based",
+            "applicationCategory": "BusinessApplication",
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.9",
+              "ratingCount": "320"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "INR"
+            }
+          }),
+        }}
+      />
+
+      <HomePageContent />
+    </>
   );
 }

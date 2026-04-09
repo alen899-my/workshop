@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -18,8 +19,12 @@ export function NavbarWhite() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
+  // Handle mounting to avoid hydration mismatch
   useEffect(() => {
+    setMounted(true);
     setIsLoggedIn(!!localStorage.getItem("workshop_token"));
   }, []);
 
@@ -29,6 +34,10 @@ export function NavbarWhite() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
   return (
     <div className="fixed top-5 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
       <header
@@ -36,8 +45,8 @@ export function NavbarWhite() {
           "pointer-events-auto w-full max-w-4xl transition-all duration-500 ease-out",
           "rounded-[2rem_2rem_2rem_0.5rem]",
           scrolled
-            ? "bg-background/95 backdrop-blur-xl border border-border shadow-[0_8px_40px_var(--primary-foreground)/0.15,0_0_0_1px_var(--border)]"
-            : "bg-background/80 backdrop-blur-md border border-white/20 shadow-[0_4px_24px_var(--primary-foreground)/0.10]"
+            ? "bg-background/90 dark:bg-black/80 backdrop-blur-xl border border-border shadow-[0_8px_40px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.04)]"
+            : "bg-black/5 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 shadow-none"
         )}
       >
         <nav className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
@@ -68,45 +77,61 @@ export function NavbarWhite() {
           </ul>
 
           {/* ── Desktop CTAs ── */}
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          <div className="hidden md:flex items-center gap-4 flex-shrink-0 font-bold">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all duration-300 border border-transparent hover:border-primary/20"
+              aria-label="Toggle theme"
+            >
+              {!mounted ? (
+                <div className="w-5 h-5 transition-all duration-500" />
+              ) : resolvedTheme === "dark" ? (
+                <Sun className="w-5 h-5 rotate-0 scale-100 transition-all" />
+              ) : (
+                <Moon className="w-5 h-5 rotate-0 scale-100 transition-all" />
+              )}
+            </button>
+
             {!isLoggedIn && (
-              <>
-                <Link
-                  href="/login"
-                  className={cn(
-                    "font-mono text-xs tracking-[0.15em] uppercase px-4 py-2",
-                    "rounded-sm border border-border",
-                    "text-primary bg-transparent",
-                    "hover:bg-primary/6 hover:border-primary/40",
-                    "transition-all duration-200"
-                  )}
-                >
-                  Login
+              <div className="flex items-center gap-3">
+             
+                <Link href="/signup">
+                  <WorkshopButton
+                    variant="primary"
+                    size="sm"
+                    className="!font-mono !text-[10px] !tracking-[0.2em] !uppercase !py-2.5 !px-6 !rounded-sm shadow-[0_8px_20px_var(--primary)/0.3] hover:shadow-[0_12px_24px_var(--primary)/0.4]"
+                  >
+                    Create for Free
+                  </WorkshopButton>
                 </Link>
-                <Link
-                  href="/signup"
-                  className={cn(
-                    "font-mono text-xs tracking-[0.15em] uppercase px-4 py-2",
-                    "rounded-sm border border-primary",
-                    "text-primary-foreground bg-primary",
-                    "hover:bg-primary/90",
-                    "transition-all duration-200 shadow-[0_0_18px_var(--primary)/0.35]"
-                  )}
-                >
-                  Create for Free
-                </Link>
-              </>
+              </div>
             )}
           </div>
 
           {/* ── Mobile toggle ── */}
-          <button
-            className="md:hidden text-primary p-1.5 rounded-full hover:bg-primary/8 transition-colors"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-full hover:bg-primary/8 text-primary transition-colors"
+              aria-label="Toggle theme"
+            >
+              {!mounted ? (
+                <div className="w-5 h-5" />
+              ) : resolvedTheme === "dark" ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+            <button
+              className="text-primary p-1.5 rounded-full hover:bg-primary/8 transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </nav>
 
         {/* ── Mobile dropdown ── */}
@@ -148,7 +173,7 @@ export function NavbarWhite() {
                       variant="primary"
                       size="sm"
                       fullWidth
-                      className="!rounded-md shadow-[0_0_18px_var(--primary)/0.35]"
+                      className="!rounded-sm !font-mono !text-[10px] !tracking-[0.2em] !uppercase shadow-[0_8px_20px_var(--primary)/0.3]"
                     >
                       Create for Free
                     </WorkshopButton>
