@@ -111,7 +111,14 @@ export function ContactSection() {
                 alt="Contact Workshop" 
                 fill
                 priority
-                className="object-cover"
+                className="object-cover dark:hidden"
+              />
+              <Image 
+                src="/images/landing%20page/contact-dark.png" 
+                alt="Contact Workshop Dark" 
+                fill
+                priority
+                className="object-cover hidden dark:block"
               />
             </div>
 
