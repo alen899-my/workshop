@@ -12,7 +12,7 @@ const features = [
     image: "/images/landing page/repairmanagment.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -24,7 +24,7 @@ const features = [
     image: "/images/landing page/vehiclerecord.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -36,7 +36,7 @@ const features = [
     image: "/images/landing page/customermanagement.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -48,7 +48,7 @@ const features = [
     image: "/images/landing page/workersmangment.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -60,7 +60,7 @@ const features = [
     image: "/images/landing page/invoice.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -72,7 +72,7 @@ const features = [
     image: "/images/landing page/insights.jpg",
     className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
     textDescColor: "text-white/80",
-    numColor: "text-white/40",
+    numColor: "text-white/60",
     tagColor: "text-white",
     glowBg: "bg-white/5 group-hover:bg-white/10",
   },
@@ -90,28 +90,28 @@ export function FeaturesSection() {
 
       <div className="max-w-[1100px] mx-auto px-4 sm:px-8">
         {/* Section header */}
-        <div className="flex items-center gap-4 mb-14">
-          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-primary white-space-nowrap m-0 font-bold">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-14">
+          <p className="font-sans text-[12px] sm:text-[10px] tracking-[0.3em] uppercase text-primary m-0 font-bold whitespace-normal sm:whitespace-nowrap">
             Everything You Need to Run Your Garage
           </p>
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-primary/30 to-transparent" />
+          <div className="hidden sm:block flex-1 h-[1px] bg-gradient-to-r from-primary/30 to-transparent" />
         </div>
 
-        {/* Features grid */}
+        {/* Features grid / Carousel on mobile */}
         <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6"
+          className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar"
         >
           {features.map((f) => (
             <div
               key={f.num}
-              className={`group relative pt-6 px-6 flex flex-col rounded-[12px] border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${f.className}`}
+              className={`group relative pt-6 px-6 flex flex-col rounded-[12px] border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden w-[85vw] md:w-auto shrink-0 snap-center ${f.className}`}
             >
               {/* Subtle inward glow */}
               <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-2xl pointer-events-none transition-colors duration-500 ${f.glowBg}`} />
 
               <div className="relative z-10 flex flex-col flex-1">
                 <div
-                  className={`font-mono text-[10px] tracking-[0.2em] mb-4 font-bold ${f.numColor}`}
+                  className={`font-mono text-[13px] tracking-[0.25em] mb-4 font-black ${f.numColor}`}
                 >
                   {f.num}
                 </div>
@@ -137,16 +137,16 @@ export function FeaturesSection() {
 
               {/* Bottom Image Section */}
               {f.image && (
-                <div className="relative -mx-6 h-[140px] sm:h-[160px] lg:h-[180px] mt-auto">
+                <div className="relative -mx-6 h-[180px] sm:h-[160px] lg:h-[180px] mt-auto">
                   <Image
                     src={f.image}
                     alt={f.title}
                     fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity duration-300 border-t border-primary/10 dark:border-primary/25 grayscale-[0.2] group-hover:grayscale-0"
+                    sizes="(max-width: 768px) 85vw, 33vw"
+                    quality={95}
+                    priority={f.num === "01"}
+                    className="object-cover object-top opacity-100 transition-opacity duration-300 border-t border-primary/10 dark:border-primary/25"
                   />
-                  {/* Dark overlay for images in dark mode */}
-                  <div className="absolute inset-0 bg-background/10 dark:bg-background/20 pointer-events-none" />
                 </div>
               )}
             </div>

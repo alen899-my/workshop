@@ -48,7 +48,7 @@ export function ServicesCarousel() {
           <div className="max-w-xl">
             <h2 className="font-sans text-[clamp(28px,4vw,44px)] font-bold text-foreground leading-[1.1] mb-6">
               The Modern Solution for <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent ">Your Garage.</span>
+              <span className="bg-clip-text  bg-gradient-to-r from-primary to-accent ">Your Garage.</span>
             </h2>
             <p className="font-sans text-[16px] text-muted-foreground leading-[1.7] max-w-lg">
               Stop managing paperwork and start growing your business. From automated jobcards to digital health reports, our platform handles the entire lifecycle of your garage’s operations.

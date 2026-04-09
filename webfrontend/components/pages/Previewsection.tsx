@@ -42,9 +42,9 @@ export function PreviewSection() {
         
 
         {/* Headline */}
-        <h2 className="font-sans text-[clamp(28px,4vw,44px)] font-bold text-foreground leading-[1.1] max-w-[560px] mb-4">
+        <h2 className="font-sans text-[clamp(32px,5vw,48px)] font-bold text-foreground leading-[1.05] max-w-[600px] mb-4 tracking-tight">
           See Your Entire Garage{" "}
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">At a Glance</span>
+          <span className="bg-clip-text  bg-gradient-to-r from-primary to-accent drop-shadow-sm">At a Glance</span>
         </h2>
 
         <p className="font-sans text-[14px] text-muted-foreground max-w-[440px] lineHeight-[1.7] mb-8">

@@ -16,7 +16,6 @@ const navLinks = [
 ];
 
 export function NavbarWhite() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -28,11 +27,7 @@ export function NavbarWhite() {
     setIsLoggedIn(!!localStorage.getItem("workshop_token"));
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
@@ -44,9 +39,7 @@ export function NavbarWhite() {
         className={cn(
           "pointer-events-auto w-full max-w-4xl transition-all duration-500 ease-out",
           "rounded-[2rem_2rem_2rem_0.5rem]",
-          (scrolled || mobileOpen)
-            ? "bg-background dark:bg-[#050505] border border-border shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
-            : "bg-background/10 dark:bg-white/5 border border-white/10 dark:border-white/5 shadow-none"
+          "bg-background dark:bg-[#050505] border border-border shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
         )}
       >
         <nav className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
@@ -66,9 +59,7 @@ export function NavbarWhite() {
                   className={cn(
                     "font-mono text-[0.65rem] tracking-[0.18em] uppercase px-3.5 py-1.5",
                     "rounded-full transition-all duration-200",
-                    (scrolled || mobileOpen) 
-                      ? "text-foreground hover:text-primary hover:bg-primary/8" 
-                      : "text-white hover:text-white/80 hover:bg-white/10"
+                    "text-foreground hover:text-primary hover:bg-primary/8"
                   )}
                 >
                   {link.label}
@@ -84,9 +75,7 @@ export function NavbarWhite() {
               onClick={toggleTheme}
               className={cn(
                 "p-2 rounded-full transition-all duration-300 border border-transparent",
-                (scrolled || mobileOpen)
-                  ? "text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/20"
-                  : "text-white hover:text-white/80 hover:bg-white/10 hover:border-white/20"
+                "text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/20"
               )}
               aria-label="Toggle theme"
             >

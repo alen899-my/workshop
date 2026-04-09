@@ -76,7 +76,7 @@ export function HeroSection() {
       {/* Overlays for depth and readability (deepened for cinematic effect) */}
       {/* 1. Base dark cinematic gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/40 dark:from-black dark:via-black/85 dark:to-black/60" />
-      
+
       {/* 2. Top fade for navbar grounding */}
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-black via-black/60 to-transparent opacity-90" />
 

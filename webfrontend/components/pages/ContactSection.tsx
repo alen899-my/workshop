@@ -87,7 +87,7 @@ export function ContactSection() {
             <Send size={32} />
           </div>
           <h2 className="text-2xl font-sans font-bold mb-4">Message Sent!</h2>
-          <p className="text-muted-foreground mb-8">We've received your inquiry and will get back to you shortly at <strong>alenjames899@gmail.com</strong>.</p>
+          <p className="text-muted-foreground mb-8">We've received your inquiry and will get back to you shortly </p>
           <WorkshopButton variant="primary" onClick={() => setSubmitted(false)}>
             Back to Form
           </WorkshopButton>
@@ -125,7 +125,7 @@ export function ContactSection() {
             {/* Right: Clean Standard Form */}
             <div className="lg:col-span-7 p-8 md:p-12 flex flex-col justify-center bg-card/20 select-none">
                <h3 className="text-2xl font-sans font-bold text-foreground mb-1">Get in Touch</h3>
-               <p className="text-muted-foreground text-sm mb-8 font-medium">Have questions? Alen and the team are ready to help.</p>
+               <p className="text-muted-foreground text-sm mb-8 font-medium">Have questions? We are ready to help.</p>
 
                {error && (
                  <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2 animate-shake">
