@@ -109,11 +109,9 @@ export function CTASection() {
       className="bg-background py-16 md:py-[100px] relative overflow-hidden transition-colors duration-500"
     >
       {/* Top separator */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent"
-      />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
-      <div className="max-w-[1100px] mx-auto px-4 md:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-8">
 
         {/* ── Ultra-Modern Metrics Strip ── */}
         <div className="relative mb-32 w-full py-16 md:py-24 border-y border-primary/10 dark:border-primary/25 overflow-hidden">
@@ -172,7 +170,7 @@ export function CTASection() {
                   Trusted by 300+ Garages
                 </span>
              </div>
-             <h2 className="font-sans text-[28px] md:text-[36px] lg:text-[42px] font-bold text-foreground tracking-tight max-w-[600px] leading-[1.2]">
+             <h2 className="font-sans text-[clamp(24px,4vw,42px)] font-bold text-foreground tracking-tight max-w-3xl leading-[1.2]">
                Built for mechanics, by the people who know garages best.
              </h2>
           </div>
@@ -222,49 +220,51 @@ export function CTASection() {
         </div>
 
         {/* ── Final CTA box ── */}
-        <div className="relative overflow-hidden rounded-[24px] p-12 md:p-16 text-center shadow-2xl border border-primary/20 bg-card/60 dark:bg-card/20 backdrop-blur-xl transition-all duration-500">
+        <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] px-6 py-16 md:px-16 md:py-24 text-center border border-primary/20 bg-card/40 dark:bg-card/20 backdrop-blur-2xl transition-all duration-500 shadow-[0_32px_64px_-16px_rgba(0,128,128,0.15)]">
           
           {/* Decorative glow blobs */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-[80px] translate-x-1/4 -translate-y-1/4 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/10 rounded-full blur-[80px] -translate-x-1/4 translate-y-1/4 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px] -translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
           <div
-            className="inline-block px-4 py-1.5 border border-primary/30 dark:border-primary/20 rounded-full font-mono text-[10px] tracking-[0.2em] uppercase text-primary mb-6 shadow-sm relative z-10 font-bold"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-primary/20 bg-primary/5 font-mono text-[10px] tracking-[0.25em] uppercase text-primary mb-8 relative z-10 font-bold"
           >
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Free to Start — No Credit Card
           </div>
 
-          <h2 className="relative z-10 font-mono text-[28px] md:text-[44px] font-bold text-foreground leading-[1.2] mb-8 tracking-tight uppercase italic">
-            Ready to Accelerate Your <br className="hidden md:block" />
-            <span className="text-primary">Workshop Growth?</span>
+          <h2 className="relative z-10 font-sans text-[clamp(28px,6vw,56px)] font-bold text-foreground leading-[1.1] mb-6 tracking-tight">
+            Ready to Accelerate Your <br className="hidden sm:block" />
+            <span className="text-primary italic">Workshop Growth?</span>
           </h2>
           
-          <p className="relative z-10 font-mono text-muted-foreground text-xs md:text-sm max-w-2xl mx-auto mb-12 leading-relaxed tracking-wider">
+          <p className="relative z-10 font-sans text-muted-foreground text-[15px] md:text-[18px] max-w-2xl mx-auto mb-12 leading-relaxed">
             Join 300+ workshops in Kerala who have already ditched the paperwork and embraced the digital future with WorkshopPro.
           </p>
 
-          <div className="h-auto flex flex-wrap items-center justify-center gap-4 relative z-10 transition-all duration-500">
-            <Link href="/signup" className="flex-1 sm:flex-none">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 relative z-10">
+            <Link href="/signup" className="w-full sm:w-auto">
               <WorkshopButton
                 variant="primary"
                 size="lg"
-                fullWidth
-                className="!font-mono !text-[11px] !tracking-[0.25em] !uppercase !py-4 !px-12 !rounded-sm shadow-[0_12px_24px_var(--primary)/0.25] hover:shadow-[0_16px_32px_var(--primary)/0.35] transition-all"
+                className="w-full sm:w-auto !font-sans !font-bold !text-[15px] !py-6 !px-12 rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
               >
                 Start Your 1 Month Free Trial
               </WorkshopButton>
             </Link>
-
-           
           </div>
 
           {/* Trust Indicators */}
-          <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-muted-foreground/50 text-[10px] tracking-[0.2em] uppercase font-mono font-bold relative z-10">
-            <span>Setup in 5 minutes</span>
-            <span className="w-1 h-1 rounded-full bg-primary/30" />
-            <span>Works on mobile</span>
-            <span className="w-1 h-1 rounded-full bg-primary/30" />
-            <span>No training needed</span>
+          <div className="mt-16 pt-10 border-t border-primary/10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-muted-foreground/60 text-[11px] tracking-wide font-sans font-medium relative z-10">
+            <div className="flex items-center gap-2">
+               <CheckCircle2 size={14} className="text-primary/60" /> Setup in 5 minutes
+            </div>
+            <div className="flex items-center gap-2">
+               <CheckCircle2 size={14} className="text-primary/60" /> Works on mobile
+            </div>
+            <div className="flex items-center gap-2">
+               <CheckCircle2 size={14} className="text-primary/60" /> No training needed
+            </div>
           </div>
         </div>
 

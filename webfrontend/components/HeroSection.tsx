@@ -31,35 +31,54 @@ export function HeroSection() {
       {/* Mobile background */}
       <div className="absolute inset-0 block sm:hidden">
         <Image
-          src="/images/landing page/workshopmobile-screen.jpg"
+          src="/images/landing%20page/workshopmobile-screen.jpg"
           alt="Vehicle repair workshop"
           fill
           priority
           quality={90}
           sizes="100vw"
-          className="object-cover object-center"
+          className="object-cover object-center dark:hidden"
+        />
+        <Image
+          src="/images/landing%20page/workshopmobile-screen-dark.png"
+          alt="Vehicle repair workshop dark"
+          fill
+          priority
+          quality={90}
+          sizes="100vw"
+          className="object-cover object-center hidden dark:block"
         />
       </div>
 
       {/* Desktop background */}
-      <div className="absolute inset-0 hidden sm:block">
+      <div className="absolute inset-0 hidden sm:block bg-black">
         <Image
-          src="/images/landing page/workshoplarger-screen.jpg"
+          src="/images/landing%20page/workshoplarger-screen.jpg"
           alt="Vehicle repair workshop"
           fill
           priority
           quality={90}
           sizes="100vw"
-          className="object-cover object-center"
+          className="object-cover object-center dark:hidden"
+        />
+        {/* Desktop-specific dark mode image - using contain to show full image */}
+        <Image
+          src="/images/landing%20page/dark.png"
+          alt="Vehicle repair workshop dark"
+          fill
+          priority
+          quality={100}
+          sizes="100vw"
+          className="object-contain object-center hidden dark:block"
         />
       </div>
 
-      {/* Overlays for depth and readability */}
+      {/* Overlays for depth and readability (deepened for cinematic effect) */}
       {/* 1. Base dark cinematic gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30 dark:from-black dark:via-black/70 dark:to-black/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/40 dark:from-black dark:via-black/85 dark:to-black/60" />
       
       {/* 2. Top fade for navbar grounding */}
-      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-black via-black/40 to-transparent opacity-80" />
+      <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-black via-black/60 to-transparent opacity-90" />
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 min-h-screen flex flex-col justify-center pt-32 pb-20">

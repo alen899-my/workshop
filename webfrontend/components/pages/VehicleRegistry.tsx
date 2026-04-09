@@ -140,16 +140,16 @@ const vehicleLibrary = [
 
 export function VehicleRegistry() {
   return (
-    <section className="bg-background py-24 relative overflow-hidden transition-colors duration-500">
+    <section className="bg-background py-16 lg:py-20 relative overflow-hidden transition-colors duration-500">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8">
         
         {/* Header Section */}
         <div className="flex flex-col items-center text-center mb-16">
-          <h2 className="font-sans text-[clamp(32px,5vw,56px)] font-bold text-foreground leading-[1] tracking-tight mb-6">
+          <h2 className="font-sans text-[clamp(28px,4vw,48px)] font-bold text-foreground leading-[1.1] tracking-tight mb-4">
             Two Wheeler, Four Wheeler, <br />
             <span className="text-primary ">Anything Managed.</span>
           </h2>
-          <p className="font-sans text-[16px] text-muted-foreground leading-[1.7] max-w-2xl">
+          <p className="font-sans text-[15px] text-muted-foreground leading-[1.6] max-w-2xl">
             From luxury sedans to heavy industrial excavators, our digital ecosystem is pre-configured to handle any machine in your shop.
           </p>
         </div>
@@ -168,7 +168,7 @@ export function VehicleRegistry() {
                  return (
                    <div 
                      key={v.id}
-                     className="group flex flex-col items-center justify-center p-6 rounded-[24px] bg-primary border border-primary/20 shadow-[0_15px_35px_rgba(0,128,128,0.2)] hover:shadow-primary/40 hover:-translate-y-1 transition-all duration-300"
+                     className="group flex flex-col items-center justify-center p-4 lg:p-5 rounded-[20px] bg-primary border border-primary/20 shadow-[0_10px_25px_rgba(0,128,128,0.15)] hover:shadow-primary/40 hover:-translate-y-1 transition-all duration-300"
                    >
                      <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
                         <VehicleIcon type={v.id} />
@@ -187,14 +187,12 @@ export function VehicleRegistry() {
           </div>
 
           {/* Right: Feature Highlights (Details) */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-             <div className="p-8 rounded-[32px] bg-muted/20 border border-border flex flex-col h-full justify-between group hover:bg-muted/30 transition-all">
+          <div className="lg:col-span-4">
+             <div className="p-7 rounded-[32px] bg-muted/20 border border-border flex flex-col gap-8 group hover:bg-muted/30 transition-all h-fit">
                 <div>
-                   <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6 font-bold text-xl">
-                      ⚡
-                   </div>
+                 
                    <h4 className="text-xl font-bold text-foreground mb-3 tracking-tight">Manage it with VehRep</h4>
-                   <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                   <p className="text-muted-foreground text-sm leading-relaxed">
                      If any of these vehicles are in your garage, you can manage them all with precision. Our system dynamically adapts to your workshop's unique requirements.
                    </p>
                 </div>

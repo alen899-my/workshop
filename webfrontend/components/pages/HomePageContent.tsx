@@ -11,6 +11,7 @@ import { ServicesCarousel } from "@/components/pages/ServicesCarousel";
 import { VehicleRegistry } from "@/components/pages/VehicleRegistry";
 import { MarqueeSection } from "@/components/pages/Marqueesection";
 import { permissionService } from "@/services/permission.service";
+import { ContactSection } from "@/components/pages/ContactSection";
 import { Footer } from "@/layout/Footer";
 
 export default function HomePageContent() {
@@ -70,6 +71,10 @@ export default function HomePageContent() {
 
         <section id="conversion" aria-label="Call to Action">
           <CTASection />
+        </section>
+
+        <section id="contact" aria-label="Contact Us">
+          <ContactSection />
         </section>
       </article>
 

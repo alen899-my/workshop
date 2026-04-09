@@ -120,7 +120,7 @@ export function Footer() {
         <div className="pt-12 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-8">
           
           <p className="font-mono text-[10px] tracking-[0.1em] text-muted-foreground/60">
-            © {currentYear} WORKSHOPPRO. ALL RIGHTS RESERVED. MADE IN KERALA.
+            © {currentYear} WORKSHOPPRO. ALL RIGHTS RESERVED.
           </p>
 
           <div className="flex items-center gap-6">
