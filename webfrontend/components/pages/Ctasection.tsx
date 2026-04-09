@@ -10,7 +10,7 @@ const metrics = [
   { val: "300+", label: "Garages on Platform" },
   { val: "12K+", label: "Repairs Tracked" },
   { val: "₹0", label: "To Get Started" },
-  { val: "5min", label: "Setup Time" },
+  { val: "1min", label: "Setup Time" },
 ];
 
 /**
