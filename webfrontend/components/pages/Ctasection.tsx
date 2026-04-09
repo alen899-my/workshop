@@ -169,17 +169,17 @@ export function CTASection() {
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/10 rounded-full blur-[80px] -translate-x-1/4 translate-y-1/4 pointer-events-none" />
 
           <div
-            className="inline-block px-4 py-1.5 border border-primary/30 dark:border-primary/20 rounded-full font-sans text-[10px] tracking-[0.2em] uppercase text-primary mb-6 shadow-sm relative z-10 font-bold"
+            className="inline-block px-4 py-1.5 border border-primary/30 dark:border-primary/20 rounded-full font-mono text-[10px] tracking-[0.2em] uppercase text-primary mb-6 shadow-sm relative z-10 font-bold"
           >
             Free to Start — No Credit Card
           </div>
 
-          <h2 className="relative z-10 font-sans text-[32px] md:text-[48px] font-black text-foreground leading-[1.1] mb-6 tracking-tight">
+          <h2 className="relative z-10 font-mono text-[28px] md:text-[44px] font-bold text-foreground leading-[1.2] mb-8 tracking-tight uppercase italic">
             Ready to Accelerate Your <br className="hidden md:block" />
-            <span className="text-primary italic">Workshop Growth?</span>
+            <span className="text-primary">Workshop Growth?</span>
           </h2>
           
-          <p className="relative z-10 font-sans text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+          <p className="relative z-10 font-mono text-muted-foreground text-xs md:text-sm max-w-2xl mx-auto mb-12 leading-relaxed tracking-wider">
             Join 300+ workshops in Kerala who have already ditched the paperwork and embraced the digital future with WorkshopPro.
           </p>
 
@@ -189,17 +189,17 @@ export function CTASection() {
                 variant="primary"
                 size="lg"
                 fullWidth
-                className="!font-mono !text-[12px] !tracking-[0.2em] !uppercase !py-4 !px-10 !rounded-sm shadow-[0_12px_24px_var(--primary)/0.3] hover:shadow-[0_16px_32px_var(--primary)/0.4] transition-all"
+                className="!font-mono !text-[11px] !tracking-[0.25em] !uppercase !py-4 !px-12 !rounded-sm shadow-[0_12px_24px_var(--primary)/0.25] hover:shadow-[0_16px_32px_var(--primary)/0.35] transition-all"
               >
                 Ready to Start
               </WorkshopButton>
             </Link>
 
             <Link
-              href="tel:+919946652438"
+              href="tel:+918921837945"
               className={cn(
-                "inline-flex items-center justify-center gap-3 px-10 py-4 font-mono text-[12px] tracking-[0.2em] uppercase font-semibold rounded-sm transition-all duration-300",
-                "bg-secondary/10 dark:bg-white/5 border border-border dark:border-white/20 text-foreground dark:text-white hover:bg-secondary/20 dark:hover:bg-white/10"
+                "inline-flex items-center justify-center gap-3 px-10 py-4 font-mono text-[11px] tracking-[0.25em] uppercase font-bold rounded-sm transition-all duration-300",
+                "bg-secondary/10 dark:bg-white/5 border border-border dark:border-white/10 text-foreground dark:text-white hover:bg-secondary/20 dark:hover:bg-white/10"
               )}
             >
               <Phone className="w-4 h-4" />
@@ -207,11 +207,14 @@ export function CTASection() {
             </Link>
           </div>
 
-          <p
-            className="mt-8 font-sans text-[10px] text-zinc-500 tracking-[0.08em] relative z-10"
-          >
-            Setup in 5 minutes · Works on mobile · No training needed
-          </p>
+          {/* Trust Indicators */}
+          <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-muted-foreground/50 text-[10px] tracking-[0.2em] uppercase font-mono font-bold relative z-10">
+            <span>Setup in 5 minutes</span>
+            <span className="w-1 h-1 rounded-full bg-primary/30" />
+            <span>Works on mobile</span>
+            <span className="w-1 h-1 rounded-full bg-primary/30" />
+            <span>No training needed</span>
+          </div>
         </div>
 
       </div>

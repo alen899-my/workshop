@@ -44,9 +44,9 @@ export function NavbarWhite() {
         className={cn(
           "pointer-events-auto w-full max-w-4xl transition-all duration-500 ease-out",
           "rounded-[2rem_2rem_2rem_0.5rem]",
-          scrolled
-            ? "bg-background/90 dark:bg-black/80 backdrop-blur-xl border border-border shadow-[0_8px_40px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.04)]"
-            : "bg-black/5 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 shadow-none"
+          (scrolled || mobileOpen)
+            ? "bg-background dark:bg-[#050505] border border-border shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+            : "bg-background/10 dark:bg-white/5 border border-white/10 dark:border-white/5 shadow-none"
         )}
       >
         <nav className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
