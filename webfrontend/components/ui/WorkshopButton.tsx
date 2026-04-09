@@ -18,31 +18,31 @@ interface WorkshopButtonProps
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground border border-primary " +
-    "hover:ring-1 hover:ring-primary/20",
+    "bg-primary text-primary-foreground border border-primary/50 " +
+    "hover:bg-primary/90 hover:shadow-[0_8px_20px_rgba(61,122,120,0.3)] dark:hover:shadow-[0_8px_25px_rgba(61,122,120,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 dark:text-white",
 
   outline:
     "bg-transparent text-foreground border border-border " +
-    "hover:bg-accent hover:text-accent-foreground",
+    "hover:bg-primary/5 hover:border-primary/30 hover:text-primary active:scale-95 dark:text-white dark:hover:text-primary",
 
   ghost:
     "bg-transparent text-muted-foreground " +
-    "hover:bg-accent hover:text-accent-foreground",
+    "hover:bg-primary/10 hover:text-primary active:scale-95 dark:text-white/70 dark:hover:text-white",
 
   danger:
-    "bg-destructive text-destructive-foreground border border-destructive " +
-    "hover:ring-1 hover:ring-destructive/20",
+    "bg-destructive text-destructive-foreground border border-destructive/50 " +
+    "hover:bg-destructive/90 hover:shadow-[0_8px_20px_rgba(192,39,45,0.2)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 dark:text-white",
 
   steel:
     "bg-foreground text-background border border-foreground " +
-    "hover:bg-foreground/90",
+    "hover:bg-foreground/90 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95 dark:bg-muted dark:text-white dark:border-border",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "text-xs px-3 py-1.5 gap-1.5",
-  md: "text-sm px-4 py-2 gap-2",
-  lg: "text-base px-6 py-3 gap-2.5",
-  xl: "text-lg px-8 py-4 gap-3",
+  sm: "text-[11px] font-black uppercase tracking-wider px-3 py-2 gap-2",
+  md: "text-xs font-black uppercase tracking-widest px-5 py-3 gap-2.5",
+  lg: "text-sm font-black uppercase tracking-[0.15em] px-8 py-4 gap-3",
+  xl: "text-base font-black uppercase tracking-[0.2em] px-10 py-5 gap-4",
 };
 
 export function WorkshopButton({
@@ -63,8 +63,10 @@ export function WorkshopButton({
       className={cn(
         // base
         "inline-flex items-center justify-center",
-        "font-semibold rounded-md",
+        "rounded-xl", // Softer, more modern corners
         "cursor-pointer",
+        "transition-all duration-300 ease-out",
+        "focus:outline-none focus:ring-2 focus:ring-primary/20",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         // variant + size
         variantStyles[variant],

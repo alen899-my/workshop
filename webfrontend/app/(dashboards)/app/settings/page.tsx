@@ -63,7 +63,7 @@ export default function SettingsPage() {
               icon={User}
               title="User Profile"
               description="Manage your personal information, security, and preferences."
-              color="text-blue-600 bg-blue-500/10 border-blue-500/20"
+              color="text-primary bg-primary/10 border-primary/20"
             />
             {canManageShop && (
               <SettingCard

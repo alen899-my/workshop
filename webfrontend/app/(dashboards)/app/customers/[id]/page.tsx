@@ -135,7 +135,7 @@ export default function CustomerDetailPage() {
             case "pending":
                 return <Clock size={16} className="text-yellow-500" />;
             case "in-progress":
-                return <AlertCircle size={16} className="text-blue-500" />;
+                return <AlertCircle size={16} className="text-primary" />;
             default:
                 return <AlertCircle size={16} className="text-gray-500" />;
         }

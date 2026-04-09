@@ -17,7 +17,7 @@ const VARIANTS = {
   success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   warning: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   danger: "bg-destructive/10 text-destructive border-destructive/20",
-  info: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  info: "bg-primary/10 text-primary border-primary/20",
   outline: "bg-transparent text-foreground border-border",
   muted: "bg-muted/50 text-muted-foreground border-border/50",
 };

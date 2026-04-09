@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Phone, CheckCircle2, Star, Quote } from "lucide-react";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
@@ -12,6 +12,66 @@ const metrics = [
   { val: "₹0", label: "To Get Started" },
   { val: "5min", label: "Setup Time" },
 ];
+
+/**
+ * A highly performant counter that animates from 0 to target
+ * Handles prefixes (like ₹) and suffixes (like K+, min, +)
+ */
+function Counter({ value, duration = 2000 }: { value: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const countRef = useRef<HTMLSpanElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Parse the value: extract number, prefix, and suffix
+  const numericMatch = value.match(/(\d+)/);
+  const target = numericMatch ? parseInt(numericMatch[0], 10) : 0;
+  const prefix = value.split(numericMatch ? numericMatch[0] : "")[0] || "";
+  const suffix = value.split(numericMatch ? numericMatch[0] : "")[1] || "";
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (countRef.current) {
+      observer.observe(countRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTimestamp: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      
+      // Easing function: easeOutExpo
+      const easing = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      
+      setCount(Math.floor(easing * target));
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+
+    window.requestAnimationFrame(step);
+  }, [isVisible, target, duration]);
+
+  return (
+    <span ref={countRef}>
+      {prefix}{count}{suffix}
+    </span>
+  );
+}
 
 const testimonials = [
   {
@@ -29,8 +89,8 @@ const testimonials = [
     name: "Abdul Majeed",
     role: "Owner, AM Auto Works — Kozhikode",
     initials: "AM",
-    color: "#7ab4cc",
-    bg: "rgba(122,180,204,0.12)",
+    color: "#5bb0ae",
+    bg: "rgba(91,176,174,0.12)",
   },
   {
     quote:
@@ -56,7 +116,7 @@ export function CTASection() {
       <div className="max-w-[1100px] mx-auto px-4 md:px-8">
 
         {/* ── Ultra-Modern Metrics Strip ── */}
-        <div className="relative mb-32 w-full py-16 md:py-24 border-y border-primary/10 overflow-hidden">
+        <div className="relative mb-32 w-full py-16 md:py-24 border-y border-primary/10 dark:border-primary/25 overflow-hidden">
           {/* Sweep animation injected to avoid external config edits */}
           <style dangerouslySetInnerHTML={{__html: `
             @keyframes sweep {
@@ -79,9 +139,9 @@ export function CTASection() {
                   className="relative font-sans text-[44px] md:text-[60px] lg:text-[76px] font-black leading-none tracking-tighter"
                 >
                   <span 
-                    className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#7ab4cc] to-primary dark:from-primary dark:via-accent-foreground dark:to-primary animate-sweep inline-block transform group-hover:scale-105 group-hover:-translate-y-2 transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none"
+                    className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-[#5bb0ae] to-primary animate-sweep inline-block transform group-hover:scale-105 group-hover:-translate-y-2 transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none"
                   >
-                    {m.val}
+                    <Counter value={m.val} />
                   </span>
                 </div>
                 
@@ -191,20 +251,11 @@ export function CTASection() {
                 fullWidth
                 className="!font-mono !text-[11px] !tracking-[0.25em] !uppercase !py-4 !px-12 !rounded-sm shadow-[0_12px_24px_var(--primary)/0.25] hover:shadow-[0_16px_32px_var(--primary)/0.35] transition-all"
               >
-                Ready to Start
+                Start Your 1 Month Free Trial
               </WorkshopButton>
             </Link>
 
-            <Link
-              href="tel:+918921837945"
-              className={cn(
-                "inline-flex items-center justify-center gap-3 px-10 py-4 font-mono text-[11px] tracking-[0.25em] uppercase font-bold rounded-sm transition-all duration-300",
-                "bg-secondary/10 dark:bg-white/5 border border-border dark:border-white/10 text-foreground dark:text-white hover:bg-secondary/20 dark:hover:bg-white/10"
-              )}
-            >
-              <Phone className="w-4 h-4" />
-              Call Support
-            </Link>
+           
           </div>
 
           {/* Trust Indicators */}
@@ -220,4 +271,5 @@ export function CTASection() {
       </div>
     </section>
   );
-}
+}
+

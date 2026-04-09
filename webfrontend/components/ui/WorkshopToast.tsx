@@ -77,10 +77,10 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
       desc: "text-amber-50",
     },
     info: {
-      bg: "bg-blue-600 border-blue-500",
-      icon: <Info className="w-5 h-5 text-white" />,
-      text: "text-white",
-      desc: "text-blue-50",
+      bg: "bg-primary border-primary/20",
+      icon: <Info className="w-5 h-5 text-primary-foreground" />,
+      text: "text-primary-foreground",
+      desc: "text-primary-foreground/90",
     },
   };
 

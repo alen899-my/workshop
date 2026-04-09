@@ -3,18 +3,27 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 const tags = [
   { label: "Repair Management", color: "#3d7a78" },
-  { label: "Vehicle Tracking", color: "#7ab4cc" },
+  { label: "Vehicle Tracking", color: "#5bb0ae" },
   { label: "Customer Records", color: "#d4a017" },
   { label: "Worker Assignments", color: "#d4622a" },
   { label: "Billing & Invoices", color: "#8fb8a8" },
 ];
 
 export function PreviewSection() {
-  const [activeCard, setActiveCard] = React.useState<"dashboard" | "vehicles" >("dashboard");
+  const [activeCard, setActiveCard] = React.useState<"dashboard" | "vehicles">("dashboard");
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <section
@@ -30,10 +39,7 @@ export function PreviewSection() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-t from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none dark:from-accent/20" />
 
       <div className="max-w-[1100px] mx-auto px-4 sm:px-8 relative z-10">
-        {/* Eyebrow */}
-        <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-primary mb-4">
-          Live Product Preview
-        </p>
+        
 
         {/* Headline */}
         <h2 className="font-sans text-[clamp(28px,4vw,44px)] font-bold text-foreground leading-[1.1] max-w-[560px] mb-4">
@@ -50,34 +56,34 @@ export function PreviewSection() {
         {/* Stacked / fanned preview cards */}
         <div
           className="relative max-w-[900px] mx-auto h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]"
-        >
-          {/* Dashboard Preview */}
+        >          {/* Dashboard Preview */}
           <div
             onClick={() => setActiveCard("dashboard")}
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 rounded-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer",
+              "absolute left-1/2 rounded-xl overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] cursor-pointer",
               activeCard === "dashboard"
-                ? "top-0 w-[96%] rotate-[-1.5deg] z-20 border-2 border-primary/30 shadow-[0_20px_60px_var(--primary)/0.18,0_4px_16px_rgba(0,0,0,0.1)]"
-                : "top-8 w-full rotate-[3deg] z-10 border border-primary/20 shadow-[0_8px_32px_var(--primary)/0.12,0_2px_8px_rgba(0,0,0,0.08)] opacity-60 grayscale-[0.5]"
+                ? "top-0 w-full -translate-x-1/2 rotate-0 z-20 border-2 border-primary/40 shadow-[0_32px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+                : "top-10 w-[95%] -translate-x-[calc(50%+60px)] rotate-[-3deg] z-10 border border-primary/10 shadow-xl opacity-60 hover:opacity-100 hover:-translate-y-2"
             )}
           >
             {/* Browser chrome */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 dark:bg-muted/30 border-b border-primary/10">
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#f3f4f6] dark:bg-[#1a1a1a] border-b border-primary/10 dark:border-primary/25">
               <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#c0272d]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#d4a017]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#3d7a78]" />
+                <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+                <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+                <div className="w-2 h-2 rounded-full bg-[#28c840]" />
               </div>
-              <div className="flex-1 ml-3 bg-background/50 border border-border/50 rounded-sm px-2.5 py-0.5 text-[9px] font-mono text-muted-foreground truncate">
+              <div className="flex-1 ml-3 bg-white/50 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-md px-2.5 py-0.5 text-[9px] font-medium text-muted-foreground/80 truncate">
                 app.vehrep.com/dashboard
               </div>
             </div>
-            <div className="w-full aspect-video relative bg-muted/20">
+            <div className="w-full aspect-video relative bg-white dark:bg-black">
               <Image
-                src="/images/landing page/preview.png"
+                src={isDark ? "/images/landing%20page/previewdark.png" : "/images/landing%20page/preview.png"}
                 alt="VehRep dashboard preview"
                 fill
-                quality={90}
+                priority
+                quality={100}
                 className="object-cover object-top"
               />
             </div>
@@ -87,33 +93,34 @@ export function PreviewSection() {
           <div
             onClick={() => setActiveCard("vehicles")}
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 rounded-xl overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer",
+              "absolute left-1/2 rounded-xl overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] cursor-pointer",
               activeCard === "vehicles"
-                ? "top-0 w-[96%] rotate-[1.5deg] z-20 border-2 border-primary/30 shadow-[0_20px_60px_var(--primary)/0.18,0_4px_16px_rgba(0,0,0,0.1)]"
-                : "top-8 w-full rotate-[-3deg] z-10 border border-primary/20 shadow-[0_8px_32px_var(--primary)/0.12,0_2px_8px_rgba(0,0,0,0.08)] opacity-60 grayscale-[0.5]"
+                ? "top-0 w-full -translate-x-1/2 rotate-0 z-20 border-2 border-primary/40 shadow-[0_32px_80px_rgba(0,0,0,0.25)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+                : "top-10 w-[95%] -translate-x-[calc(50%-60px)] rotate-[3deg] z-10 border border-primary/10 shadow-xl opacity-60 hover:opacity-100 hover:-translate-y-2"
             )}
           >
             {/* Browser chrome */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/50 dark:bg-muted/30 border-b border-primary/10">
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#f3f4f6] dark:bg-[#1a1a1a] border-b border-primary/10 dark:border-primary/25">
               <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#c0272d]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#d4a017]" />
-                <div className="w-2.5 h-2.5 rounded-full bg-[#3d7a78]" />
+                <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+                <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+                <div className="w-2 h-2 rounded-full bg-[#28c840]" />
               </div>
-              <div className="flex-1 ml-3 bg-background/50 border border-border/50 rounded-sm px-2.5 py-0.5 text-[9px] font-mono text-muted-foreground truncate">
-                app.vehrep.com/vehicles
+              <div className="flex-1 ml-3 bg-white/50 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-md px-2.5 py-0.5 text-[9px] font-medium text-muted-foreground/80 truncate">
+                app.vehrep.com/inventory
               </div>
             </div>
-            <div className="w-full aspect-video relative bg-muted/20">
+            <div className="w-full aspect-video relative bg-white dark:bg-black">
               <Image
-                src="/images/landing page/preview2.png"
+                src={isDark ? "/images/landing%20page/previewdark2.png" : "/images/landing%20page/preview2.png"}
                 alt="VehRep vehicles page"
                 fill
-                quality={90}
+                quality={100}
                 className="object-cover object-top"
               />
             </div>
           </div>
+
 
         </div>
       </div>

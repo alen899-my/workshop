@@ -7,6 +7,8 @@ import { HeroSection } from "@/components/HeroSection";
 import { FeaturesSection } from "@/components/pages/Featuressection";
 import { CTASection } from "@/components/pages/Ctasection";
 import { PreviewSection } from "@/components/pages/Previewsection";
+import { ServicesCarousel } from "@/components/pages/ServicesCarousel";
+import { VehicleRegistry } from "@/components/pages/VehicleRegistry";
 import { MarqueeSection } from "@/components/pages/Marqueesection";
 import { permissionService } from "@/services/permission.service";
 import { Footer } from "@/layout/Footer";
@@ -24,11 +26,11 @@ export default function HomePageContent() {
           const role = user?.role || "worker";
           const permsRes = await permissionService.getRolePermissions(role);
           const perms = permsRes.success ? permsRes.data?.join(',') : "";
-          
+
           document.cookie = `workshop_token=${token}; path=/; max-age=604800; SameSite=Lax`;
           document.cookie = `workshop_role=${role}; path=/; max-age=604800; SameSite=Lax`;
           document.cookie = `workshop_permissions=${perms}; path=/; max-age=604800; SameSite=Lax`;
-          router.refresh(); 
+          router.refresh();
         };
         fetchAndSync();
       } else {
@@ -49,7 +51,15 @@ export default function HomePageContent() {
           <HeroSection />
         </section>
 
-    
+
+        <section id="services" aria-label="Our Service Capabilities">
+          <ServicesCarousel />
+        </section>
+
+        <section id="registry" aria-label="Supported Vehicle Types">
+          <VehicleRegistry />
+        </section>
+
         <section id="preview" aria-label="Product Preview">
           <PreviewSection />
         </section>

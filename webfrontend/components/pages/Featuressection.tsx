@@ -10,11 +10,11 @@ const features = [
     desc: "Create job cards instantly. Track every repair from intake to delivery.",
     tags: "Job Cards · Milestones · Notes",
     image: "/images/landing page/repairmanagment.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
   {
     num: "02",
@@ -22,11 +22,11 @@ const features = [
     desc: "Full repair history per vehicle. Know what's due for next service.",
     tags: "History · Parts Log · Service Due",
     image: "/images/landing page/vehiclerecord.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
   {
     num: "03",
@@ -34,11 +34,11 @@ const features = [
     desc: "Store every customer's details, vehicle list, and contact info.",
     tags: "CRM · Search · Alerts",
     image: "/images/landing page/customermanagement.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
   {
     num: "04",
@@ -46,11 +46,11 @@ const features = [
     desc: "See who's working on what, right now. Balance workload and shifts.",
     tags: "Assignments · Workload",
     image: "/images/landing page/workersmangment.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
   {
     num: "05",
@@ -58,11 +58,11 @@ const features = [
     desc: "Generate professional invoices in seconds. Add labour, and parts.",
     tags: "GST Bills · WhatsApp",
     image: "/images/landing page/invoice.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
   {
     num: "06",
@@ -70,11 +70,11 @@ const features = [
     desc: "Daily, weekly, monthly revenue. Top customers, busiest workers.",
     tags: "Revenue · Analytics",
     image: "/images/landing page/insights.jpg",
-    className: "bg-card text-card-foreground border-border/50",
-    textDescColor: "text-muted-foreground",
-    numColor: "text-primary/40",
-    tagColor: "text-primary",
-    glowBg: "bg-primary/5 group-hover:bg-primary/10",
+    className: "bg-primary text-white border-primary/20 shadow-[0_15px_40px_rgba(0,128,128,0.2)]",
+    textDescColor: "text-white/80",
+    numColor: "text-white/40",
+    tagColor: "text-white",
+    glowBg: "bg-white/5 group-hover:bg-white/10",
   },
 ];
 
@@ -104,7 +104,7 @@ export function FeaturesSection() {
           {features.map((f) => (
             <div
               key={f.num}
-              className={`group relative pt-6 px-6 flex flex-col rounded-[12px] border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${f.className} dark:bg-card/40 dark:backdrop-blur-sm`}
+              className={`group relative pt-6 px-6 flex flex-col rounded-[12px] border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden ${f.className}`}
             >
               {/* Subtle inward glow */}
               <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-2xl pointer-events-none transition-colors duration-500 ${f.glowBg}`} />
@@ -143,7 +143,7 @@ export function FeaturesSection() {
                     alt={f.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity duration-300 border-t border-primary/10 grayscale-[0.2] group-hover:grayscale-0"
+                    className="object-cover object-top opacity-90 group-hover:opacity-100 transition-opacity duration-300 border-t border-primary/10 dark:border-primary/25 grayscale-[0.2] group-hover:grayscale-0"
                   />
                   {/* Dark overlay for images in dark mode */}
                   <div className="absolute inset-0 bg-background/10 dark:bg-background/20 pointer-events-none" />

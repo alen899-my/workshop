@@ -475,13 +475,13 @@ export default function TaxSettingsClient({ initialData }: { initialData: TaxSet
                 onClick={() => setForm({ ...form, is_inclusive: true })}
                 className={cn(
                   "p-5 rounded-2xl border flex flex-col gap-2 transition-all text-left group/btn",
-                  form.is_inclusive ? "border-blue-500 bg-blue-500/5 ring-4 ring-blue-500/5" : "border-border bg-muted/10 hover:border-blue-500/20"
+                  form.is_inclusive ? "border-primary bg-primary/5 ring-4 ring-primary/5" : "border-border bg-muted/10 hover:border-primary/20"
                 )}
               >
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", form.is_inclusive ? "bg-blue-500 text-white" : "bg-muted text-muted-foreground group-hover/btn:bg-blue-500/10 group-hover/btn:text-blue-500")}>
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", form.is_inclusive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover/btn:bg-primary/10 group-hover/btn:text-primary")}>
                   <Layers size={16} />
                 </div>
-                <span className={cn("text-xs font-bold uppercase tracking-tight", form.is_inclusive ? "text-blue-600" : "text-foreground")}>
+                <span className={cn("text-xs font-bold uppercase tracking-tight", form.is_inclusive ? "text-primary" : "text-foreground")}>
                   Built-in (Inclusive)
                 </span>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">

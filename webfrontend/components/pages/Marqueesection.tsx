@@ -21,7 +21,7 @@ export function MarqueeSection() {
   const list = [...vehicles, ...vehicles, ...vehicles, ...vehicles];
 
   return (
-    <div className="w-full relative py-12 md:py-16 overflow-hidden bg-background border-b border-primary/10 flex flex-col justify-center transition-colors duration-500">
+    <div className="w-full relative py-12 md:py-16 overflow-hidden bg-background border-b border-primary/10 dark:border-primary/25 flex flex-col justify-center transition-colors duration-500">
       
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       

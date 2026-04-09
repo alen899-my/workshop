@@ -33,7 +33,7 @@ export function generateInvoicePDF({
   // --- HEADER SECTION ---
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.setTextColor(15, 30, 50); // Dark Blue
+  doc.setTextColor(61, 122, 120); // Workshop Teal
 
   // Shop Name & Title
   doc.text(shopName.toUpperCase(), 14, y);
@@ -125,7 +125,7 @@ export function generateInvoicePDF({
       head: [tableColumn],
       body: tableRows,
       theme: "striped",
-      headStyles: { fillColor: [20, 40, 70] },
+      headStyles: { fillColor: [61, 122, 120] },
       margin: { top: 10, left: 14, right: 14 },
     });
 
@@ -177,7 +177,7 @@ export function generateInvoicePDF({
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.setTextColor(15, 30, 50); // Dark Blue
+    doc.setTextColor(61, 122, 120); // Workshop Teal
     doc.text("Grand Total:", 140, y, { align: "right" });
     doc.text(`${symbol}${Number(bill.total_amount || 0).toFixed(2)}`, 185, y, {
       align: "right",

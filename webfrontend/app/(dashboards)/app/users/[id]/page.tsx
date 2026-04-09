@@ -117,7 +117,7 @@ export default function UserDetailPage() {
     switch (status?.toLowerCase()) {
       case "completed":   return <CheckCircle2 size={14} className="text-emerald-500" />;
       case "pending":     return <Clock size={14} className="text-amber-500" />;
-      case "in progress": return <AlertCircle size={14} className="text-blue-500" />;
+      case "in progress": return <AlertCircle size={14} className="text-primary" />;
       default:            return <AlertCircle size={14} className="text-slate-400" />;
     }
   };

@@ -384,7 +384,7 @@ export function CustomersClient({ initialData = [] }: { initialData?: Customer[]
                   <div className="flex items-center justify-between">
                     <span className={cn(
                       "text-[9px] font-black uppercase tracking-[2px] px-2 py-0.5 rounded-md border",
-                      vh.mode === 'existing' ? "bg-blue-500/10 text-blue-600 border-blue-500/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                      vh.mode === 'existing' ? "bg-primary/10 text-primary border-primary/20" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                     )}>
                       {vh.mode === 'existing' ? "Registered in System" : "New Registration"}
                     </span>
