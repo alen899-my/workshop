@@ -8,6 +8,7 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('workshop_token')?.value;
   const permissions = request.cookies.get('workshop_permissions')?.value || "";
   const { pathname } = request.nextUrl;
+  
 
   const userPerms = permissions.split(',');
   const hasInfinitePerm = userPerms.includes('*');

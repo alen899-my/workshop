@@ -450,12 +450,10 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
             )}
 
             {/* Payment Status Dropdown */}
-            <div className="flex justify-between items-center px-1 pt-2 border-t border-border">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-widest text-foreground">
-                  Payment Status
-                </span>
-              </div>
+            <div className="flex flex-col gap-2 pt-4 border-t border-border">
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground ml-1">
+                Payment Status
+              </label>
               <WorkshopInlineSelect
                 value={paymentStatus}
                 onChange={(newVal) => setPaymentStatus(newVal)}
@@ -463,12 +461,13 @@ export default function BillClient({ id, initialRepair, initialBill, currencyCod
                   { value: "Unpaid", label: "Unpaid" },
                   { value: "Paid", label: "Payment Received (Paid)" }
                 ]}
-                className={
+                className={cn(
+                  "w-full h-[48px] px-4 rounded-xl text-sm font-bold border transition-all",
                   paymentStatus === 'Paid' 
-                    ? "bg-success/10 text-success-foreground border-success/30 hover:bg-success/20" 
-                    : "bg-warning/10 text-warning border-warning/30 hover:bg-warning/20"
-                }
-                activeClassName="bg-card text-foreground border-primary"
+                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                    : "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                )}
+                activeClassName="bg-card text-foreground border-primary ring-4 ring-primary/5"
               />
             </div>
 

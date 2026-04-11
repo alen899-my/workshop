@@ -10,7 +10,7 @@ const { upload } = require('../../middleware/upload');
 router.get('/stats/summary', authenticate, repairController.getDashboardStats);
 
 // @route   GET /api/repairs
-router.get('/', authenticate, repairController.getRepairs);
+router.get('/', authenticate, authorize('view:repairs'), repairController.getRepairs);
 
 // @route   GET /api/repairs/:id
 router.get('/:id', authenticate, authorize('view:repairs'), repairController.getRepairById);

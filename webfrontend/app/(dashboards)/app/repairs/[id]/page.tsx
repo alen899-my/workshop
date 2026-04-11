@@ -29,7 +29,6 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useRBAC } from "@/lib/rbac";
 import { useCurrency } from "@/lib/currency";
-import { generateReceipt } from "@/lib/generateReceipt";
 
 export default function RepairDetailPage() {
   const params = useParams();
@@ -39,12 +38,13 @@ export default function RepairDetailPage() {
   const [repair, setRepair] = useState<Repair | null>(null);
   const [bill, setBill] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const { user } = useRBAC();
   const currencyCode = user?.shopCurrency || 'INR';
   const { symbol } = useCurrency({ shopCurrency: currencyCode });
   
   useEffect(() => {
-    const fetch = async () => {
+    const loadData = async () => {
       if (!id) return;
       setLoading(true);
       const [rRes, bRes] = await Promise.all([
@@ -55,8 +55,34 @@ export default function RepairDetailPage() {
       if (bRes.success) setBill(bRes.data || null);
       setLoading(false);
     };
-    fetch();
+    loadData();
   }, [id]);
+
+  /** Download PDF via Puppeteer-rendered backend route — streams blob directly */
+  const downloadPdf = async () => {
+    if (!repair) return;
+    setPdfLoading(true);
+    try {
+      const token = localStorage.getItem('workshop_token');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/repairs/${repair.id}/pdf`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `invoice_${repair.vehicle_number}_${repair.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   if (loading) return <Loading />;
   if (!repair) return (
@@ -86,7 +112,8 @@ export default function RepairDetailPage() {
                   src={repair.vehicle_image} 
                   alt="Vehicle Profile" 
                   fill 
-                  className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                  unoptimized
                 />
              ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground/30">
@@ -98,7 +125,13 @@ export default function RepairDetailPage() {
              {/* Dynamic Status Pin */}
              <div className={cn(
                 "absolute top-6 right-6 px-4 py-2 rounded-2xl border backdrop-blur-md shadow-xl flex items-center gap-2",
-                repair.status === 'Completed' ? "bg-emerald-500/80 text-white border-emerald-400" : "bg-orange-500/80 text-white border-orange-400"
+                repair.status === 'Completed'
+                  ? "bg-emerald-500/80 text-white border-emerald-400"
+                  : repair.status === 'In Progress'
+                  ? "bg-yellow-500/80 text-white border-yellow-400"
+                  : repair.status === 'Started'
+                  ? "bg-blue-500/80 text-white border-blue-400"
+                  : "bg-orange-500/80 text-white border-orange-400" /* Pending */
              )}>
                 <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                 <span className="text-[10px] font-black uppercase tracking-widest">{repair.status}</span>
@@ -276,13 +309,19 @@ export default function RepairDetailPage() {
                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground/30 group-hover:scale-110 transition-transform duration-500">
                       <Tag size={32} />
                    </div>
-                   <div className="flex flex-col items-center gap-1.5 text-center px-6">
-                      <span className="text-xs font-black uppercase tracking-[3px] text-foreground">No Billing Data</span>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
-                        Parts and labor costs haven't been recorded yet.<br/>
-                        <span className="text-primary hover:underline cursor-pointer" onClick={() => router.push(`/app/repairs/bill/${repair.id}`)}>Click to generate invoice</span>
-                      </p>
-                   </div>
+              <div className="flex flex-col items-center gap-3 text-center px-6">
+                  <span className="text-xs font-black uppercase tracking-[3px] text-foreground">No Billing Data</span>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-relaxed">
+                    Parts and labor costs haven't been recorded yet.
+                  </p>
+                  <WorkshopButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/app/repairs/bill/${repair.id}`)}
+                  >
+                    Generate Invoice
+                  </WorkshopButton>
+              </div>
                 </div>
              )}
           </div>
@@ -295,7 +334,11 @@ export default function RepairDetailPage() {
            <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-1">
                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Job Date</span>
-                 <span className="text-sm font-black text-foreground">{repair.repair_date ? new Date(repair.repair_date).toLocaleDateString() : 'N/A'}</span>
+                 <span className="text-sm font-black text-foreground">
+                   {repair.repair_date
+                     ? (() => { const d = new Date(repair.repair_date); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; })()
+                     : 'N/A'}
+                 </span>
               </div>
               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-1">
                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Service</span>
@@ -373,36 +416,10 @@ export default function RepairDetailPage() {
                    variant="steel"
                    className="w-full h-12 text-sm font-bold uppercase tracking-widest"
                    icon={<Download size={16} />}
-                   onClick={() => {
-                     generateReceipt(
-                       {
-                         shopName: user?.shopName || "Workshop",
-                         shopLocation: undefined,
-                         shopPhone: undefined,
-                         shopCurrency: user?.shopCurrency || "USD",
-                         currencySymbol: symbol,
-                         repairId: repair.id,
-                         repairDate: repair.repair_date,
-                         serviceType: repair.service_type,
-                         status: repair.status,
-                         paymentStatus: bill.payment_status,
-                         vehicleNumber: repair.vehicle_number || "—",
-                         vehicleType: repair.vehicle_type,
-                         modelName: repair.model_name,
-                         ownerName: repair.owner_name || "—",
-                         phoneNumber: repair.phone_number,
-                         workerName: repair.attending_worker_name,
-                         items: bill.items || [],
-                         serviceCharge: Number(bill.service_charge || 0),
-                         taxSnapshot: bill.tax_snapshot || [],
-                         taxTotal: Number(bill.tax_total || 0),
-                         totalAmount: Number(bill.total_amount || 0),
-                       },
-                       repair.complaints
-                     );
-                   }}
+                   onClick={downloadPdf}
+                   disabled={pdfLoading}
                  >
-                   Download Receipt
+                   {pdfLoading ? 'Generating PDF...' : 'Download Invoice PDF'}
                  </WorkshopButton>
                )}
            </div>

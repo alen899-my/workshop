@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
@@ -21,18 +21,14 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import { RepairDetailsModal } from "@/components/repair/RepairDetailsModal";
 
-interface RepairsClientProps {
-  initialData: Repair[];
-  currencyCode?: string;
-}
-
-export default function RepairsClient({ initialData, currencyCode = 'INR' }: RepairsClientProps) {
+export default function RepairsClient() {
   const router = useRouter();
   const { toast } = useToast();
-  const { can } = useRBAC();
+  const { can, user } = useRBAC();
+  const currencyCode = user?.shopCurrency || 'INR';
   const { symbol } = useCurrency({ shopCurrency: currencyCode });
 
-  const [repairs, setRepairs] = useState<Repair[]>(initialData);
+  const [repairs, setRepairs] = useState<Repair[]>([]);
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void }>({ isOpen: false, title: "", message: "", onConfirm: () => { } });
@@ -40,51 +36,69 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
   const searchParams = useSearchParams();
 
   // ── Auto-View Sync ─────────────────────────────────────────────────────────
+  // Guard: only auto-open once — don't re-open when filter refetches update `repairs`
+  const autoViewHandled = React.useRef(false);
   React.useEffect(() => {
     const autoViewId = searchParams.get('view');
-    if (autoViewId && repairs.length > 0) {
+    if (autoViewId && repairs.length > 0 && !autoViewHandled.current) {
       const rep = repairs.find((r: Repair) => r && r.id.toString() === autoViewId);
-      if (rep) handleView(rep);
+      if (rep) {
+        autoViewHandled.current = true;
+        handleView(rep);
+      }
     }
-  }, [searchParams, repairs]);
+  }, [searchParams, repairs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [recordStatus, setRecordStatus] = useState("Active");
   const [filterServiceType, setFilterServiceType] = useState("");
   const [filterVehicleType, setFilterVehicleType] = useState("");
   const [filterWorker, setFilterWorker] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  // Fetch data when filters change (with slight debounce for search)
+  // Hardcoded service type options (matches create/edit form)
+  const SERVICE_TYPE_OPTIONS = [
+    { value: "Repair",       label: "Repair" },
+    { value: "Servicing",    label: "Servicing" },
+    { value: "Inspection",   label: "Inspection" },
+    { value: "Modification", label: "Modification" },
+    { value: "Other",        label: "Other" },
+  ];
+
+  // Fetch data when filters change (debounced for search/dates)
   useEffect(() => {
     const fetchFiltered = async () => {
       const res = await repairService.getAll({
-        recordStatus,
         status: filterStatus,
         serviceType: filterServiceType,
         vehicleType: filterVehicleType,
         worker: filterWorker,
+        dateFrom,
+        dateTo,
         search
       });
       if (res.success) setRepairs(res.data);
+      else toast({ type: "error", title: "Fetch Error", description: res.error || "Failed to load repairs" });
     };
 
     const timeoutId = setTimeout(fetchFiltered, 300);
     return () => clearTimeout(timeoutId);
-  }, [recordStatus, filterStatus, filterServiceType, filterVehicleType, filterWorker, search]);
+  }, [filterStatus, filterServiceType, filterVehicleType, filterWorker, dateFrom, dateTo, search]);
 
-  const filtered = repairs; // Data is already filtered by backend
+  const filtered = repairs; // Already filtered server-side
 
   const activeFilterCount = [
-    filterStatus, 
-    recordStatus === 'Active' ? '' : 'Archived',
+    filterStatus,
     filterServiceType,
     filterVehicleType,
-    filterWorker
+    filterWorker,
+    dateFrom,
+    dateTo,
   ].filter(Boolean).length;
 
-  const uniqueWorkers = useMemo(() => {
+  const uniqueWorkers = React.useMemo(() => {
     const seen = new Set<string>();
     return repairs
       .map(r => r.attending_worker_name)
@@ -92,15 +106,7 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
       .map(w => ({ value: w, label: w }));
   }, [repairs]);
 
-  const uniqueServiceTypes = useMemo(() => {
-    const seen = new Set<string>();
-    return repairs
-      .map(r => r.service_type)
-      .filter((s): s is string => !!s && !seen.has(s) && !!seen.add(s))
-      .map(s => ({ value: s, label: s }));
-  }, [repairs]);
-
-  const uniqueVehicleTypes = useMemo(() => {
+  const uniqueVehicleTypes = React.useMemo(() => {
     const seen = new Set<string>();
     return repairs
       .map(r => r.vehicle_type)
@@ -111,10 +117,11 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
   const handleReset = () => {
     setSearch("");
     setFilterStatus("");
-    setRecordStatus("Active");
     setFilterServiceType("");
     setFilterVehicleType("");
     setFilterWorker("");
+    setDateFrom("");
+    setDateTo("");
   };
 
   // ── Columns ────────────────────────────────────────────────────────────────
@@ -142,7 +149,11 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
       renderCell: (row) => (
         <div className="flex items-center gap-2 text-muted-foreground">
           <Calendar size={12} className="opacity-60" />
-          <span className="text-sm">{row.repair_date ? new Date(row.repair_date).toLocaleDateString() : 'N/A'}</span>
+          <span className="text-sm">
+            {row.repair_date
+              ? (() => { const d = new Date(row.repair_date); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; })()
+              : 'N/A'}
+          </span>
         </div>
       )
     },
@@ -200,7 +211,7 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
 
   const handleCreate = () => {
     if (can("create:repair")) router.push("/app/repairs/create");
-    else toast({ type: "error", title: "Access Denied", description: "You don't have permission to create pairs" });
+    else toast({ type: "error", title: "Access Denied", description: "You don't have permission to create repairs" });
   }
 
   const handleEdit = (row: Repair) => {
@@ -261,14 +272,14 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
         onReset={handleReset}
       >
         <FilterSelect
-          label="Status"
+          label="Repair Status"
           value={filterStatus}
           onChange={setFilterStatus}
           options={[
-            { value: "Pending", label: "Pending" },
-            { value: "Started", label: "Started" },
+            { value: "Pending",     label: "Pending" },
+            { value: "Started",     label: "Started" },
             { value: "In Progress", label: "In Progress" },
-            { value: "Completed", label: "Completed" },
+            { value: "Completed",   label: "Completed" },
           ]}
           placeholder="All Statuses"
         />
@@ -276,7 +287,7 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
           label="Service Type"
           value={filterServiceType}
           onChange={setFilterServiceType}
-          options={uniqueServiceTypes}
+          options={SERVICE_TYPE_OPTIONS}
           placeholder="All Services"
         />
         <FilterSelect
@@ -293,15 +304,25 @@ export default function RepairsClient({ initialData, currencyCode = 'INR' }: Rep
           options={uniqueWorkers}
           placeholder="Any Worker"
         />
-        <FilterSelect
-          label="Record Status"
-          value={recordStatus}
-          onChange={setRecordStatus}
-          options={[
-            { value: "Active", label: "Active" },
-            { value: "Inactive", label: "Archived" },
-          ]}
-        />
+        {/* Date Range */}
+        <div className="flex flex-col gap-2 min-w-[150px]">
+          <label className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 ml-1">From Date</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            className="w-full rounded-xl border border-border/60 bg-card px-3 py-2.5 text-[12px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300 focus:border-primary/50 focus:ring-4 focus:ring-primary/5 shadow-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-2 min-w-[150px]">
+          <label className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 ml-1">To Date</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            className="w-full rounded-xl border border-border/60 bg-card px-3 py-2.5 text-[12px] font-bold text-foreground outline-none cursor-pointer transition-all duration-300 focus:border-primary/50 focus:ring-4 focus:ring-primary/5 shadow-sm"
+          />
+        </div>
       </FilterBar>
 
       <WorkshopTable

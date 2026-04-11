@@ -183,11 +183,7 @@ export default function CreateUserPage() {
             value={form.role}
             onChange={(val) => setForm({ ...form, role: String(val) })}
           />
-          {!isSuperAdmin && (
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Shop owners can only assign: Worker or Shop Owner
-            </p>
-          )}
+         
         </div>
 
         <div className="flex flex-col gap-2">
@@ -221,14 +217,6 @@ export default function CreateUserPage() {
           </div>
         )}
 
-        <div className="md:col-span-2 p-5 rounded-xl bg-primary/5 border border-primary/10 mt-2 flex items-center gap-4">
-          <Shield size={18} className="shrink-0 text-primary/40" />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {isSuperAdmin
-              ? "You have full access to assign any role across all workshops."
-              : "New users will be automatically assigned to your workshop."}
-          </p>
-        </div>
       </div>
     </ModuleForm>
   );

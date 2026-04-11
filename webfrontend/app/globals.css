@@ -212,6 +212,9 @@
     }
     html {
         font-family: "Google Sans", sans-serif;
+        /* Permanently reserve scrollbar space so portals/dropdowns never cause a page shift */
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
     }
     /* Smooth dark/light mode transition */
     html:not(.no-transition) * {

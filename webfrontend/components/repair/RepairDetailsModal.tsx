@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { WorkshopModal } from "@/components/common/WorkshopModal";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
-import { downloadInvoicePDF } from "@/lib/pdfGenerator";
 import { billService } from "@/services/bill.service";
 import { VEHICLE_CONFIG } from "@/constants/vehicles";
 import { useCurrency } from "@/lib/currency";
@@ -51,26 +50,27 @@ export function RepairDetailsModal({
     }
   }, [isOpen, repair?.id, mode, repair]);
 
+  /** Download PDF via Puppeteer-rendered backend route — streams blob directly */
   const handleDownloadPdf = async () => {
     if (!repair?.id) return;
     setPdfLoading(true);
     try {
-      let shopData = {};
-      const sessionStr = localStorage.getItem("workshop_user");
-      if (sessionStr) {
-        try {
-          shopData = JSON.parse(sessionStr);
-        } catch (e) {}
-      }
-
-      downloadInvoicePDF({
-        repair,
-        bill: selectedBill,
-        shopData,
-        symbol
-      }, `receipt_${repair.id}.pdf`);
-    } catch (e) {
-      console.error("PDF download failed", e);
+      const token = localStorage.getItem('workshop_token');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/repairs/${repair.id}/pdf`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `invoice_${repair.vehicle_number || 'repair'}_${repair.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      alert('Failed to generate PDF. Please try again.');
     } finally {
       setPdfLoading(false);
     }
@@ -148,7 +148,7 @@ export function RepairDetailsModal({
             type="button" 
             className="w-full h-48 relative rounded-xl overflow-hidden border group/img"
           >
-            <Image src={repair.vehicle_image} alt="Vehicle" fill className="object-cover" />
+            <Image src={repair.vehicle_image} alt="Vehicle" fill className="object-cover" unoptimized />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center">
               <p className="text-[10px] text-white font-black uppercase tracking-[3px]">View Full Image</p>
             </div>
@@ -229,7 +229,9 @@ export function RepairDetailsModal({
               </p>
               <div className="p-4 rounded-lg bg-muted/30 border border-border">
                 <p className="text-sm font-medium text-foreground">
-                  {repair.repair_date ? new Date(repair.repair_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not scheduled'}
+                  {repair.repair_date
+                    ? (() => { const d = new Date(repair.repair_date); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; })()
+                    : 'Not scheduled'}
                 </p>
               </div>
             </div>

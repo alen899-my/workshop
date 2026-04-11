@@ -680,9 +680,9 @@ export default function CreateRepairClient({ workers }: { workers: User[] }) {
             <button 
               type="button"
               onClick={() => setPreviewImage(file ? URL.createObjectURL(file) : prefilledImage)}
-              className="relative w-full h-40 rounded-xl overflow-hidden border border-border mb-2 group/img"
+              className="relative w-full max-w-sm aspect-square rounded-xl overflow-hidden border border-border mb-2 group/img"
             >
-              <NextImage src={file ? URL.createObjectURL(file) : (prefilledImage || "")} alt="Vehicle" fill className="object-cover" />
+              <NextImage src={file ? URL.createObjectURL(file) : (prefilledImage || "")} alt="Vehicle" fill className="object-cover" unoptimized />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                  <p className="text-[10px] text-white font-bold uppercase tracking-widest">View Full Image</p>
               </div>

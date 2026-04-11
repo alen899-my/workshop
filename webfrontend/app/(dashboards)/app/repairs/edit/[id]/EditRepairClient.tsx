@@ -209,6 +209,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
     if (form.repair_date) formData.append("repair_date", form.repair_date);
     if (form.attending_worker_id) formData.append("attending_worker_id", form.attending_worker_id);
     formData.append("status", form.status);
+    formData.append("payment_status", form.payment_status); // Always send payment_status
 
     if (file) {
       formData.append("vehicle_image", file);
@@ -242,12 +243,13 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
           <div className="md:col-span-2 mb-4">
             <label className="text-[10px] font-bold tracking-[2px] text-muted-foreground/60 block mb-2 uppercase">Vehicle Image</label>
             {/* Full image display */}
-            <div className="relative w-full h-48 sm:h-60 rounded-xl overflow-hidden border border-border bg-muted/10 mb-2">
+            <div className="relative w-full max-w-sm aspect-square rounded-xl overflow-hidden border border-border bg-muted/10 mb-2">
               <NextImage
                 src={file ? URL.createObjectURL(file) : (existingImage || "")}
                 alt="Vehicle"
                 fill
                 className="object-cover"
+                unoptimized
               />
             </div>
             {/* View in new tab button */}
@@ -584,7 +586,7 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Repair Status</label>
+          <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground mb-1 block">Repair Status</label>
           <WorkshopInlineSelect
             value={form.status}
             onChange={(val) => setForm({ ...form, status: val })}
@@ -595,7 +597,27 @@ export default function EditRepairClient({ id, initialRepair, workers }: EditRep
               { value: "Completed", label: "Completed" },
             ]}
             wrapperClassName="w-full min-w-0"
-            className="w-full bg-background border border-border rounded-md text-sm px-4 h-[42px] font-semibold text-foreground normal-case tracking-normal"
+            className="w-full bg-background border border-border rounded-xl text-sm px-4 h-[48px] font-bold text-foreground normal-case tracking-normal"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground mb-1 block">Payment Status</label>
+          <WorkshopInlineSelect
+            value={form.payment_status}
+            onChange={(val) => setForm({ ...form, payment_status: val })}
+            options={[
+              { value: "Unpaid", label: "Unpaid" },
+              { value: "Paid", label: "Payment Received (Paid)" },
+            ]}
+            wrapperClassName="w-full min-w-0"
+            className={cn(
+              "w-full h-[48px] px-4 rounded-xl text-sm font-bold border transition-all",
+              form.payment_status === 'Paid'
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                : "bg-orange-500/10 text-orange-600 border-orange-500/20"
+            )}
+            activeClassName="bg-card text-foreground border-primary ring-4 ring-primary/5"
           />
         </div>
       </div>

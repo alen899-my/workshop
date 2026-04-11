@@ -20,7 +20,7 @@ import { WorkshopBadge } from "@/components/ui/WorkshopBadge";
 import { useRBAC } from "@/lib/rbac";
 
 export default function WorkshopDashboard() {
-  const { user } = useRBAC();
+  const { user, can, loading: rbacLoading } = useRBAC();
   const [stats, setStats] = useState({
     totalRepairs: 0,
     pendingRepairs: 0,
@@ -96,7 +96,7 @@ export default function WorkshopDashboard() {
     { label: "Invoices", href: "/app/invoices", icon: DollarSign },
   ];
 
-  if (loading) {
+  if (loading || rbacLoading) {
     return (
       <div className="flex flex-col gap-8 animate-pulse">
         <div className="flex flex-col gap-2">
@@ -111,6 +111,19 @@ export default function WorkshopDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 h-80 bg-muted rounded-xl" />
           <div className="h-80 bg-muted rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Permission Check ──
+  if (!can("dashboard:view")) {
+    return (
+      <div className="flex flex-col gap-8 pb-12">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            Dashboard
+          </h1>
         </div>
       </div>
     );

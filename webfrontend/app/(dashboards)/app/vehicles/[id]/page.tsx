@@ -281,6 +281,7 @@ export default function VehicleDetailPage() {
                                     alt={vehicle.model_name} 
                                     fill 
                                     className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                                    unoptimized
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-muted/50 to-muted/20">
