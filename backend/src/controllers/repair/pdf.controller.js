@@ -535,6 +535,7 @@ function buildHtml(repair, bill, curr, invNo) {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
   }
   .grand-label {
     font-size: 10px;
@@ -548,6 +549,8 @@ function buildHtml(repair, bill, curr, invNo) {
     font-weight: 900;
     color: #ffffff;
     letter-spacing: -0.02em;
+    word-break: break-all;
+    text-align: right;
   }
 
   /* ── PAYMENT STATUS BANNER ── */
@@ -558,6 +561,7 @@ function buildHtml(repair, bill, curr, invNo) {
     align-items: center;
     justify-content: space-between;
     margin-top: 16px;
+    gap: 12px;
   }
   .payment-banner.paid {
     background: var(--green-light);
@@ -579,6 +583,8 @@ function buildHtml(repair, bill, curr, invNo) {
   .payment-amount {
     font-size: 18px;
     font-weight: 900;
+    word-break: break-all;
+    text-align: right;
   }
   .payment-banner.paid   .payment-amount { color: var(--green); }
   .payment-banner.unpaid .payment-amount { color: var(--amber); }

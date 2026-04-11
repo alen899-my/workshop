@@ -368,14 +368,14 @@ export function RepairDetailsModal({
               </div>
             )}
 
-            <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border mt-2">
-              <div className="flex flex-col">
+            <div className="flex justify-between items-center text-sm font-bold text-primary pt-2 border-t border-border mt-2 gap-4">
+              <div className="flex flex-col shrink-0">
                 <span>Total Amount</span>
                 {(selectedBill.tax_total || 0) > 0 && (
                   <span className="text-[9px] font-medium text-emerald-600/80">Incl. {symbol}{Number(selectedBill.tax_total).toFixed(2)} tax</span>
                 )}
               </div>
-              <span className="font-mono">{symbol}{Number(selectedBill.total_amount || 0).toFixed(2)}</span>
+              <span className="font-mono break-all text-right">{symbol}{Number(selectedBill.total_amount || 0).toFixed(2)}</span>
             </div>
           </div>
         )}
