@@ -172,18 +172,19 @@ function WorkshopsContent() {
   useEffect(() => {
     const loc = searchParams.get("location") || "";
     const svc = searchParams.get("service") || "";
+    const ctr = searchParams.get("country") || "";
     const st = searchParams.get("state") || "";
     const ct = searchParams.get("city") || "";
-    if (loc || svc || st || ct) {
-      doSearch(loc, svc, st, ct);
+    if (loc || svc || ctr || st || ct) {
+      doSearch(loc, svc, ctr, st, ct);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function doSearch(loc: string, svc: string, state: string, city: string) {
+  async function doSearch(loc: string, svc: string, country: string, state: string, city: string) {
     setLoading(true);
     setSearched(false);
-    const res = await shopService.search(loc, svc, state, city);
+    const res = await shopService.search(loc, svc, country, state, city);
     setShops(res.success ? res.data : []);
     setLoading(false);
     setSearched(true);
@@ -206,7 +207,7 @@ function WorkshopsContent() {
     
     if (service.trim()) params.set("service", service.trim());
     router.replace(`/workshops?${params.toString()}`);
-    doSearch(location.trim() && !region.state && !region.city ? location.trim() : "", service, region.state, region.city);
+    doSearch(location.trim() && !region.state && !region.city ? location.trim() : "", service, region.country, region.state, region.city);
   };
 
   const filteredServices = predefinedServices.filter(s =>

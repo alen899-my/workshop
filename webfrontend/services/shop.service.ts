@@ -101,11 +101,12 @@ export const shopService = {
   },
 
   /** Public search — no auth needed (landing page finder) */
-  async search(location: string, service: string, state?: string, city?: string): Promise<{ success: boolean; data: Shop[]; error?: string }> {
+  async search(location: string, service: string, country?: string, state?: string, city?: string): Promise<{ success: boolean; data: Shop[]; error?: string }> {
     try {
       const params = new URLSearchParams({ status: "Active" });
       if (location.trim()) params.set("location", location.trim());
       if (service.trim()) params.set("service", service.trim());
+      if (country) params.set("country", country);
       if (state) params.set("state", state);
       if (city) params.set("city", city);
       const res = await fetch(`${API_URL}/public?${params.toString()}`, { cache: "no-store" });

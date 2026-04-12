@@ -3,7 +3,7 @@ const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
 
 // @desc    Get all shops — Global Oversight for super-admin / admin, or public search
 exports.getShops = async (req, res) => {
-  const { status, location, service, state, city } = req.query;
+  const { status, location, service, country, state, city } = req.query;
   const statusFilter = status === 'Inactive' ? 'deleted_at IS NOT NULL' : 'deleted_at IS NULL';
 
   // Public search — if no user attached (no auth middleware on this public route variant)
@@ -13,7 +13,11 @@ exports.getShops = async (req, res) => {
       const conditions = [statusFilter];
       const scoreExprs = [];
 
-      // If explicit city/state provided (from WorkshopRegionSelects)
+      // If explicit region provided (from WorkshopRegionSelects)
+      if (country) {
+        params.push(country);
+        conditions.push(`country ILIKE $${params.length}`);
+      }
       if (state) {
         params.push(state);
         conditions.push(`state ILIKE $${params.length}`);
