@@ -1,4 +1,6 @@
 "use client";
+// NOTE: page-level metadata is injected via the parent layout for client pages.
+// SEO for this route is handled in app/workshops/metadata.ts
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";

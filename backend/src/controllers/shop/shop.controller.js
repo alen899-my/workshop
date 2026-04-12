@@ -16,11 +16,11 @@ exports.getShops = async (req, res) => {
       // If explicit city/state provided (from WorkshopRegionSelects)
       if (state) {
         params.push(state);
-        conditions.push(`state = $${params.length}`);
+        conditions.push(`state ILIKE $${params.length}`);
       }
       if (city) {
         params.push(city);
-        conditions.push(`city = $${params.length}`);
+        conditions.push(`city ILIKE $${params.length}`);
       }
 
       // Generic location search text
