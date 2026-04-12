@@ -3,7 +3,7 @@ import "@/app/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WorkshopToastProvider } from "@/components/ui/WorkshopToast";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 const SITE_NAME = "Repairo";
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     "mechanic software",
     "car service management",
     "Repairo",
-    "repairo.in",
+    "repairo-garage.vercel.app",
     "workshop billing software",
     "GST invoice garage",
     "auto workshop CRM India",
@@ -100,7 +100,7 @@ export const metadata: Metadata = {
 
   // ── Verification (add Search Console ID when live) ──
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "google05d4ee03af8c52a3",
     // yandex: "...",
     // bing: "...",
   },

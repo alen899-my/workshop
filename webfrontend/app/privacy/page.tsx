@@ -2,7 +2,7 @@ import { NavbarWhite } from "@/layout/Navbar";
 import Link from "next/link";
 import { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Repairo Garage Management Software",
@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground leading-relaxed">
               Repairo ("we", "our", or "us") is a vehicle repair management platform operated for garages and their customers. 
               This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data 
-              when you use our platform at <span className="text-primary font-mono">repairo.in</span> or via our associated workshops directory.
+              when you use our platform at <span className="text-primary font-mono">repairo-garage.vercel.app</span> or via our associated workshops directory.
             </p>
           </section>
 

@@ -1,7 +1,7 @@
 // Metadata for the /workshops route (must be in a separate file since page.tsx is "use client")
 import { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "Find a Workshop Near You — Garage Finder | Repairo",

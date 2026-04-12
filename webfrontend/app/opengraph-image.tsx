@@ -98,7 +98,7 @@ export default function OGImage() {
         >
           <span style={{ color: "#0d9488", fontSize: 20, fontWeight: 800 }}>⚙</span>
           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 18, fontWeight: 700, letterSpacing: "0.05em" }}>
-            repairo.in
+            repairo-garage.vercel.app
           </span>
         </div>
 

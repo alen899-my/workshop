@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Check, Zap, Star, MessageCircle } from "lucide-react";
 import { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "Pricing — \u20b92,999/month | Repairo Garage Software",

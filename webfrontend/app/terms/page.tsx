@@ -2,7 +2,7 @@ import { NavbarWhite } from "@/layout/Navbar";
 import Link from "next/link";
 import { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions | Repairo Garage Management Software",

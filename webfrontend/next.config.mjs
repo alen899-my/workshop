@@ -70,8 +70,8 @@ const nextConfig = {
       // Redirect bare www to non-www (canonical domain)
       {
         source: "/:path*",
-        has: [{ type: "host", value: "www.repairo.in" }],
-        destination: "https://repairo.in/:path*",
+        has: [{ type: "host", value: "www.repairo-garage.vercel.app" }],
+        destination: "https://repairo-garage.vercel.app/:path*",
         permanent: true,
       },
       // Redirect old /workshop (singular) to /workshops

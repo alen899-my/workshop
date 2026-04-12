@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import HomePageContent from "@/components/pages/HomePageContent";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "Repairo — #1 Garage Management Software | Kerala & India",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     "GST invoice garage software",
     "find workshop near me Kerala",
     "car service management software",
-    "repairo.in",
+    "repairo-garage.vercel.app",
     "garage software free trial",
     "digital workshop management",
     "technician management system",

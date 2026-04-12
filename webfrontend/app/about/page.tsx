@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Wrench, Users, Globe, ShieldCheck, Zap, BarChart3, Car, Clock, ArrowRight } from "lucide-react";
 import { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo.in";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 
 export const metadata: Metadata = {
   title: "About Repairo — Garage Management Platform Built for Kerala",
