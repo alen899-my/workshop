@@ -5,7 +5,7 @@ import { ModuleLayout } from "@/components/layout/ModuleLayout";
 import { WorkshopTable, ColumnDef } from "@/components/common/Workshoptable";
 import { FilterBar, FilterSelect } from "@/components/common/FilterBar";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
-import { Building2, Edit, Trash2, MapPin, User as UserIcon, Eye } from "lucide-react";
+import { Building2, Edit, Trash2, MapPin, User as UserIcon, Eye, Clock, Wrench } from "lucide-react";
 import { Shop, shopService } from "@/services/shop.service";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,16 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 interface ShopsClientProps {
   initialData: Shop[];
 }
+
+const defaultHours = {
+  monday: { open: "09:00", close: "18:00", closed: false },
+  tuesday: { open: "09:00", close: "18:00", closed: false },
+  wednesday: { open: "09:00", close: "18:00", closed: false },
+  thursday: { open: "09:00", close: "18:00", closed: false },
+  friday: { open: "09:00", close: "18:00", closed: false },
+  saturday: { open: "09:00", close: "18:00", closed: false },
+  sunday: { open: "09:00", close: "18:00", closed: true },
+};
 
 export default function ShopsClient({ initialData }: ShopsClientProps) {
   const router = useRouter();
@@ -209,10 +219,20 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
       >
         {selectedShop && (
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Shop Name</p>
-                <p className="text-sm font-bold text-foreground">{selectedShop.name}</p>
+            {/* Header Banner & Avatar */}
+            <div className="flex items-center gap-4 bg-muted/10 border border-border/50 rounded-xl p-4">
+              <div className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-full border-2 border-background ring-1 ring-border/50 bg-muted overflow-hidden flex items-center justify-center shadow-sm">
+                {selectedShop.shop_image ? (
+                  <img src={selectedShop.shop_image} alt={selectedShop.name} className="h-full w-full object-cover" />
+                ) : (
+                  <Building2 size={24} className="text-muted-foreground/30" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="text-lg md:text-xl font-black tracking-tight text-foreground">{selectedShop.name || "Unnamed Shop"}</p>
+                <span className="text-[10px] md:text-xs font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                  <MapPin size={12} /> {selectedShop.location || "No Location"}
+                </span>
               </div>
             </div>
 
@@ -234,6 +254,50 @@ export default function ShopsClient({ initialData }: ShopsClientProps) {
                 <p className="text-sm font-medium">
                   {new Date(selectedShop.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/50 pt-4">
+              {/* Operating Hours View */}
+              <div className="flex flex-col gap-3">
+                 <div className="flex items-center gap-2 mb-1">
+                   <Clock size={14} className="text-primary"/> 
+                   <h3 className="font-bold text-foreground text-[10px] uppercase tracking-widest">Operating Hours</h3>
+                 </div>
+                 <div className="flex flex-col gap-1.5 bg-muted/20 p-3 rounded-xl border border-border/50">
+                   {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                     const dayData = selectedShop.operating_hours?.[day] || defaultHours[day as keyof typeof defaultHours];
+                     return (
+                       <div key={day} className="flex justify-between items-center py-1 border-b border-border/50 last:border-0">
+                         <span className="capitalize text-muted-foreground text-xs font-medium">{day}</span>
+                         <span className="text-[11px] font-semibold text-foreground bg-background px-2 py-0.5 rounded shadow-sm border border-border/50">
+                           {dayData.closed ? "Closed" : `${dayData.open} - ${dayData.close}`}
+                         </span>
+                       </div>
+                     )
+                   })}
+                 </div>
+              </div>
+
+              {/* Services Offered View */}
+              <div className="flex flex-col gap-3">
+                 <div className="flex items-center gap-2 mb-1">
+                   <Wrench size={14} className="text-primary"/> 
+                   <h3 className="font-bold text-foreground text-[10px] uppercase tracking-widest">Services Offered</h3>
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                   {selectedShop.services_offered && selectedShop.services_offered.length > 0 ? (
+                      selectedShop.services_offered.map((service, idx) => (
+                        <span key={idx} className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-semibold shadow-sm">
+                          {service}
+                        </span>
+                      ))
+                   ) : (
+                      <div className="p-3 rounded-xl bg-muted/20 border border-border/50 w-full text-center">
+                        <span className="text-muted-foreground text-xs">No specific services listed.</span>
+                      </div>
+                   )}
+                 </div>
               </div>
             </div>
           </div>

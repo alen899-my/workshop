@@ -21,6 +21,11 @@ export interface Shop {
   country?: string;
   currency?: string;
   status?: string;
+  latitude?: number;
+  longitude?: number;
+  place_id?: string;
+  operating_hours?: any;
+  services_offered?: string[];
   created_at: string;
 }
 
@@ -92,6 +97,21 @@ export const shopService = {
       return await res.json();
     } catch (error) {
       return { success: false, error: "Deletion failed" };
+    }
+  },
+
+  /** Public search — no auth needed (landing page finder) */
+  async search(location: string, service: string, state?: string, city?: string): Promise<{ success: boolean; data: Shop[]; error?: string }> {
+    try {
+      const params = new URLSearchParams({ status: "Active" });
+      if (location.trim()) params.set("location", location.trim());
+      if (service.trim()) params.set("service", service.trim());
+      if (state) params.set("state", state);
+      if (city) params.set("city", city);
+      const res = await fetch(`${API_URL}/public?${params.toString()}`, { cache: "no-store" });
+      return await res.json();
+    } catch {
+      return { success: false, data: [], error: "Search failed" };
     }
   }
 };

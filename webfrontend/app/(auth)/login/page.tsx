@@ -9,8 +9,8 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { permissionService } from "@/services/permission.service";
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 function AuthFormWrapper({
   badge,
@@ -26,8 +26,8 @@ function AuthFormWrapper({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[440px] mx-auto">
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-6 w-full">
+      <div className="flex flex-col gap-2">
         {badge && (
           <div className="flex items-center gap-3 mb-1">
             <span className="w-6 h-px bg-primary" />
@@ -44,12 +44,10 @@ function AuthFormWrapper({
         </p>
       </div>
 
-
-
       <div className="w-full">{children}</div>
 
       {footer && (
-        <div className="text-center text-sm font-medium text-muted-foreground mt-2">
+        <div className="text-center text-sm font-medium text-muted-foreground">
           {footer}
         </div>
       )}
@@ -71,7 +69,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Redirect if already authenticated
   useEffect(() => {
     const token = localStorage.getItem("workshop_token");
     if (token) {
@@ -104,7 +101,7 @@ export default function LoginPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
       });
       const data = await res.json();
 
@@ -116,18 +113,15 @@ export default function LoginPage() {
       localStorage.setItem("workshop_token", data.token);
       localStorage.setItem("workshop_user", JSON.stringify(data.data));
 
-      // Fetch permissions for middleware guarding
       const permsRes = await permissionService.getRolePermissions(data.data.role);
-      const perms = permsRes.success ? permsRes.data?.join(',') : "";
+      const perms = permsRes.success ? permsRes.data?.join(",") : "";
 
-      // Set cookies for middleware redirection and dynamic permission-based protection
       document.cookie = `workshop_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `workshop_role=${data.data.role}; path=/; max-age=604800; SameSite=Lax`;
       document.cookie = `workshop_permissions=${perms}; path=/; max-age=604800; SameSite=Lax`;
 
       toast({ type: "success", title: "Success", description: "" });
       router.push("/app");
-
     } catch (error) {
       toast({ type: "error", title: "Network Error", description: "Failed to connect to the server." });
     } finally {
@@ -136,8 +130,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center font-mono sm:p-8">
-      {/* ── BACKGROUND: Full screen image ── */}
+    <div className="min-h-screen relative flex items-center justify-center font-mono p-0 sm:p-10">
+      {/* Background image (desktop only) */}
       <div className="absolute inset-0 z-0 hidden sm:block">
         <Image
           src="/images/auth/auth.jpg"
@@ -147,87 +141,107 @@ export default function LoginPage() {
           priority
           sizes="100vw"
         />
-        {/* Background Image Only */}
       </div>
 
-      {/* ── CENTERED: Form panel ── */}
-      <div className="relative z-10 w-full sm:max-w-[500px]">
-        {/* Card Container */}
-        <div className="bg-background sm:bg-card border-0 sm:border sm:border-border shadow-none rounded-none sm:rounded-2xl p-6 sm:p-10 relative min-h-screen sm:min-h-0 flex flex-col justify-center">
-          {/* Logo inside card */}
-          <div className="flex justify-center w-full mb-8">
-            <span className="font-sans font-bold text-3xl sm:text-4xl tracking-tight text-primary text-center">
-              REPAIRO
-            </span>
+      {/* Card */}
+      <div className="relative z-10 w-full sm:max-w-[520px]">
+        <div className="
+          bg-background sm:bg-card
+          border-0 sm:border sm:border-border
+          shadow-none sm:shadow-2xl
+          rounded-none sm:rounded-2xl
+          min-h-screen sm:min-h-0
+          flex flex-col items-center justify-center
+          px-7 py-14
+          sm:px-14 sm:py-14
+        ">
+
+          {/* Logo — centered, tall */}
+          <div className="w-full flex justify-center mb-7">
+            <img
+              src="/images/logos/logo.png"
+              alt="Repairo Logo"
+              className="h-[120px] sm:h-[150px] w-auto object-contain"
+            />
           </div>
 
-          <AuthFormWrapper
-            badge="Welcome back"
-            title="Log In"
-            subtitle="Access your active job cards and invoices."
-            footer={
-              <span className="text-muted-foreground/80">
-                Don&apos;t have an account?{" "}
-                <Link
-                  href="/signup"
-                  className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+          {/* Form */}
+          <div className="w-full">
+            <AuthFormWrapper
+              badge="Welcome back"
+              title="Log In"
+              subtitle="Access your active job cards and invoices."
+              footer={
+                <span className="text-muted-foreground/80">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href="/signup"
+                    className="font-bold text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
+                  >
+                    Register your shop
+                  </Link>
+                </span>
+              }
+            >
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+
+                {/* Phone */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-normal text-muted-foreground ml-0.5">
+                    Phone Number
+                  </label>
+                  <PhoneInput
+                    country="in"
+                    value={form.phone}
+                    onChange={(phone) => setForm({ ...form, phone: `+${phone}` })}
+                    containerClass="!w-full"
+                    inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
+                    buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"
+                    dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
+                    searchClass="!bg-muted !border !border-border !text-foreground"
+                  />
+                  {errors.phone && (
+                    <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div className="flex flex-col gap-1.5 items-end">
+                  <AuthFormField
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    error={errors.password}
+                    autoComplete="current-password"
+                  />
+                  <Link
+                    href="/forgot-password"
+                    className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-colors mt-1"
+                    tabIndex={-1}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <WorkshopButton
+                  type="submit"
+                  variant="primary"
+                  size="xl"
+                  fullWidth
+                  loading={loading}
+                  className="mt-2 h-[52px] rounded-xl shadow-none"
                 >
-                  Register your shop
-                </Link>
-              </span>
-            }
-          >
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-normal text-muted-foreground ml-0.5">Phone Number</label>
-                <PhoneInput
-                  country="in"
-                  value={form.phone}
-                  onChange={(phone) => setForm({ ...form, phone: `+${phone}` })}
-                  containerClass="!w-full"
-                  inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
-                  buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"
-                  dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-xl"
-                  searchClass="!bg-muted !border !border-border !text-foreground"
-                />
-                {errors.phone && <span className="text-[10px] text-destructive font-bold ml-1">{errors.phone}</span>}
-              </div>
+                  Sign In
+                </WorkshopButton>
 
-              <div className="flex flex-col gap-1.5 items-end">
-                <AuthFormField
-                  label="Password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  error={errors.password}
-                  autoComplete="current-password"
-                />
-                <Link
-                  href="/forgot-password"
-                  className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-colors mt-1"
-                  tabIndex={-1}
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              </form>
+            </AuthFormWrapper>
+          </div>
 
-              <WorkshopButton
-                type="submit"
-                variant="primary"
-                size="xl"
-                fullWidth
-                loading={loading}
-                className="mt-2 h-[52px] rounded-xl shadow-none"
-              >
-                Sign In
-              </WorkshopButton>
-
-            </form>
-          </AuthFormWrapper>
         </div>
       </div>
     </div>
-
   );
 }

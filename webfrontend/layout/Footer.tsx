@@ -41,9 +41,7 @@ export function Footer() {
           {/* Brand & Mission */}
           <div className="lg:col-span-5 flex flex-col items-start gap-6">
             <Link href="/" className="inline-block">
-               <span className="font-mono text-2xl font-black tracking-[0.2em] text-primary uppercase">
-                REPAIRO
-              </span>
+               <img src="/images/logos/logo.png" alt="Repairo Logo" className="h-[40px] w-auto object-contain" />
             </Link>
             <p className="font-sans text-muted-foreground text-base max-w-sm leading-relaxed">
               The #1 vehicle repair management software built for modern garages in Kerala. 

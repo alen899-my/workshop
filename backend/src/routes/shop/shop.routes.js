@@ -4,6 +4,9 @@ const shopController = require('../../controllers/shop/shop.controller');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { authorize } = require('../../middleware/rbac.middleware');
 
+// @route   GET /api/shops/public — public search, no auth required
+router.get('/public', shopController.getShops);
+
 // @route   GET /api/shops
 router.get('/', authenticate, authorize('view:shops'), shopController.getShops);
 

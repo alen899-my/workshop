@@ -17,6 +17,8 @@ const createShopTable = async () => {
       latitude DECIMAL(10, 8),
       longitude DECIMAL(11, 8),
       place_id VARCHAR(255),
+      operating_hours JSONB DEFAULT '{}'::jsonb,
+      services_offered JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;

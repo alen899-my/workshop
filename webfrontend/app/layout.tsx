@@ -3,6 +3,7 @@ import "@/app/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "WorkshopPro — Vehicle Repair Management",
   description:
     "End-to-end vehicle repair management system for auto workshops. Job cards, invoicing, inventory, and technician tracking — built for Kerala.",

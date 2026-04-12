@@ -215,6 +215,7 @@
         /* Permanently reserve scrollbar space so portals/dropdowns never cause a page shift */
         scrollbar-gutter: stable;
         overflow-y: scroll;
+        scroll-behavior: smooth;
     }
     /* Smooth dark/light mode transition */
     html:not(.no-transition) * {

@@ -57,9 +57,7 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 w-full sm:max-w-[480px]">
         <div className="bg-background sm:bg-white dark:sm:bg-card border-0 sm:border sm:border-border/50 shadow-none sm:shadow-2xl rounded-none sm:rounded-3xl p-6 py-12 sm:p-10 min-h-screen sm:min-h-0 flex flex-col justify-center">
           <div className="flex justify-center w-full mb-8 lg:mb-10">
-            <span className="font-mono font-black text-3xl sm:text-4xl tracking-widest text-primary uppercase text-center">
-              REPAIRO
-            </span>
+            <img src="/images/logos/logo.png" alt="Repairo Logo" className="h-[48px] sm:h-[56px] w-auto object-contain" />
           </div>
 
           <div className="flex flex-col gap-6 w-full">

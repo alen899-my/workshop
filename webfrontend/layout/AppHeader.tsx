@@ -86,9 +86,7 @@ export function AppHeader() {
 
       {/* ── Mobile: centered logo ── */}
       <div className="flex-1 flex justify-center md:hidden">
-        <span className="font-mono text-base font-black tracking-[0.18em] text-primary uppercase">
-          REPAIRO
-        </span>
+        <img src="/images/logos/logo.png" alt="Repairo Logo" className="h-[100px] w-auto object-contain" />
       </div>
 
       {/* ── Desktop left: date & time ── */}

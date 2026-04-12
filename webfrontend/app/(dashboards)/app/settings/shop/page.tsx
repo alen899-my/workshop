@@ -5,7 +5,7 @@ import { useRBAC } from "@/lib/rbac";
 import { shopService, Shop } from "@/services/shop.service";
 import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { useToast } from "@/components/ui/WorkshopToast";
-import { Building2, MapPin, Phone, User as UserIcon, Globe, Lock, Edit2, X } from "lucide-react";
+import { Building2, MapPin, Phone, User as UserIcon, Globe, Lock, Edit2, X, Clock, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { ModuleForm } from "@/components/forms/ModuleForm";
@@ -15,8 +15,26 @@ import countryToCurrency from 'country-to-currency';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { WorkshopImageUpload } from "@/components/ui/WorkshopImageUpload";
+import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
 
 const SHOP_PERMISSION = "can:see:the:shop:details:and:can:edit";
+
+const defaultHours = {
+  monday: { open: "09:00", close: "18:00", closed: false },
+  tuesday: { open: "09:00", close: "18:00", closed: false },
+  wednesday: { open: "09:00", close: "18:00", closed: false },
+  thursday: { open: "09:00", close: "18:00", closed: false },
+  friday: { open: "09:00", close: "18:00", closed: false },
+  saturday: { open: "09:00", close: "18:00", closed: false },
+  sunday: { open: "09:00", close: "18:00", closed: true },
+};
+
+const predefinedServices = [
+  "General Servicing", "Oil Change", "Brake Repair", 
+  "Engine Diagnostics", "Tire Replacement & Balancing", 
+  "Wheel Alignment", "AC Service & Repair", 
+  "Battery & Electrical", "Denting & Painting", "Car Wash & Detailing", "Transmission Repair"
+];
 
 export default function ShopSettingsPage() {
   const router = useRouter();
@@ -29,6 +47,9 @@ export default function ShopSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
+  const [customService, setCustomService] = useState("");
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  
   const [form, setForm] = useState({
     name: "",
     owner_name: "",
@@ -38,7 +59,9 @@ export default function ShopSettingsPage() {
     city: "",
     address: "",
     currency: "INR",
-    shop_image: ""
+    shop_image: "",
+    operating_hours: defaultHours,
+    services_offered: [] as string[]
   });
   const [shopImageFile, setShopImageFile] = useState<File | null>(null);
 
@@ -60,7 +83,9 @@ export default function ShopSettingsPage() {
           city: res.data.city || res.data.location || "",
           address: res.data.address || "",
           currency: res.data.currency || "INR",
-          shop_image: res.data.shop_image || ""
+          shop_image: res.data.shop_image || "",
+          operating_hours: res.data.operating_hours || defaultHours,
+          services_offered: res.data.services_offered || []
         });
       }
       setLoading(false);
@@ -114,6 +139,8 @@ export default function ShopSettingsPage() {
     payload.append("city", form.city);
     payload.append("address", form.address);
     payload.append("currency", form.currency);
+    payload.append("operating_hours", JSON.stringify(form.operating_hours));
+    payload.append("services_offered", JSON.stringify(form.services_offered));
 
     if (shopImageFile) {
       payload.append("shop_image", shopImageFile);
@@ -144,7 +171,9 @@ export default function ShopSettingsPage() {
       city: shop.city || shop.location || "",
       address: shop.address || "",
       currency: shop.currency || "INR",
-      shop_image: shop.shop_image || ""
+      shop_image: shop.shop_image || "",
+      operating_hours: shop.operating_hours || defaultHours,
+      services_offered: shop.services_offered || []
     });
     setShopImageFile(null);
     setIsEditing(false);
@@ -221,6 +250,50 @@ export default function ShopSettingsPage() {
                 <p className="text-xs md:text-sm text-muted-foreground">{form.address || "No detailed address provided."}</p>
               </div>
             </div>
+          </div>
+
+          <div className="p-5 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 border-t border-border/50">
+             {/* Operating Hours View */}
+             <div className="flex flex-col gap-4">
+                 <div className="flex items-center gap-2 mb-1">
+                   <Clock size={16} className="text-primary"/> 
+                   <h3 className="font-bold text-foreground text-sm uppercase tracking-widest">Operating Hours</h3>
+                 </div>
+                 <div className="flex flex-col gap-2 bg-muted/20 p-4 rounded-xl border border-border/50">
+                   {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                     const dayData = shop.operating_hours?.[day] || defaultHours[day as keyof typeof defaultHours];
+                     return (
+                       <div key={day} className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0">
+                         <span className="capitalize text-muted-foreground text-sm font-medium">{day}</span>
+                         <span className="text-sm font-semibold text-foreground bg-background px-2 py-0.5 rounded shadow-sm border border-border/50">
+                           {dayData.closed ? "Closed" : `${dayData.open} - ${dayData.close}`}
+                         </span>
+                       </div>
+                     )
+                   })}
+                 </div>
+             </div>
+             
+             {/* Services Offered View */}
+             <div className="flex flex-col gap-4">
+                 <div className="flex items-center gap-2 mb-1">
+                   <Wrench size={16} className="text-primary"/> 
+                   <h3 className="font-bold text-foreground text-sm uppercase tracking-widest">Services Offered</h3>
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                   {shop.services_offered && shop.services_offered.length > 0 ? (
+                      shop.services_offered.map((service, idx) => (
+                        <span key={idx} className="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-semibold shadow-sm">
+                          {service}
+                        </span>
+                      ))
+                   ) : (
+                      <div className="p-4 rounded-xl bg-muted/20 border border-border/50 w-full text-center">
+                        <span className="text-muted-foreground text-sm">No specific services listed.</span>
+                      </div>
+                   )}
+                 </div>
+             </div>
           </div>
         </div>
       </div>
@@ -317,6 +390,126 @@ export default function ShopSettingsPage() {
               dropdownClass="!bg-card !border !border-border !text-foreground !shadow-xl !rounded-md"
               searchClass="!bg-muted !border !border-border !text-foreground"
             />
+          </div>
+
+          {/* New Operating Hours module */}
+          <div className="md:col-span-2 pt-6 border-t border-border mt-2">
+            <h3 className="font-bold text-sm tracking-widest uppercase mb-4 text-foreground">Operating Hours</h3>
+            <div className="flex flex-col gap-3 max-w-lg">
+              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                const dayData = (form.operating_hours as Record<string, {open: string, close: string, closed: boolean}>)?.[day] || defaultHours[day as keyof typeof defaultHours];
+                return (
+                  <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-28 font-semibold capitalize text-sm text-muted-foreground tracking-wide">{day}</div>
+                    <div className="flex items-center gap-4 flex-1">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                        <input type="checkbox" checked={dayData.closed} onChange={(e) => {
+                           setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, closed: e.target.checked}}}))
+                        }} className="rounded text-primary focus:ring-primary h-4 w-4 border-border bg-background" />
+                        <span className={dayData.closed ? "text-destructive font-semibold" : "text-muted-foreground"}>Closed</span>
+                      </label>
+                      {!dayData.closed && (
+                        <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                          <input type="time" value={dayData.open} onChange={(e) => {
+                             setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, open: e.target.value}}}))
+                          }} className="h-9 px-3 text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" />
+                          <span className="text-muted-foreground text-xs font-medium">to</span>
+                          <input type="time" value={dayData.close} onChange={(e) => {
+                             setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, close: e.target.value}}}))
+                          }} className="h-9 px-3 text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* New Services Offered module */}
+          <div className="md:col-span-2 pt-6 border-t border-border mt-2">
+            <h3 className="font-bold text-sm tracking-widest uppercase mb-4 text-foreground">Services Offered</h3>
+            <p className="text-xs text-muted-foreground mb-4">Select all services provided by your shop. This helps standardize job creation.</p>
+            
+            <div className="flex flex-col gap-4 max-w-2xl">
+              {/* Selected Services Tags */}
+              <div className="flex flex-wrap gap-2.5 text-sm min-h-[50px] p-4 bg-muted/20 border border-border/50 rounded-xl">
+                 {form.services_offered?.length > 0 ? form.services_offered.map(service => (
+                    <span key={service} className="pl-3 pr-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                      {service}
+                      <button 
+                        type="button" 
+                        onClick={() => setForm(f => ({...f, services_offered: f.services_offered.filter(s => s !== service)}))}
+                        className="p-1 hover:bg-black/20 rounded transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                 )) : (
+                    <span className="text-muted-foreground text-sm flex items-center font-medium">No services added yet.</span>
+                 )}
+              </div>
+
+              {/* Add Service Controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                 <WorkshopInlineSelect
+                   value=""
+                   onChange={(val) => {
+                     if (val === "" || val === "placeholder") return;
+                     if (val === "Other") {
+                       setShowOtherInput(true);
+                     } else {
+                       setShowOtherInput(false);
+                       if (val && !form.services_offered?.includes(val)) {
+                         setForm(f => ({...f, services_offered: [...f.services_offered, val]}));
+                       }
+                     }
+                   }}
+                   options={[
+                     { value: "placeholder", label: "Select a service..." },
+                     ...predefinedServices
+                        .filter(s => !form.services_offered?.includes(s))
+                        .map(s => ({ value: s, label: s })),
+                     { value: "Other", label: "Other (Custom Service)..." }
+                   ]}
+                   className="h-10 px-3 text-sm rounded-md bg-background border border-border hover:bg-muted text-foreground transition-all !normal-case !tracking-normal !font-medium"
+                   wrapperClassName="flex-1 min-w-[220px]"
+                 />
+
+                 {showOtherInput && (
+                   <div className="flex gap-2 flex-1 animate-in fade-in slide-in-from-left-2 duration-300">
+                     <input 
+                       type="text" 
+                       placeholder="Type a custom service name..."
+                       value={customService}
+                       onChange={(e) => setCustomService(e.target.value)}
+                       onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (customService.trim() && !form.services_offered?.includes(customService.trim())) {
+                               setForm(f => ({...f, services_offered: [...f.services_offered, customService.trim()]}));
+                               setCustomService("");
+                            }
+                          }
+                       }}
+                       className="h-10 px-3 text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all flex-1"
+                     />
+                     <button 
+                       type="button"
+                       onClick={() => {
+                          if (customService.trim() && !form.services_offered?.includes(customService.trim())) {
+                             setForm(f => ({...f, services_offered: [...f.services_offered, customService.trim()]}));
+                             setCustomService("");
+                          }
+                       }}
+                       className="px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 text-sm font-semibold rounded-md border border-border transition-colors"
+                     >
+                       Add
+                     </button>
+                   </div>
+                 )}
+              </div>
+            </div>
           </div>
         </div>
       </ModuleForm>

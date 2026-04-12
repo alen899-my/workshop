@@ -55,14 +55,14 @@ export function WorkshopModal({
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-2 sm:p-4 outline-none focus:outline-none">
       {/* Premium Backdrop with Blur */}
       <div
-        className="fixed inset-0 bg-background/40 backdrop-blur-[2px] cursor-pointer z-[-1] transition-all duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-background/40 backdrop-blur-[2px] cursor-pointer z-[-1]"
         onClick={onClose}
       />
 
       {/* Modal Content container */}
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-none border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] pointer-events-auto flex flex-col transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4",
+          "relative w-full overflow-hidden rounded-none border border-border bg-card shadow-[0_32px_128px_-16px_rgba(0,0,0,0.15)] pointer-events-auto flex flex-col",
           "h-auto max-h-[calc(100dvh-2rem)]", // Maximum height on small screens
           widthClasses[width]
         )}

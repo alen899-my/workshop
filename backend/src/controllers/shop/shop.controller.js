@@ -1,15 +1,90 @@
 const db = require('../../config/db');
 const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
 
-// @desc    Get all shops — Global Oversight for super-admin / admin
+// @desc    Get all shops — Global Oversight for super-admin / admin, or public search
 exports.getShops = async (req, res) => {
+  const { status, location, service, state, city } = req.query;
+  const statusFilter = status === 'Inactive' ? 'deleted_at IS NOT NULL' : 'deleted_at IS NULL';
+
+  // Public search — if no user attached (no auth middleware on this public route variant)
+  if (!req.user) {
+    try {
+      const params = [];
+      const conditions = [statusFilter];
+      const scoreExprs = [];
+
+      // If explicit city/state provided (from WorkshopRegionSelects)
+      if (state) {
+        params.push(state);
+        conditions.push(`state = $${params.length}`);
+      }
+      if (city) {
+        params.push(city);
+        conditions.push(`city = $${params.length}`);
+      }
+
+      // Generic location search text
+      if (location) {
+        const locIdx = () => { params.push(location.toLowerCase()); return params.length; };
+        const locWild = () => { params.push(`%${location}%`); return params.length; };
+
+        const e1 = locIdx(); const e2 = locWild(); const e3 = locWild();
+        const e4 = locWild(); const e5 = locWild(); const e6 = locWild();
+
+        conditions.push(`(
+          LOWER(city) = $${e1} OR
+          city    ILIKE $${e2} OR
+          state   ILIKE $${e3} OR
+          location ILIKE $${e4} OR
+          address  ILIKE $${e5} OR
+          name     ILIKE $${e6}
+        )`);
+
+        const s1 = locIdx(); const s2 = locWild(); const s3 = locWild();
+        const s4 = locWild(); const s5 = locWild(); const s6 = locWild();
+
+        scoreExprs.push(`
+          CASE WHEN LOWER(city) = $${s1}     THEN 100 ELSE 0 END +
+          CASE WHEN city    ILIKE $${s2}     THEN  60 ELSE 0 END +
+          CASE WHEN state   ILIKE $${s3}     THEN  40 ELSE 0 END +
+          CASE WHEN location ILIKE $${s4}    THEN  30 ELSE 0 END +
+          CASE WHEN address  ILIKE $${s5}    THEN  30 ELSE 0 END +
+          CASE WHEN name     ILIKE $${s6}    THEN  20 ELSE 0 END
+        `);
+      }
+
+      if (service) {
+        const sWild = () => { params.push(`%${service}%`); return params.length; };
+        const f1 = sWild(); const s1 = sWild();
+
+        conditions.push(`services_offered::text ILIKE $${f1}`);
+        scoreExprs.push(`CASE WHEN services_offered::text ILIKE $${s1} THEN 50 ELSE 0 END`);
+      }
+
+      const scoreClause = scoreExprs.length
+        ? `(${scoreExprs.join(' + ')}) AS relevance_score`
+        : `0 AS relevance_score`;
+
+      const whereClause = conditions.join(' AND ');
+      const query = `
+        SELECT *, ${scoreClause}
+        FROM shops
+        WHERE ${whereClause}
+        ORDER BY relevance_score DESC, name ASC
+      `;
+
+      const result = await db.query(query, params);
+      return res.status(200).json({ success: true, data: result.rows });
+    } catch (error) {
+      console.error('getShops (public) Error:', error);
+      return res.status(500).json({ success: false, error: 'Server error' });
+    }
+  }
+
+  // Authenticated route — role-scoped
   const { role, shopId: userShopId } = req.user;
-  // Support both 'super-admin' and legacy 'admin' slugs for global view
   const isGlobalAdmin = role === 'super-admin' || role === 'admin';
   const shopId = isGlobalAdmin ? null : userShopId;
-
-  const { status } = req.query;
-  const statusFilter = status === 'Inactive' ? 'deleted_at IS NOT NULL' : 'deleted_at IS NULL';
 
   try {
     const query = shopId 
@@ -36,9 +111,10 @@ exports.getShopById = async (req, res) => {
 
 // @desc    Create new shop
 exports.createShop = async (req, res) => {
-  const { 
+  const {
     name, location, owner_name, owner_phone, country, currency, 
-    latitude, longitude, place_id, state, city, address, shop_image 
+    latitude, longitude, place_id, state, city, address, shop_image,
+    operating_hours, services_offered
   } = req.body;
   try {
     let finalShopImage = shop_image;
@@ -46,14 +122,22 @@ exports.createShop = async (req, res) => {
       finalShopImage = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
     }
 
+    let finalHours = operating_hours;
+    if (typeof operating_hours === 'object') try { finalHours = JSON.stringify(operating_hours); } catch(e) {}
+    
+    let finalServices = services_offered;
+    if (typeof services_offered === 'object') try { finalServices = JSON.stringify(services_offered); } catch(e) {}
+
     const result = await db.query(
       `INSERT INTO shops (
         name, location, owner_name, owner_phone, country, currency, 
-        latitude, longitude, place_id, state, city, address, status, shop_image
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        latitude, longitude, place_id, state, city, address, status, shop_image,
+        operating_hours, services_offered
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
       [
         name, location, owner_name, owner_phone, country || 'India', currency || 'INR', 
-        latitude, longitude, place_id, state, city, address, req.body.status || 'Active', finalShopImage
+        latitude, longitude, place_id, state, city, address, req.body.status || 'Active', finalShopImage,
+        finalHours, finalServices
       ]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -67,7 +151,8 @@ exports.createShop = async (req, res) => {
 exports.updateShop = async (req, res) => {
   const { 
     name, location, owner_name, currency, country, owner_phone, 
-    latitude, longitude, place_id, state, city, address, status, shop_image 
+    latitude, longitude, place_id, state, city, address, status, shop_image,
+    operating_hours, services_offered
   } = req.body;
   try {
     const existing = await db.query('SELECT shop_image FROM shops WHERE id = $1', [req.params.id]);
@@ -81,6 +166,12 @@ exports.updateShop = async (req, res) => {
       if (finalShopImage) await deleteFromR2(finalShopImage);
       finalShopImage = null;
     }
+
+    let finalHours = operating_hours;
+    if (typeof operating_hours === 'object') try { finalHours = JSON.stringify(operating_hours); } catch(e) {}
+    
+    let finalServices = services_offered;
+    if (typeof services_offered === 'object') try { finalServices = JSON.stringify(services_offered); } catch(e) {}
 
     const params = [
       name ?? null, 
@@ -96,7 +187,9 @@ exports.updateShop = async (req, res) => {
       city ?? null, 
       address ?? null, 
       status ?? null, 
-      finalShopImage, 
+      finalShopImage,
+      finalHours ?? null,
+      finalServices ?? null,
       req.params.id
     ];
 
@@ -115,8 +208,10 @@ exports.updateShop = async (req, res) => {
            city = COALESCE($11, city),
            address = COALESCE($12, address),
            status = COALESCE($13, status),
-           shop_image = COALESCE($14, shop_image)
-       WHERE id = $15 RETURNING *`,
+           shop_image = COALESCE($14, shop_image),
+           operating_hours = COALESCE($15, operating_hours),
+           services_offered = COALESCE($16, services_offered)
+       WHERE id = $17 RETURNING *`,
       params
     );
     res.status(200).json({ success: true, data: result.rows[0] });

@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 
 const navLinks = [
+  { label: "Services", href: "#services" },
+  { label: "Vehicles", href: "#registry" },
   { label: "Features", href: "#features" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Pricing", href: "#pricing" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -45,9 +45,7 @@ export function NavbarWhite() {
         <nav className="px-5 sm:px-7 h-14 flex items-center justify-between gap-4">
 
           <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="font-mono text-xl font-black tracking-[0.2em] text-primary uppercase ">
-              REPAIRO
-            </span>
+            <Image src="/images/logos/logo.png" alt="Repairo Logo" width={300} height={90} className="h-[90px] w-auto object-contain" priority />
           </Link>
 
           {/* ── Desktop nav ── */}
