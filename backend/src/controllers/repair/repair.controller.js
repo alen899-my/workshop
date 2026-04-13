@@ -185,7 +185,7 @@ exports.createRepair = async (req, res) => {
   const parsedComplaints = parseComplaints(complaints);
   let vehicle_image = prefilled_image || null;
 
-  const client = await db.connect();
+  const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
 
@@ -288,7 +288,7 @@ exports.updateRepair = async (req, res) => {
 
   const parsedComplaints = parseComplaints(complaints);
 
-  const client = await db.connect();
+  const client = await db.pool.connect();
   try {
     // Scope check
     const { rows: existRows } = await client.query(

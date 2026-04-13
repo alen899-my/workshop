@@ -117,6 +117,11 @@ export const metadata: Metadata = {
     email: true,
     address: true,
   },
+  icons: {
+    icon: '/images/logos/single.ico',
+    shortcut: '/images/logos/single.ico',
+    apple: '/images/logos/single.ico',
+  },
 };
 
 export default function RootLayout({
@@ -130,11 +135,6 @@ export default function RootLayout({
         {/* Preconnect to external origins for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-
-        {/* Favicon chain */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/images/logos/logo.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/images/logos/logo.png" />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
