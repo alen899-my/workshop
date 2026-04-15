@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { shopService, Shop } from "@/services/shop.service";
 import { NavbarWhite } from "@/layout/Navbar";
+import { Footer } from "@/layout/Footer";
 import { WorkshopRegionSelects } from "@/components/ui/WorkshopRegionSelects";
 
 import {
@@ -355,6 +356,7 @@ function WorkshopsContent() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

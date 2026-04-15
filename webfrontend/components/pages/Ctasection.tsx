@@ -175,41 +175,41 @@ export function CTASection() {
              </h2>
           </div>
 
-          {/* Interactive Focus Grid */}
-          <div className="group/testi flex flex-col md:flex-row gap-12 md:gap-0">
-            {testimonials.map((t, i) => (
+          {/* Premium Square Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((t) => (
               <div
                 key={t.name}
-                className={`flex-1 relative flex flex-col md:px-10 group-hover/testi:opacity-30 group-hover/testi:blur-[2px] hover:!blur-none hover:!opacity-100 transition-all duration-700 ease-out hover:-translate-y-2 
-                  ${i !== 0 ? 'md:border-l border-primary/15 border-t pt-10 md:pt-0 md:border-t-0' : 'pt-10 md:pt-0 md:pl-0'}
-                  ${i === testimonials.length - 1 ? 'md:pr-0' : ''}
-                `}
+                className="group relative bg-card/30 dark:bg-card/10 backdrop-blur-xl border border-primary/10 dark:border-primary/20 rounded-[32px] p-8 md:p-10 flex flex-col justify-between transition-all duration-500 hover:border-primary/30 hover:shadow-[0_20px_50px_-12px_rgba(0,128,128,0.15)] hover:-translate-y-3 min-h-[400px] overflow-hidden"
               >
-                {/* Abstract floating quote mark */}
-                <div className="absolute top-0 left-0 md:left-6 text-[80px] font-serif text-primary opacity-10 leading-none -translate-y-4 md:-translate-y-6 select-none pointer-events-none">
-                  "
+                {/* Decorative background element */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-700" />
+                
+                <div className="relative z-10">
+                  <div className="flex gap-1 mb-8">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={14} fill="#d4a017" stroke="#d4a017" />
+                    ))}
+                  </div>
+
+                  <blockquote className="font-sans text-[17px] md:text-[19px] text-foreground/90 dark:text-muted-foreground/90 leading-[1.6] font-medium italic">
+                    "{t.quote}"
+                  </blockquote>
                 </div>
 
-                <div className="flex gap-0.5 mb-8 text-[#d4a017] text-[12px]">
-                  ★★★★★
-                </div>
-
-                <blockquote className="font-sans text-[15px] italic text-foreground/70 dark:text-muted-foreground leading-relaxed transition-colors duration-500 mb-12 relative z-10">
-                  "{t.quote}"
-                </blockquote>
-
-                <div className="mt-auto flex items-center gap-4 pt-6 relative before:absolute before:top-0 before:left-0 before:w-12 before:h-[1px] before:bg-primary/20">
+                <div className="relative z-10 flex items-center gap-4 mt-12 pt-8 border-t border-primary/10 dark:border-primary/5">
                   <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center font-sans font-bold text-[12px] text-white shadow-md shadow-black/5"
-                    style={{ background: t.color }}
+                    className="w-14 h-14 flex items-center justify-center font-sans font-bold text-[16px] text-white shadow-2xl relative overflow-hidden"
+                    style={{ background: t.color, borderRadius: '18px' }}
                   >
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
                     {t.initials}
                   </div>
-                  <div>
-                    <div className="font-sans font-bold text-[14px] text-foreground tracking-tight">
+                  <div className="flex-1">
+                    <div className="font-sans font-bold text-[16px] text-foreground tracking-tight">
                       {t.name}
                     </div>
-                    <div className="font-sans text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-[0.15em] mt-1">
+                    <div className="font-sans text-[10px] text-muted-foreground/70 uppercase tracking-[0.2em] mt-1 font-bold">
                       {t.role}
                     </div>
                   </div>

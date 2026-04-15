@@ -1,4 +1,5 @@
 import { NavbarWhite } from "@/layout/Navbar";
+import { Footer } from "@/layout/Footer";
 import Link from "next/link";
 import { Check, Zap, Star, MessageCircle } from "lucide-react";
 import { Metadata } from "next";
@@ -63,18 +64,18 @@ const pricingSchema = {
 };
 
 const standardFeatures = [
-  "Unlimited Job Cards",
-  "Customer & Vehicle Registry",
-  "Multi-Technician Accounts",
-  "Receptionist & Admin Roles",
+  "Interactive Dashboard & Analytics",
+  "Repair Job Card Management",
+  "Customer Management",
+  "Vehicle Management",
+  "Worker / Technician Management",
   "PDF Invoice Generation with Tax",
-  "Inventory & Parts Tracking",
-  "Service History per Vehicle",
-  "Operating Hours Management",
+  "WhatsApp Report Sharing",
+  "Full Service History per Vehicle",
   "Public Workshop Finder Listing",
-  "Call Now & Get Directions Button",
+  "Operating Hours Management",
   "Real-Time Job Status Tracking",
-  "Cloudflare R2 Image Storage",
+  "Role-Based Permissions Control",
   "Mobile Responsive Dashboard",
   "Monthly Subscription — No Lock-In",
 ];
@@ -220,14 +221,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Footer note */}
-      <div className="border-t border-border py-6 text-center">
-        <p className="text-xs text-muted-foreground font-mono">
-          © {new Date().getFullYear()} Repairo. ·{" "}
-          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link> ·{" "}
-          <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
-        </p>
-      </div>
+      <Footer />
     </div>
   );
 }

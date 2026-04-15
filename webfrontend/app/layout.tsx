@@ -118,9 +118,12 @@ export const metadata: Metadata = {
     address: true,
   },
   icons: {
-    icon: '/images/logos/single.ico',
+    icon: [
+      { url: '/images/logos/single.ico', type: 'image/x-icon' },
+      { url: '/images/logos/single.png', type: 'image/png' },
+    ],
     shortcut: '/images/logos/single.ico',
-    apple: '/images/logos/single.ico',
+    apple: '/images/logos/single.png',
   },
 };
 

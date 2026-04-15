@@ -1,4 +1,5 @@
 import { NavbarWhite } from "@/layout/Navbar";
+import { Footer } from "@/layout/Footer";
 import Link from "next/link";
 import { Wrench, Users, Globe, ShieldCheck, Zap, BarChart3, Car, Clock, ArrowRight } from "lucide-react";
 import { Metadata } from "next";
@@ -194,20 +195,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Tech Stack */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold text-foreground mb-3">Built with Modern Tech</h2>
-        <p className="text-muted-foreground mb-10 max-w-xl">
-          Repairo is engineered on a production-grade stack designed for reliability, speed, and scalability.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {stack.map((tech) => (
-            <span key={tech} className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm font-semibold font-mono">
-              {tech}
-            </span>
-          ))}
-        </div>
-      </section>
+    
 
       {/* CTA */}
       <section className="pb-24 px-6 max-w-5xl mx-auto">
@@ -222,10 +210,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Bottom bar */}
-      <div className="border-t border-border py-6 text-center">
-        <p className="text-xs text-muted-foreground font-mono">© {new Date().getFullYear()} Repairo. All rights reserved.</p>
-      </div>
+      <Footer />
     </div>
   );
 }
