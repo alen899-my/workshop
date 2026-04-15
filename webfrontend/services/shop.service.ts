@@ -26,6 +26,8 @@ export interface Shop {
   place_id?: string;
   operating_hours?: any;
   services_offered?: string[];
+  vehicle_types?: string[];
+  is_public?: boolean;
   created_at: string;
 }
 

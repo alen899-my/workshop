@@ -13,6 +13,10 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { WorkshopImageUpload } from "@/components/ui/WorkshopImageUpload";
 import { WorkshopInlineSelect } from "@/components/ui/WorkshopInlineSelect";
+import { WorkshopModal } from "@/components/common/WorkshopModal";
+import { Search, ChevronRight, MoreHorizontal, Car, Clock, Wrench } from "lucide-react";
+import { VEHICLE_CONFIG, MAIN_VEHICLES } from "@/constants/vehicles";
+import { cn } from "@/lib/utils";
 
 const defaultHours = {
   monday: { open: "09:00", close: "18:00", closed: false },
@@ -44,6 +48,9 @@ export default function EditShopPage() {
   const [isEditing, setIsEditing] = useState(searchParams.get("mode") === "edit");
   const [customService, setCustomService] = useState("");
   const [showOtherInput, setShowOtherInput] = useState(false);
+  
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [vehicleSearch, setVehicleSearch] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -56,7 +63,9 @@ export default function EditShopPage() {
     currency: "INR",
     shop_image: "",
     operating_hours: defaultHours,
-    services_offered: [] as string[]
+    services_offered: [] as string[],
+    vehicle_types: [] as string[],
+    is_public: true
   });
   const [shopImageFile, setShopImageFile] = useState<File | null>(null);
 
@@ -76,7 +85,9 @@ export default function EditShopPage() {
           currency: res.data.currency || "INR",
           shop_image: res.data.shop_image || "",
           operating_hours: res.data.operating_hours || defaultHours,
-          services_offered: res.data.services_offered || []
+          services_offered: res.data.services_offered || [],
+          vehicle_types: res.data.vehicle_types || [],
+          is_public: res.data.is_public ?? true
         });
       } else {
         toast({ type: "error", title: "Error", description: "Shop not found." });
@@ -101,6 +112,8 @@ export default function EditShopPage() {
     payload.append("currency", form.currency);
     payload.append("operating_hours", JSON.stringify(form.operating_hours));
     payload.append("services_offered", JSON.stringify(form.services_offered));
+    payload.append("vehicle_types", JSON.stringify(form.vehicle_types));
+    payload.append("is_public", String(form.is_public));
 
     if (shopImageFile) {
       payload.append("shop_image", shopImageFile);
@@ -152,6 +165,12 @@ export default function EditShopPage() {
               <span className="px-2.5 py-1 rounded-md bg-accent/50 text-accent-foreground text-xs font-semibold block flex items-center justify-center gap-1.5">
                 <Globe size={12} /> {form.country || "IN"}
               </span>
+              <span className={cn(
+                "mt-2 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5",
+                form.is_public ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
+              )}>
+                {form.is_public ? "Publicly Visible" : "Private / Hidden"}
+              </span>
             </div>
           </div>
           
@@ -185,6 +204,27 @@ export default function EditShopPage() {
                 <MapPin size={14} className="text-muted-foreground" /> {form.city ? `${form.city}, ${form.state}` : "—"}
               </p>
               <p className="text-sm text-muted-foreground pl-5">{form.address || ""}</p>
+            </div>
+
+            <div className="space-y-1 md:col-span-2 pt-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Supported Vehicle Types</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {form.vehicle_types && form.vehicle_types.length > 0 ? (
+                   form.vehicle_types.map((vTypeId) => {
+                      const vObj = VEHICLE_CONFIG.find(v => v.id === vTypeId);
+                      if (!vObj) return null;
+                      const Icon = vObj.icon;
+                      return (
+                        <span key={vTypeId} className="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 border bg-card/60" style={{ color: vObj.color, borderColor: `${vObj.color}30` }}>
+                          <Icon size={14} />
+                          {vObj.label}
+                        </span>
+                      )
+                   })
+                ) : (
+                   <span className="text-sm text-muted-foreground">No vehicle types configured.</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -220,6 +260,26 @@ export default function EditShopPage() {
             }}
             onError={(err) => toast({ type: "error", title: "Image Error", description: err })}
           />
+        </div>
+
+        <div className="md:col-span-2 p-4 rounded-xl bg-muted/20 border border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-bold text-foreground">Public Visibility</h3>
+            <p className="text-xs text-muted-foreground">When enabled, this garage will be visible in the public workshops listing for customer search.</p>
+          </div>
+          <button
+             type="button"
+             onClick={() => setForm(f => ({...f, is_public: !f.is_public}))}
+             className={cn(
+               "relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/20",
+               form.is_public ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted"
+             )}
+          >
+             <span className={cn(
+               "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out",
+               form.is_public ? "translate-x-[26px]" : "translate-x-[2px]"
+             )} />
+          </button>
         </div>
 
         <div className="md:col-span-1">
@@ -289,24 +349,37 @@ export default function EditShopPage() {
             {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
               const dayData = (form.operating_hours as Record<string, {open: string, close: string, closed: boolean}>)?.[day] || defaultHours[day as keyof typeof defaultHours];
               return (
-                <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-28 font-semibold capitalize text-sm text-muted-foreground tracking-wide">{day}</div>
-                  <div className="flex items-center gap-4 flex-1">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <div key={day} className="flex flex-col sm:flex-row sm:items-center p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-shadow gap-3 sm:gap-4">
+                  {/* Day & Mobile Checkbox Line */}
+                  <div className="flex items-center justify-between sm:w-28 shrink-0">
+                    <span className="font-semibold capitalize text-sm text-foreground tracking-wide">{day}</span>
+                    <label className="flex sm:hidden items-center gap-2 text-sm cursor-pointer select-none">
+                      <span className={dayData.closed ? "text-destructive font-semibold text-xs" : "text-muted-foreground text-xs"}>Closed</span>
+                      <input type="checkbox" checked={dayData.closed} onChange={(e) => {
+                         setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, closed: e.target.checked}}}))
+                      }} className="rounded text-primary focus:ring-primary h-4 w-4 border-border bg-background" />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center w-full gap-4">
+                    {/* Desktop Checkbox */}
+                    <label className="hidden sm:flex items-center gap-2 text-sm cursor-pointer select-none shrink-0 w-20">
                       <input type="checkbox" checked={dayData.closed} onChange={(e) => {
                          setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, closed: e.target.checked}}}))
                       }} className="rounded text-primary focus:ring-primary h-4 w-4 border-border bg-background" />
                       <span className={dayData.closed ? "text-destructive font-semibold" : "text-muted-foreground"}>Closed</span>
                     </label>
+                    
+                    {/* Time Inputs */}
                     {!dayData.closed && (
-                      <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                      <div className="flex items-center justify-between w-full sm:justify-start gap-2 sm:gap-3">
                         <input type="time" value={dayData.open} onChange={(e) => {
                            setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, open: e.target.value}}}))
-                        }} className="h-9 px-3 text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" />
-                        <span className="text-muted-foreground text-xs font-medium">to</span>
+                        }} className="h-9 px-2 text-center text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all flex-1 sm:flex-none min-w-[100px]" />
+                        <span className="text-muted-foreground text-xs font-medium shrink-0">to</span>
                         <input type="time" value={dayData.close} onChange={(e) => {
                            setForm(f => ({...f, operating_hours: {...(f.operating_hours as any), [day]: {...dayData, close: e.target.value}}}))
-                        }} className="h-9 px-3 text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" />
+                        }} className="h-9 px-2 text-center text-sm rounded-md bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all flex-1 sm:flex-none min-w-[100px]" />
                       </div>
                     )}
                   </div>
@@ -399,8 +472,157 @@ export default function EditShopPage() {
             </div>
           </div>
         </div>
+
+        {/* Vehicle Types */}
+        <div className="md:col-span-2 pt-6 border-t border-border mt-2">
+          <h3 className="font-bold text-sm tracking-widest uppercase mb-4 text-foreground">Supported Vehicle Types</h3>
+          <p className="text-xs text-muted-foreground mb-4">Select the types of vehicles your shop services.</p>
+
+          <div className="flex flex-col gap-4 max-w-2xl">
+            <div className="flex flex-wrap gap-3">
+              {MAIN_VEHICLES.map((id) => {
+                const vehicle = VEHICLE_CONFIG.find(v => v.id === id);
+                if (!vehicle) return null;
+                const isSelected = form.vehicle_types?.includes(id);
+                const Icon = vehicle.icon;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setForm(f => ({...f, vehicle_types: f.vehicle_types.filter(v => v !== id)}));
+                      } else {
+                        setForm(f => ({...f, vehicle_types: [...(f.vehicle_types || []), id]}));
+                      }
+                    }}
+                    className={cn(
+                      "relative flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border transition-all duration-300 group",
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-lg shadow-primary/10 ring-4 ring-primary/5 scale-105 z-10"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/5 hover:scale-105"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-10 h-10 sm:w-12 sm:h-12 rounded-xl mb-1.5 sm:mb-2 flex items-center justify-center transition-colors shadow-sm",
+                        isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                      )}
+                      style={isSelected ? { backgroundColor: vehicle.color } : {}}
+                    >
+                      <Icon size={20} strokeWidth={2} />
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[9px] sm:text-[10px] font-bold tracking-tight transition-colors",
+                        isSelected ? "text-primary uppercase" : "text-muted-foreground"
+                      )}
+                      style={isSelected ? { color: vehicle.color } : {}}
+                    >
+                      {vehicle.label}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Non-main selected vehicles */}
+              {form.vehicle_types?.map(vId => {
+                if (MAIN_VEHICLES.includes(vId)) return null;
+                const vObj = VEHICLE_CONFIG.find(v => v.id === vId);
+                if (!vObj) return null;
+                const Icon = vObj.icon;
+                return (
+                  <button
+                    key={vId}
+                    type="button"
+                    onClick={() => setForm(f => ({...f, vehicle_types: f.vehicle_types.filter(v => v !== vId)}))}
+                    className="relative flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border border-primary bg-primary/5 shadow-lg shadow-primary/10 ring-4 ring-primary/5 scale-105 z-10 transition-all group"
+                  >
+                    <div
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl mb-1.5 sm:mb-2 flex items-center justify-center text-white shadow-sm"
+                      style={{ backgroundColor: vObj.color }}
+                    >
+                      <Icon size={20} strokeWidth={2} />
+                    </div>
+                    <span className="text-[9px] sm:text-[10px] font-bold tracking-tight uppercase" style={{ color: vObj.color }}>
+                      {vObj.label}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setIsVehicleModalOpen(true)}
+                className="relative flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border border-dashed border-border bg-card hover:border-primary/40 transition-all duration-300 group"
+              >
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl mb-1.5 sm:mb-2 flex items-center justify-center bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                  <MoreHorizontal size={20} />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-bold tracking-tight text-muted-foreground">ADD MORE</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </ModuleForm>
+
+    <WorkshopModal
+      isOpen={isVehicleModalOpen}
+      onClose={() => setIsVehicleModalOpen(false)}
+      title="Vehicle Library"
+      subtitle="Select the specific vehicles you support"
+      width="lg"
+    >
+      <div className="flex flex-col gap-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+          <input
+            type="text"
+            placeholder="Search vehicles..."
+            className="w-full bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-primary/50"
+            value={vehicleSearch}
+            onChange={(e) => setVehicleSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {VEHICLE_CONFIG.filter(v =>
+            v.label.toLowerCase().includes(vehicleSearch.toLowerCase()) ||
+            v.category.toLowerCase().includes(vehicleSearch.toLowerCase())
+          ).map(v => {
+            const isSelected = form.vehicle_types?.includes(v.id);
+            return (
+              <button
+                key={v.id}
+                onClick={() => {
+                  if (isSelected) {
+                    setForm(f => ({...f, vehicle_types: f.vehicle_types.filter(id => id !== v.id)}));
+                  } else {
+                    setForm(f => ({...f, vehicle_types: [...(f.vehicle_types || []), v.id]}));
+                  }
+                }}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group",
+                  isSelected ? "bg-primary/5 border-primary shadow-sm" : "bg-card border-border hover:border-primary/40"
+                )}
+              >
+                <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted/50 group-hover:bg-primary/10 transition-colors" style={isSelected ? { backgroundColor: v.color + '20' } : {}}>
+                  <v.icon size={18} style={{ color: v.color }} />
+                </div>
+                <div className="flex flex-col overflow-hidden text-left flex-1">
+                  <span className="text-xs font-bold text-foreground truncate">{v.label}</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-widest">{v.category}</span>
+                </div>
+                <div className={cn("w-4 h-4 rounded border flex items-center justify-center ml-auto transition-colors", isSelected ? "bg-primary border-primary" : "border-muted-foreground/30")}>
+                  {isSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </WorkshopModal>
     </div>
   );
 }

@@ -10,7 +10,7 @@ exports.getShops = async (req, res) => {
   if (!req.user) {
     try {
       const params = [];
-      const conditions = [statusFilter];
+      const conditions = [statusFilter, 'is_public = true'];
       const scoreExprs = [];
 
       // If explicit region provided (from WorkshopRegionSelects)
@@ -116,9 +116,8 @@ exports.getShopById = async (req, res) => {
 // @desc    Create new shop
 exports.createShop = async (req, res) => {
   const {
-    name, location, owner_name, owner_phone, country, currency, 
     latitude, longitude, place_id, state, city, address, shop_image,
-    operating_hours, services_offered
+    operating_hours, services_offered, vehicle_types, is_public
   } = req.body;
   try {
     let finalShopImage = shop_image;
@@ -132,16 +131,20 @@ exports.createShop = async (req, res) => {
     let finalServices = services_offered;
     if (typeof services_offered === 'object') try { finalServices = JSON.stringify(services_offered); } catch(e) {}
 
+    let finalVehicleTypes = vehicle_types;
+    if (typeof vehicle_types === 'object') try { finalVehicleTypes = JSON.stringify(vehicle_types); } catch(e) {}
+
     const result = await db.query(
       `INSERT INTO shops (
         name, location, owner_name, owner_phone, country, currency, 
         latitude, longitude, place_id, state, city, address, status, shop_image,
-        operating_hours, services_offered
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+        operating_hours, services_offered, vehicle_types, is_public
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
       [
         name, location, owner_name, owner_phone, country || 'India', currency || 'INR', 
         latitude, longitude, place_id, state, city, address, req.body.status || 'Active', finalShopImage,
-        finalHours, finalServices
+        finalHours, finalServices, finalVehicleTypes,
+        is_public !== undefined ? (is_public === 'true' || is_public === true) : true
       ]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -156,7 +159,7 @@ exports.updateShop = async (req, res) => {
   const { 
     name, location, owner_name, currency, country, owner_phone, 
     latitude, longitude, place_id, state, city, address, status, shop_image,
-    operating_hours, services_offered
+    operating_hours, services_offered, vehicle_types, is_public
   } = req.body;
   try {
     const existing = await db.query('SELECT shop_image FROM shops WHERE id = $1', [req.params.id]);
@@ -177,6 +180,9 @@ exports.updateShop = async (req, res) => {
     let finalServices = services_offered;
     if (typeof services_offered === 'object') try { finalServices = JSON.stringify(services_offered); } catch(e) {}
 
+    let finalVehicleTypes = vehicle_types;
+    if (typeof vehicle_types === 'object') try { finalVehicleTypes = JSON.stringify(vehicle_types); } catch(e) {}
+
     const params = [
       name ?? null, 
       location ?? city ?? null, 
@@ -194,6 +200,8 @@ exports.updateShop = async (req, res) => {
       finalShopImage,
       finalHours ?? null,
       finalServices ?? null,
+      finalVehicleTypes ?? null,
+      is_public !== undefined ? (is_public === 'true' || is_public === true) : null,
       req.params.id
     ];
 
@@ -214,8 +222,10 @@ exports.updateShop = async (req, res) => {
            status = COALESCE($13, status),
            shop_image = COALESCE($14, shop_image),
            operating_hours = COALESCE($15, operating_hours),
-           services_offered = COALESCE($16, services_offered)
-       WHERE id = $17 RETURNING *`,
+           services_offered = COALESCE($16, services_offered),
+           vehicle_types = COALESCE($17, vehicle_types),
+           is_public = COALESCE($18, is_public)
+       WHERE id = $19 RETURNING *`,
       params
     );
     res.status(200).json({ success: true, data: result.rows[0] });

@@ -11,8 +11,9 @@ import { WorkshopRegionSelects } from "@/components/ui/WorkshopRegionSelects";
 
 import {
   Search, MapPin, Wrench, Phone, Building2,
-  Clock, X, Loader2, ArrowLeft, ChevronRight, SlidersHorizontal, Navigation
+  Clock, X, Loader2, ArrowLeft, ChevronRight, SlidersHorizontal, Navigation, Car
 } from "lucide-react";
+import { VEHICLE_CONFIG } from "@/constants/vehicles";
 
 const predefinedServices = [
   "General Servicing", "Oil Change", "Brake Repair", "Engine Diagnostics",
@@ -120,6 +121,29 @@ function ShopCard({ shop }: { shop: Shop }) {
                   {s}
                 </span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Row 5b: Vehicle Types */}
+        {shop.vehicle_types && shop.vehicle_types.length > 0 && (
+          <div className="flex flex-col gap-1.5 mt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Car size={10} /> Supported Vehicles
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {shop.vehicle_types.map((vId) => {
+                const vObj = VEHICLE_CONFIG.find(v => v.id === vId);
+                if (!vObj) return null;
+                const Icon = vObj.icon;
+                return (
+                  <span key={vId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border" 
+                    style={{ backgroundColor: `${vObj.color}10`, color: vObj.color, borderColor: `${vObj.color}25` }}>
+                    <Icon size={10} />
+                    {vObj.label.toUpperCase()}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
