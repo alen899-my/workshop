@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/app/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WorkshopToastProvider } from "@/components/ui/WorkshopToast";
+import { PostHogProvider } from "@/app/providers";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://repairo-garage.vercel.app";
 const SITE_NAME = "Repairo";
@@ -141,9 +142,11 @@ export default function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
-          <WorkshopToastProvider>
-            {children}
-          </WorkshopToastProvider>
+          <PostHogProvider>
+            <WorkshopToastProvider>
+              {children}
+            </WorkshopToastProvider>
+          </PostHogProvider>
         </ThemeProvider>
       </body>
     </html>
