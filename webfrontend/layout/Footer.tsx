@@ -12,6 +12,13 @@ const footerLinks = {
     { label: "Contact", href: "/#contact" },
     { label: "Find a Workshop", href: "/workshops" },
   ],
+  resources: [
+    { label: "Blog", href: "/blog" },
+    { label: "Garage Management Guide", href: "/blog/garage-management-software-guide" },
+    { label: "Workshop Management System", href: "/blog/workshop-management-system-benefits" },
+    { label: "GST Invoicing Guide", href: "/blog/gst-invoicing-garage-india" },
+    { label: "Free Trial", href: "/signup" },
+  ],
   legal: [
     { label: "About Us", href: "/about" },
     { label: "Privacy Policy", href: "/privacy" },
@@ -60,14 +67,29 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Links Grid — Product + Legal only */}
-          <div className="lg:col-span-7 grid grid-cols-2 gap-12">
+          {/* Links Grid — Product + Resources + Legal */}
+          <div className="lg:col-span-7 grid grid-cols-3 gap-8">
 
             {/* Product */}
             <div>
               <h4 className="font-mono text-[10px] tracking-[0.3em] uppercase text-foreground font-black mb-8">Product</h4>
               <ul className="flex flex-col gap-4">
                 {footerLinks.product.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href}
+                      className="text-muted-foreground hover:text-primary text-sm font-medium transition-all hover:pl-1">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources / Blog */}
+            <div>
+              <h4 className="font-mono text-[10px] tracking-[0.3em] uppercase text-foreground font-black mb-8">Resources</h4>
+              <ul className="flex flex-col gap-4">
+                {footerLinks.resources.map((link) => (
                   <li key={link.label}>
                     <Link href={link.href}
                       className="text-muted-foreground hover:text-primary text-sm font-medium transition-all hover:pl-1">

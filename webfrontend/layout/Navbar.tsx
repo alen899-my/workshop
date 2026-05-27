@@ -9,10 +9,11 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 
 const navLinks = [
-  { label: "Services", href: "#services" },
-  { label: "Vehicles", href: "#registry" },
-  { label: "Features", href: "#features" },
-  { label: "Contact", href: "#contact" },
+  { label: "Services", href: "/#services" },
+  { label: "Vehicles", href: "/#registry" },
+  { label: "Features", href: "/#features" },
+  { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/#contact" },
 ];
 
 export function NavbarWhite() {

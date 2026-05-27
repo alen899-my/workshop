@@ -32,6 +32,32 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
 
+    // ── Blog (high-value SEO pages) ──
+    {
+      url: `${SITE_URL}/blog`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/blog/garage-management-software-guide`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.95,
+    },
+    {
+      url: `${SITE_URL}/blog/workshop-management-system-benefits`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/blog/gst-invoicing-garage-india`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+
     // ── Auth pages ──
     {
       url: `${SITE_URL}/login`,
