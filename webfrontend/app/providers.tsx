@@ -1,12 +1,11 @@
 'use client'
 
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { register } from '@/instrumentation-client'
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     register()
@@ -16,8 +15,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     const posthog = window.posthog
     if (!posthog || !pathname) return
 
-    const query = searchParams.toString()
-    const currentUrl = query ? `${pathname}?${query}` : pathname
+    const currentUrl = `${window.location.pathname}${window.location.search}`
 
     posthog.push([
       'capture',
@@ -26,7 +24,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         $current_url: window.location.origin + currentUrl,
       },
     ])
-  }, [pathname, searchParams])
+  }, [pathname])
 
   return <>{children}</>
 }

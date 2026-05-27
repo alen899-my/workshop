@@ -27,8 +27,12 @@ function ensureSnippetLoaded() {
   script.src = POSTHOG_SNIPPET_SRC
 
   const firstScript = document.getElementsByTagName('script')[0]
-  if (!firstScript?.parentNode) return
-  firstScript.parentNode.insertBefore(script, firstScript)
+  if (firstScript?.parentNode) {
+    firstScript.parentNode.insertBefore(script, firstScript)
+    return
+  }
+
+  document.head.appendChild(script)
 }
 
 function initQueue() {
@@ -45,6 +49,7 @@ function initQueue() {
   posthog.init(POSTHOG_PROJECT_TOKEN!, {
     api_host: POSTHOG_HOST,
     defaults: '2026-01-30',
+    capture_pageview: false,
   })
 }
 
