@@ -91,7 +91,7 @@ exports.login = async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'Access denied' });
+      return res.status(400).json({ success: false, error: 'No account found with this phone number' });
     }
 
     const user = userResult.rows[0];
@@ -99,7 +99,7 @@ exports.login = async (req, res) => {
     // Password Verification
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ success: false, error: 'Access denied' });
+      return res.status(400).json({ success: false, error: 'Incorrect password' });
     }
     
     // Generate JWT Token with full identity context

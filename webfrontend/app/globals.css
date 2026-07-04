@@ -5,230 +5,186 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Utility classes just map back to standard now, kept for backward compatibility */
-.google-sans-regular {
-  font-family: "Google Sans", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
-  font-variation-settings: "GRAD" 0;
-}
-
-.google-sans-medium {
-  font-family: "Google Sans", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  font-style: normal;
-  font-variation-settings: "GRAD" 0;
-}
-
-.google-sans-bold {
-  font-family: "Google Sans", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 700;
-  font-style: normal;
-  font-variation-settings: "GRAD" 0;
-}
+/*
+  🎨 REPAIRO THEME TOKENS
+  ─────────────────────────────────
+  Token              Hex         Usage
+  bg-primary         #FAF6EE     App background
+  bg-card-dark       #1A1A1A     Balance/dark cards
+  bg-card-light      #FFFFFF     Elevated cards on cream
+  accent-primary     #8CE64B     CTAs, active states
+  accent-gradient    #8CE64B→#2E5C2E  Chart fills, hero cards
+  text-primary       #1A1A1A     Headings
+  text-secondary     #8A8A80     Subtext
+  text-inverse       #FFFFFF     Text on dark cards
+  accent-gold        #F2C230     Rewards/coins
+  border-subtle      #E8E0CC     Card outlines
+*/
 
 @custom-variant dark (&:is(.dark *));
 
-/*
-  🔧 WORKSHOP GARAGE THEME
-  Colors sourced directly from two workshop illustrations:
-
-  Image 1 (large): teal steel facade, sandy beige walls, deep garage
-  interior, signal red roller doors, amber hydraulic lift posts,
-  concrete floor, oil drum red.
-
-  Image 2 (mobile): soft sage-mint painted walls, sky-blue roller door,
-  dark brick cornice, fire-engine red truck, hazard orange crate,
-  slate tool cabinet, cream paper notices, red utility pipe.
-
-  Mood: functional, grounded, SaaS-minimal — clean surfaces with
-  just enough warmth to feel like somewhere real work happens.
-*/
-
 :root {
-    /* Base — snow-white clean surfaces */
-    --background: oklch(0.99 0.003 248);           /* snow-white, crisp and cool */
-    --foreground: oklch(0.14 0.025 168);            /* deep garage teal-black text */
+  --background: #FAF6EE;
+  --foreground: #1A1A1A;
 
-    /* Cards — clean plaster surface */
-    --card: oklch(1.00 0.000 0);
-    --card-foreground: oklch(0.14 0.025 168);
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
 
-    /* Popover */
-    --popover: oklch(1.00 0.000 0);
-    --popover-foreground: oklch(0.14 0.025 168);
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
 
-    /* Primary — teal steel facade (dominant building color, image 1) */
-    --primary: oklch(0.48 0.072 188);               /* ~#3d7a78 — teal workshop facade */
-    --primary-foreground: oklch(0.96 0.014 188);    /* pale teal-white */
+  --primary: #8CE64B;
+  --primary-foreground: #1A1A1A;
 
-    /* Secondary — sage-mint painted wall (dominant wall color, image 2) */
-    --secondary: oklch(0.74 0.058 162);             /* ~#8fb8a8 — sage green wall */
-    --secondary-foreground: oklch(0.14 0.025 168);
+  --secondary: #E8E0CC;
+  --secondary-foreground: #1A1A1A;
 
-    /* Muted — clean asphalt mist / cool grey */
-    --muted: oklch(0.94 0.008 248);                 /* cool-toned light grey */
-    --muted-foreground: oklch(0.52 0.030 168);      /* shifted from warm to cool-teal grey */
+  --muted: #FAF6EE;
+  --muted-foreground: #8A8A80;
 
-    /* Accent — sky blue roller door (image 2 shifted to teal) */
-    --accent: oklch(0.72 0.075 188);                /* ~#5bb0ae — vibrant teal */
-    --accent-foreground: oklch(0.14 0.025 168);
+  --accent: #F2C230;
+  --accent-foreground: #1A1A1A;
 
-    /* Destructive — signal red roller doors / fire extinguisher (both images) */
-    --destructive: oklch(0.44 0.175 22);            /* ~#c0272d — workshop signal red */
+  --destructive: #DC2626;
+  --destructive-foreground: #FAF6EE;
 
-    /* Borders — clean metal seam */
-    --border: oklch(0.88 0.012 248);
-    --input: oklch(0.91 0.010 248);
-    --ring: oklch(0.52 0.065 185);
+  --border: #E8E0CC;
+  --input: #E8E0CC;
+  --ring: #8CE64B;
 
-    /* Charts — teal → sage → sky blue → amber post → hazard orange */
-    --chart-1: oklch(0.48 0.072 188);              /* teal facade */
-    --chart-2: oklch(0.74 0.058 162);              /* sage wall */
-    --chart-3: oklch(0.72 0.075 188);              /* vibrant teal */
-    --chart-4: oklch(0.68 0.130 80);               /* amber lift post ~#d4a017 */
-    --chart-5: oklch(0.60 0.145 44);               /* hazard orange ~#d4622a */
+  --radius: 0.5rem;
 
-    --radius: 0.3125rem;                            /* 5px — clean SaaS geometry */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #8CE64B;
+  --sidebar-primary-foreground: #1A1A1A;
+  --sidebar-accent: #FAF6EE;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #E8E0CC;
+  --sidebar-ring: #8CE64B;
 
-    /* Sidebar — clean teal-white panel (matching primary facade) */
-    --sidebar: oklch(0.985 0.008 188);
-    --sidebar-foreground: oklch(0.18 0.030 168);
-    --sidebar-primary: oklch(0.48 0.072 188);
-    --sidebar-primary-foreground: oklch(0.99 0.003 188);
-    --sidebar-accent: oklch(0.95 0.015 188);
-    --sidebar-accent-foreground: oklch(0.14 0.040 188);
-    --sidebar-border: oklch(0.93 0.010 188);
-    --sidebar-ring: oklch(0.52 0.065 185);
+  --chart-1: #8CE64B;
+  --chart-2: #2E5C2E;
+  --chart-3: #F2C230;
+  --chart-4: #8A8A80;
+  --chart-5: #E8E0CC;
 }
 
 .dark {
-    /* Pitch Black Dark Mode */
-    --background: oklch(0 0 0);                     /* True black #000000 */
-    --foreground: oklch(0.98 0 0);                  /* Crisp white text */
+  --background: #1A1A1A;
+  --foreground: #FFFFFF;
 
-    --card: oklch(0.05 0 0);                        /* Very dark gray #0d0d0d */
-    --card-foreground: oklch(0.98 0 0);
+  --card: #1A1A1A;
+  --card-foreground: #FFFFFF;
 
-    --popover: oklch(0.05 0 0);
-    --popover-foreground: oklch(0.98 0 0);
+  --popover: #1A1A1A;
+  --popover-foreground: #FFFFFF;
 
-    /* Primary: Vibrantly Glowing Teal for Dark Mode */
-    --primary: oklch(0.48 0.072 188);                
-    --primary-foreground: oklch(0.98 0 0);          /* White text for better readability on teal */
+  --primary: #8CE64B;
+  --primary-foreground: #1A1A1A;
 
-    --secondary: oklch(0.12 0 0);                   /* Dark neutral #1e1e1e */
-    --secondary-foreground: oklch(0.88 0 0);
+  --secondary: #2A2A2A;
+  --secondary-foreground: #FFFFFF;
 
-    --muted: oklch(0.15 0 0);                       /* #262626 */
-    --muted-foreground: oklch(0.65 0 0);            /* #a3a3a3 */
+  --muted: #2A2A2A;
+  --muted-foreground: #8A8A80;
 
-    --accent: oklch(0.15 0.040 188);                /* Dark Teal for ghost/outline hover */
-    --accent-foreground: oklch(0.98 0 0);           /* White */
+  --accent: #F2C230;
+  --accent-foreground: #1A1A1A;
 
-    --destructive: oklch(0.52 0.190 20);            /* Red */
-    --destructive-foreground: oklch(0.98 0 0);      /* White */
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
 
-    /* Grayscale Borders — Increased for visibility on #000 */
-    --border: oklch(0.25 0 0);                      /* Better visibility grey */
-    --input: oklch(0.25 0 0);
-    --ring: oklch(0.48 0.072 188);
+  --border: #333333;
+  --input: #333333;
+  --ring: #8CE64B;
 
-    /* Charts */
-    --chart-1: oklch(0.48 0.072 188);              /* Teal */
-    --chart-2: oklch(0.66 0.065 162);              /* Sage */
-    --chart-3: oklch(0.70 0.100 188);              /* Teal */
-    --chart-4: oklch(0.68 0.130 80);               /* Amber */
-    --chart-5: oklch(0.60 0.145 44);               /* Hazard orange */
+  --sidebar: #1A1A1A;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #8CE64B;
+  --sidebar-primary-foreground: #1A1A1A;
+  --sidebar-accent: #2A2A2A;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #333333;
+  --sidebar-ring: #8CE64B;
 
-    /* Sidebar — Pure black to match */
-    /* Sidebar — Pure black to match */
-    --sidebar: oklch(0 0 0);
-    --sidebar-foreground: oklch(0.88 0 0);
-    /* Sidebar Primary to match main theme */
-    --sidebar-primary: oklch(0.68 0.12 188);
-    --sidebar-primary-foreground: oklch(0.05 0 0);
-    --sidebar-accent: oklch(0.10 0 0);
-    --sidebar-accent-foreground: oklch(0.88 0 0);
-    --sidebar-border: oklch(0.25 0 0);
-    --sidebar-ring: oklch(0.48 0.072 188);
+  --chart-1: #8CE64B;
+  --chart-2: #2E5C2E;
+  --chart-3: #F2C230;
+  --chart-4: #8A8A80;
+  --chart-5: #E8E0CC;
 }
 
 @theme inline {
-    --font-sans: "Google Sans", sans-serif;
-    --font-heading: "Google Sans", sans-serif;
-    --font-mono: "Google Sans", sans-serif;
+  --font-sans: "Google Sans", sans-serif;
+  --font-heading: "Google Sans", sans-serif;
+  --font-mono: "Google Sans", sans-serif;
 
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
-    }
-    body {
-        @apply bg-background text-foreground;
-        font-family: "Google Sans", sans-serif;
-    }
-    html {
-        font-family: "Google Sans", sans-serif;
-        /* Permanently reserve scrollbar space so portals/dropdowns never cause a page shift */
-        scrollbar-gutter: stable;
-        overflow-y: scroll;
-        scroll-behavior: smooth;
-    }
-    /* Smooth dark/light mode transition */
-    html:not(.no-transition) * {
-        transition-property: background-color, border-color, color, fill, stroke, box-shadow;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 200ms;
-    }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Google Sans", sans-serif;
+  }
+  html {
+    font-family: "Google Sans", sans-serif;
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+  }
+  html:not(.no-transition) * {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
 }
 
-/* 📜 Global Custom Scrollbar */
 :root {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--primary), transparent 80%) transparent;
+  scrollbar-color: color-mix(in srgb, var(--primary), transparent 80%) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -236,43 +192,41 @@
   height: 10px;
 }
 
-::-webkit-scrollbar-track, 
+::-webkit-scrollbar-track,
 ::-webkit-scrollbar-corner {
   background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: color-mix(in oklch, var(--primary), transparent 80%);
+  background-color: color-mix(in srgb, var(--primary), transparent 80%);
   background-clip: padding-box;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in oklch, var(--primary), transparent 50%);
+  background-color: color-mix(in srgb, var(--primary), transparent 50%);
 }
 
-/* Ensure it targets the main scrollbar specifically in some browsers */
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   background: transparent !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* 📱 react-phone-input-2 Custom Integration */
 .react-tel-input .form-control {
   font-family: inherit !important;
 }
 
 .react-tel-input .flag-dropdown {
   background-color: transparent !important;
-  border: 1px solid oklch(var(--border)) !important;
+  border: 1px solid var(--border) !important;
   border-right: none !important;
 }
 
@@ -286,18 +240,18 @@ body::-webkit-scrollbar {
 .react-tel-input .selected-flag:hover,
 .react-tel-input .selected-flag:focus,
 .react-tel-input .flag-dropdown.open .selected-flag {
-  background-color: oklch(var(--muted)) !important;
+  background-color: var(--muted) !important;
 }
 
 .react-tel-input .flag-dropdown.open {
-  border-color: oklch(var(--primary)) !important;
-  box-shadow: 0 0 0 2px oklch(var(--primary) / 0.1) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary), transparent 90%) !important;
 }
 
 .react-tel-input .country-list {
-  background-color: oklch(var(--card)) !important;
-  color: oklch(var(--foreground)) !important;
-  border: 1px solid oklch(var(--border)) !important;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px !important;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
   padding: 4px !important;
@@ -311,18 +265,18 @@ body::-webkit-scrollbar {
 }
 
 .react-tel-input .country-list .country.highlight {
-  background-color: oklch(var(--primary) / 0.1) !important;
-  color: oklch(var(--primary)) !important;
+  background-color: color-mix(in srgb, var(--primary), transparent 90%) !important;
+  color: var(--primary) !important;
 }
 
 .react-tel-input .country-list .country:hover {
-  background-color: oklch(var(--muted)) !important;
+  background-color: var(--muted) !important;
 }
 
 .react-tel-input .country-list .search {
-  background-color: oklch(var(--muted)) !important;
-  color: oklch(var(--foreground)) !important;
-  border: 1px solid oklch(var(--border)) !important;
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
   padding: 8px !important;
   margin-bottom: 4px !important;
 }
@@ -339,5 +293,5 @@ body::-webkit-scrollbar {
 }
 
 .react-tel-input .country-list .dial-code {
-  color: oklch(var(--muted-foreground)) !important;
+  color: var(--muted-foreground) !important;
 }

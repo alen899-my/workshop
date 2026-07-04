@@ -19,10 +19,10 @@ router.get('/:id', authenticate, authorize('view:repairs'), repairController.get
 router.get('/:id/pdf', authenticate, authorize('view:repairs'), pdfController.generatePDF);
 
 // @route   POST /api/repairs
-router.post('/', authenticate, authorize('create:repair'), upload.single('vehicle_image'), repairController.createRepair);
+router.post('/', authenticate, authorize('create:repair'), upload.array('vehicle_image[]', 10), repairController.createRepair);
 
 // @route   PUT /api/repairs/:id
-router.put('/:id', authenticate, authorize('edit:repair'), upload.single('vehicle_image'), repairController.updateRepair);
+router.put('/:id', authenticate, authorize('edit:repair'), upload.array('vehicle_image[]', 10), repairController.updateRepair);
 
 // @route   DELETE /api/repairs/:id
 router.delete('/:id', authenticate, authorize('delete:repair'), repairController.deleteRepair);

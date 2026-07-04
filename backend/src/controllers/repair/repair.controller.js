@@ -31,7 +31,8 @@ exports.getRepairs = async (req, res) => {
         r.id, r.shop_id, r.vehicle_id,
         r.vehicle_number, r.model_name, r.owner_name, r.phone_number,
         r.complaints, r.repair_date, r.status, r.service_type, r.vehicle_type,
-        r.created_at, r.updated_at,
+        r.created_at, r.updated_at, r.images,
+        r.brand, r.km_reading, r.whatsapp_number, r.priority, r.expected_completion,
         COALESCE(v.vehicle_image, r.vehicle_image) AS vehicle_image,
         COALESCE(c.name, r.owner_name)             AS owner_name,
         COALESCE(c.phone, r.phone_number)           AS phone_number,
@@ -179,19 +180,25 @@ exports.createRepair = async (req, res) => {
   const {
     vehicle_number, model_name, owner_name, phone_number,
     complaints, repair_date, attending_worker_id,
-    status, service_type, vehicle_type, prefilled_image
+    status, service_type, vehicle_type, prefilled_image,
+    brand, km_reading, whatsapp_number, priority, expected_completion
   } = req.body;
 
   const parsedComplaints = parseComplaints(complaints);
   let vehicle_image = prefilled_image || null;
+  let images = [];
 
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Upload image first (outside transaction — R2 is external)
-    if (req.file) {
-      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    // Upload images to R2
+    if (req.files && req.files.length > 0) {
+      const urls = await Promise.all(
+        req.files.map((f) => uploadToR2(f.buffer, f.originalname, f.mimetype))
+      );
+      images = urls;
+      vehicle_image = urls[0]; // first image as primary
     }
 
     // 1. Upsert Customer by phone
@@ -224,9 +231,9 @@ exports.createRepair = async (req, res) => {
     let vehicleId;
     if (vRows.length === 0) {
       const r = await client.query(
-        `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [customerId, shopId, vehicle_number, model_name, vehicle_type, vehicle_image]
+        `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image, brand)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [customerId, shopId, vehicle_number, model_name, vehicle_type, vehicle_image, brand || null]
       );
       vehicleId = r.rows[0].id;
     } else {
@@ -234,9 +241,10 @@ exports.createRepair = async (req, res) => {
       await client.query(
         `UPDATE vehicles
          SET customer_id = $1, model_name = $2, vehicle_type = $3,
-             vehicle_image = COALESCE($4, vehicle_image), updated_at = CURRENT_TIMESTAMP
-         WHERE id = $5`,
-        [customerId, model_name, vehicle_type, vehicle_image, vehicleId]
+             vehicle_image = COALESCE($4, vehicle_image), brand = COALESCE($5, brand),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6`,
+        [customerId, model_name, vehicle_type, vehicle_image, brand || null, vehicleId]
       );
     }
 
@@ -245,8 +253,9 @@ exports.createRepair = async (req, res) => {
       `INSERT INTO repairs
          (shop_id, vehicle_id, vehicle_number, model_name, owner_name, phone_number,
           complaints, repair_date, attending_worker_id, submitted_by_id,
-          status, service_type, vehicle_type, vehicle_image)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          status, service_type, vehicle_type, vehicle_image, images,
+          brand, km_reading, whatsapp_number, priority, expected_completion)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING *`,
       [
         shopId, vehicleId, vehicle_number, model_name, owner_name, phone_number,
@@ -257,7 +266,13 @@ exports.createRepair = async (req, res) => {
         status || 'Pending',
         service_type || 'Repair',
         vehicle_type || 'Car',
-        vehicle_image
+        vehicle_image,
+        images.length > 0 ? images : null,
+        brand || null,
+        km_reading || null,
+        whatsapp_number || null,
+        priority || 'Medium',
+        expected_completion || null
       ]
     );
 
@@ -283,7 +298,8 @@ exports.updateRepair = async (req, res) => {
   const {
     vehicle_number, model_name, owner_name, phone_number,
     complaints, repair_date, attending_worker_id,
-    status, service_type, vehicle_type, payment_status
+    status, service_type, vehicle_type, payment_status,
+    brand, km_reading, whatsapp_number, priority, expected_completion
   } = req.body;
 
   const parsedComplaints = parseComplaints(complaints);
@@ -292,7 +308,7 @@ exports.updateRepair = async (req, res) => {
   try {
     // Scope check
     const { rows: existRows } = await client.query(
-      'SELECT shop_id, vehicle_image FROM repairs WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT shop_id, vehicle_image, images FROM repairs WHERE id = $1 AND deleted_at IS NULL',
       [repairId]
     );
     if (existRows.length === 0) {
@@ -304,16 +320,23 @@ exports.updateRepair = async (req, res) => {
 
     const repairShopId = existRows[0].shop_id;
     let vehicle_image = existRows[0].vehicle_image;
+    let images = existRows[0].images || [];
 
     await client.query('BEGIN');
 
-    // Handle image replacement
-    if (req.file) {
-      if (vehicle_image) {
-        // Delete old image from R2 (non-blocking — don't let R2 failure abort the update)
-        deleteFromR2(vehicle_image).catch(e => console.error('R2 delete failed (non-critical):', e.message));
-      }
-      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+    // Handle image replacement — replace all images
+    if (req.files && req.files.length > 0) {
+      // Delete old images from R2 (non-blocking)
+      const allOld = [vehicle_image, ...images].filter(Boolean);
+      allOld.forEach((url) => {
+        deleteFromR2(url).catch(e => console.error('R2 delete failed (non-critical):', e.message));
+      });
+
+      const urls = await Promise.all(
+        req.files.map((f) => uploadToR2(f.buffer, f.originalname, f.mimetype))
+      );
+      images = urls;
+      vehicle_image = urls[0]; // first image as primary
     }
 
     // 1. Upsert Customer
@@ -346,9 +369,9 @@ exports.updateRepair = async (req, res) => {
     let vehicleId;
     if (vRows.length === 0) {
       const r = await client.query(
-        `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [customerId, repairShopId, vehicle_number, model_name, vehicle_type, vehicle_image]
+        `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image, brand)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [customerId, repairShopId, vehicle_number, model_name, vehicle_type, vehicle_image, brand || null]
       );
       vehicleId = r.rows[0].id;
     } else {
@@ -356,9 +379,9 @@ exports.updateRepair = async (req, res) => {
       await client.query(
         `UPDATE vehicles
          SET customer_id = $1, model_name = $2, vehicle_type = $3, vehicle_image = $4,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $5`,
-        [customerId, model_name, vehicle_type, vehicle_image, vehicleId]
+             brand = COALESCE($5, brand), updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6`,
+        [customerId, model_name, vehicle_type, vehicle_image, brand || null, vehicleId]
       );
     }
 
@@ -377,8 +400,14 @@ exports.updateRepair = async (req, res) => {
          service_type       = $10,
          vehicle_type       = $11,
          vehicle_image      = $12,
+         images             = $13,
+         brand              = $14,
+         km_reading         = $15,
+         whatsapp_number    = $16,
+         priority           = $17,
+         expected_completion = $18,
          updated_at         = CURRENT_TIMESTAMP
-       WHERE id = $13
+       WHERE id = $19
        RETURNING *`,
       [
         vehicleId, vehicle_number, model_name, owner_name, phone_number,
@@ -389,6 +418,12 @@ exports.updateRepair = async (req, res) => {
         service_type || 'Repair',
         vehicle_type || 'Car',
         vehicle_image,
+        images.length > 0 ? images : null,
+        brand || null,
+        km_reading || null,
+        whatsapp_number || null,
+        priority || 'Medium',
+        expected_completion || null,
         repairId
       ]
     );
