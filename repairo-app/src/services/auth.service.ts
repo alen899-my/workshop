@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import { api, setToken } from './api';
+import { getCallingCode, waitForCountries } from '@/utils/preload-countries';
 
 const USER_KEY = 'repairo_user';
 
@@ -52,8 +53,12 @@ export const authService = {
     if (res.token) {
       await setToken(res.token);
     }
-    // Persist the user data; shopCallingCode may come from backend or will be
-    // derived lazily in CreateRepairScreen via getCallingCode(shopCountry)
+    // Compute and persist the calling code from shop country so it's available immediately
+    if (res.data?.shopCountry) {
+      await waitForCountries();
+      const code = getCallingCode(res.data.shopCountry);
+      if (code) res.data.shopCallingCode = code;
+    }
     await saveUser(res.data ?? null);
     return res;
   },

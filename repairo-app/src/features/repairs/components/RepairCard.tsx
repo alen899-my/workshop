@@ -137,7 +137,7 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
             <ThemedText style={styles.vehicleNumber} numberOfLines={1}>
               {repair.vehicle_number}
             </ThemedText>
-            {(repair.priority === 'High' || repair.priority === 'Urgent') && (
+            {(repair.status !== 'Completed' && (repair.priority === 'High' || repair.priority === 'Urgent')) && (
               <Animated.View style={[
                 styles.priorityBadge,
                 {

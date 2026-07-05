@@ -76,9 +76,7 @@ export default function ViewRepairScreen({
     const num = repair.whatsapp_number || repair.phone_number;
     if (num) {
       const cleanNum = num.replace(/\D/g, '');
-      // Add country code if not present (assuming standard 91 for India as default if length is 10)
-      const formattedNum = cleanNum.length === 10 ? `91${cleanNum}` : cleanNum;
-      Linking.openURL(`whatsapp://send?phone=${formattedNum}&text=Hello, this is regarding your vehicle repair job.`);
+      Linking.openURL(`whatsapp://send?phone=${cleanNum}&text=Hello, this is regarding your vehicle repair job.`);
     }
   };
 

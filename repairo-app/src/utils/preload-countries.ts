@@ -10,9 +10,22 @@ const promise = getAllCountries(FlagType.EMOJI).then((map) => {
   console.error('preload-countries error:', err);
 });
 
-/** Synchronous lookup — returns '' if cache not ready */
+// Static fallback so we never show an empty code even before the async cache loads
+const FALLBACK_CODES: Record<string, string> = {
+  IN: '+91', US: '+1', GB: '+44', AE: '+971', SA: '+966',
+  QA: '+974', KW: '+965', OM: '+968', BH: '+973', MY: '+60',
+  SG: '+65', LK: '+94', BD: '+880', NP: '+977', PK: '+92',
+  AF: '+93', AU: '+61', NZ: '+64', CA: '+1', CH: '+41',
+  SE: '+46', NO: '+47', DK: '+45', JP: '+81', KR: '+82',
+  CN: '+86', BR: '+55', ZA: '+27', NG: '+234', KE: '+254',
+  EG: '+20', TR: '+90', RU: '+7', TH: '+66', VN: '+84',
+  PH: '+63', ID: '+62', DE: '+49', FR: '+33', IT: '+39',
+  ES: '+34', PT: '+351', NL: '+31', BE: '+32', AT: '+43',
+};
+
+/** Synchronous lookup — falls back to static map if cache not ready */
 export function getCallingCode(cca2: string): string {
-  return cache?.[cca2]?.callingCode?.[0] ? `+${cache[cca2].callingCode[0]}` : '';
+  return cache?.[cca2]?.callingCode?.[0] ? `+${cache[cca2].callingCode[0]}` : FALLBACK_CODES[cca2] || '';
 }
 
 /** Synchronous lookup */

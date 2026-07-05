@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,9 +12,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import ENV from '@/config/env';
+import { getStoredToken } from '@/services/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -23,7 +25,6 @@ import { billService } from '@/features/repairs/services/bill.service';
 import type { Tax } from '@/features/repairs/services/tax.service';
 import { taxService } from '@/features/repairs/services/tax.service';
 import BillItemEditor from './components/BillItemEditor';
-import SuccessModal from '@/components/ui/SuccessModal';
 import { getCurrentUser } from '@/services/auth.service';
 import { getCurrencySymbol } from '@/hooks/use-currency';
 import { buildInvoiceHtml } from './utils/invoice-html';
@@ -50,9 +51,10 @@ export default function GenerateBillScreen({
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  
+  const [hasExistingBill, setHasExistingBill] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -74,12 +76,11 @@ export default function GenerateBillScreen({
     }
   };
 
-  const generateAndSharePDF = async () => {
+  const generatePDFBase64 = async () => {
     const user = getCurrentUser();
     const shopName = user?.shopName || repair.shop_name || 'Garage';
     const currency = getCurrencySymbol(user?.shopCurrency);
 
-    // Parse service blocks from complaints
     const serviceBlocks = (() => {
       if (!repair.complaints) return undefined;
       try {
@@ -103,7 +104,6 @@ export default function GenerateBillScreen({
       }
     })();
 
-    // Convert vehicle image to base64 if local, or pass URL directly
     let vehicleImageSrc: string | undefined;
     const imgSrc = repair.vehicle_image || (Array.isArray(repair.images) ? repair.images[0] : undefined);
     if (imgSrc) {
@@ -140,17 +140,7 @@ export default function GenerateBillScreen({
     });
 
     const { base64 } = await Print.printToFileAsync({ html, base64: true });
-    const dest = `${FileSystem.documentDirectory}invoice_${repair.id}.pdf`;
-    await FileSystem.writeAsStringAsync(dest, base64!, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(dest, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Share Invoice',
-      });
-    }
+    return base64!;
   };
 
   const handleShareInvoice = async () => {
@@ -161,7 +151,25 @@ export default function GenerateBillScreen({
         alert('Could not save latest billing details first. Please try again.');
         return;
       }
-      await generateAndSharePDF();
+
+      const token = await getStoredToken();
+      const res = await fetch(`${ENV.API_URL}/repairs/${repair.id}/pdf?action=store`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (!data.success || !data.url) {
+        alert('Could not generate invoice. Please try again.');
+        return;
+      }
+
+      const phone = repair.whatsapp_number || repair.phone_number;
+      if (!phone) {
+        alert('No customer phone number available.');
+        return;
+      }
+
+      const message = encodeURIComponent(`Your invoice is ready: ${data.url}`);
+      await Linking.openURL(`https://wa.me/${phone}?text=${message}`);
     } catch (err) {
       console.error('Failed to share invoice:', err);
       alert('Could not share invoice. Please try again.');
@@ -178,7 +186,20 @@ export default function GenerateBillScreen({
         alert('Could not save latest billing details first. Please try again.');
         return;
       }
-      await generateAndSharePDF();
+      const base64 = await generatePDFBase64();
+
+      const saf = FileSystem.StorageAccessFramework;
+      const permission = await saf.requestDirectoryPermissionsAsync();
+      if (!permission.granted) return;
+
+      const fileUri = await saf.createFileAsync(
+        permission.directoryUri,
+        `invoice_${repair.id}.pdf`,
+        'application/pdf',
+      );
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
     } catch (err) {
       console.error('Failed to download invoice:', err);
       alert('Could not download invoice. Please try again.');
@@ -224,6 +245,7 @@ export default function GenerateBillScreen({
           setTaxSnapshot(billRes.data.tax_snapshot || []);
           setPaymentStatus(billRes.data.payment_status || 'Unpaid');
           setPaymentMethod(billRes.data.payment_method || null);
+          setHasExistingBill(true);
         }
       } catch (err) {
         console.error('Failed to load billing details:', err);
@@ -241,14 +263,14 @@ export default function GenerateBillScreen({
         items: billItems,
         service_charge: serviceCharge,
         tax_snapshot: taxSnapshot,
-        // tax_total stores all taxes for record; backend calculates total_amount using exclusive only
         tax_total: taxSnapshot.reduce((s, t) => s + Number(t.amount || 0), 0),
         payment_status: paymentStatus,
         payment_method: paymentStatus === 'Paid' ? paymentMethod : null,
       });
 
       if (res.success) {
-        setShowSuccess(true);
+        setHasExistingBill(true);
+        setIsEditing(false);
       }
     } catch (err) {
       console.error('Failed to save bill:', err);
@@ -256,6 +278,9 @@ export default function GenerateBillScreen({
       setSubmitting(false);
     }
   };
+
+  const handleFormAction = hasExistingBill && !isEditing ? () => setIsEditing(true) : handleSave;
+  const formActionLabel = hasExistingBill && !isEditing ? 'Edit Bill' : isEditing ? 'Save Changes' : 'Save Billing Details';
 
   return (
     <ThemedView style={styles.container}>
@@ -362,13 +387,14 @@ export default function GenerateBillScreen({
               taxes={taxes}
               taxSnapshot={taxSnapshot}
               onTaxChange={setTaxSnapshot}
+              editable={!hasExistingBill || isEditing}
             />
           </ScrollView>
 
           {/* Footer Actions (Share, Download, Save) — hidden while keyboard is open */}
           {!keyboardVisible && (
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}> 
-            {/* Row 1: WhatsApp Share & Download PDF side-by-side */}
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+            {hasExistingBill && (
             <View style={styles.actionRow}>
               <Pressable
                 style={({ pressed }) => [
@@ -408,15 +434,16 @@ export default function GenerateBillScreen({
                 )}
               </Pressable>
             </View>
+            )}
 
-            {/* Row 2: Save Billing Details */}
+            {/* Save / Edit Bill */}
             <Pressable
               style={({ pressed }) => [
                 styles.saveBtn,
                 pressed && styles.pressed,
                 submitting && styles.disabled,
               ]}
-              onPress={handleSave}
+              onPress={handleFormAction}
               disabled={sharing || downloading || submitting}
             >
               {submitting ? (
@@ -424,7 +451,7 @@ export default function GenerateBillScreen({
               ) : (
                 <View style={styles.btnInner}>
                   <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                  <ThemedText style={styles.saveBtnText}>Save Billing Details</ThemedText>
+                  <ThemedText style={styles.saveBtnText}>{formActionLabel}</ThemedText>
                 </View>
               )}
             </Pressable>
@@ -433,35 +460,6 @@ export default function GenerateBillScreen({
         </>
       )}
 
-      {/* Google Pay style Success Animation */}
-      <SuccessModal
-        visible={showSuccess}
-        onClose={onSuccess}
-        title="Invoice Saved!"
-        subtitle="Billing details and invoice have been successfully generated."
-        actionButtons={[
-          {
-            label: 'Share via WhatsApp',
-            icon: 'logo-whatsapp',
-            onPress: handleShareInvoice,
-            primary: true,
-            loading: sharing,
-          },
-          {
-            label: 'Download Invoice',
-            icon: 'download-outline',
-            onPress: handleDownloadInvoice,
-            primary: false,
-            loading: downloading,
-          },
-          {
-            label: 'Done',
-            icon: 'checkmark-circle-outline',
-            onPress: onSuccess,
-            primary: false,
-          },
-        ]}
-      />
     </ThemedView>
   );
 }

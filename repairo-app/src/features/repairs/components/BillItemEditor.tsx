@@ -22,15 +22,17 @@ interface BillItemEditorProps {
   taxes: Tax[];
   taxSnapshot: TaxSnapshotItem[];
   onTaxChange: (t: TaxSnapshotItem[]) => void;
+  editable?: boolean;
 }
 
 // ── Individual Item Card ────────────────────────────────────────────────────
-const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency }: {
+const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency, editable }: {
   item: BillItem;
   index: number;
   onUpdate: (item: BillItem) => void;
   onRemove: () => void;
   currency: string;
+  editable: boolean;
 }) => {
   const [name, setName] = useState(item.name);
   const [qty, setQty] = useState(String(item.qty ?? 1));
@@ -69,9 +71,11 @@ const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency }: {
           <ThemedText style={styles.lineTotalLabel}>
         {currency}{lineTotal.toFixed(2)}
       </ThemedText>
-          <Pressable style={styles.deleteBtn} onPress={onRemove} hitSlop={8}>
-            <Ionicons name="trash-outline" size={16} color="#E5544D" />
-          </Pressable>
+          {editable && (
+            <Pressable style={styles.deleteBtn} onPress={onRemove} hitSlop={8}>
+              <Ionicons name="trash-outline" size={16} color="#E5544D" />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -82,9 +86,10 @@ const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency }: {
         onChangeText={setName}
         onBlur={commit}
         onEndEditing={commit}
-        placeholder="Part / service name..."
+        placeholder={editable ? "Part / service name..." : ""}
         placeholderTextColor="#B0AA97"
         returnKeyType="next"
+        editable={editable}
       />
 
       {/* Qty + Cost side-by-side */}
@@ -96,9 +101,10 @@ const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency }: {
             value={qty}
             onChangeText={handleQtyChange}
             keyboardType="numeric"
-            placeholder="1"
+            placeholder={editable ? "1" : ""}
             placeholderTextColor="#B0AA97"
             returnKeyType="next"
+            editable={editable}
           />
         </View>
         <View style={styles.halfCol}>
@@ -108,9 +114,10 @@ const BillItemRow = memo(({ item, index, onUpdate, onRemove, currency }: {
             value={cost}
             onChangeText={handleCostChange}
             keyboardType="numeric"
-            placeholder="0.00"
+            placeholder={editable ? "0.00" : ""}
             placeholderTextColor="#B0AA97"
             returnKeyType="done"
+            editable={editable}
           />
         </View>
       </View>
@@ -124,6 +131,7 @@ export default function BillItemEditor({
   paymentStatus, onPaymentStatusChange,
   paymentMethod, onPaymentMethodChange,
   taxes, taxSnapshot, onTaxChange,
+  editable = true,
 }: BillItemEditorProps) {
   const currency = useCurrency();
   const [localCharge, setLocalCharge] = useState(String(serviceCharge || ''));
@@ -164,11 +172,13 @@ export default function BillItemEditor({
           <ThemedText style={styles.sectionTitle}>Parts & Services</ThemedText>
         </View>
 
-        {items.length === 0 ? (
+        {items.length === 0 && editable ? (
           <Pressable style={styles.emptyCard} onPress={addItem}>
             <Ionicons name="receipt-outline" size={32} color={PRIMARY + '60'} />
             <ThemedText style={styles.emptyText}>Tap to add parts or services</ThemedText>
           </Pressable>
+        ) : items.length === 0 ? (
+          <ThemedText style={styles.noItemsText}>No items added yet.</ThemedText>
         ) : (
           <View style={styles.itemList}>
             {items.map((item, i) => (
@@ -177,15 +187,17 @@ export default function BillItemEditor({
                 item={item}
                 index={i}
                 currency={currency}
+                editable={editable}
                 onUpdate={(updated) => handleRowUpdate(i, updated)}
                 onRemove={() => handleRowRemove(i)}
               />
             ))}
-            {/* Inline add button at the bottom of list */}
-            <Pressable style={styles.inlineAddBtn} onPress={addItem}>
-              <Ionicons name="add-circle-outline" size={18} color={PRIMARY} />
-              <ThemedText style={styles.inlineAddBtnText}>Add another item</ThemedText>
-            </Pressable>
+            {editable && (
+              <Pressable style={styles.inlineAddBtn} onPress={addItem}>
+                <Ionicons name="add-circle-outline" size={18} color={PRIMARY} />
+                <ThemedText style={styles.inlineAddBtnText}>Add another item</ThemedText>
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -205,8 +217,9 @@ export default function BillItemEditor({
             onBlur={() => onServiceChargeChange(Number(localCharge) || 0)}
             onEndEditing={() => onServiceChargeChange(Number(localCharge) || 0)}
             keyboardType="numeric"
-            placeholder="0.00"
+            placeholder={editable ? "0.00" : ""}
             placeholderTextColor="#B0AA97"
+            editable={editable}
           />
         </View>
       </View>
@@ -218,6 +231,7 @@ export default function BillItemEditor({
         onChange={onTaxChange}
         subtotal={subtotal}
         serviceCharge={serviceCharge}
+        editable={editable}
       />
 
       {/* ── Summary ──────────────────────────────────────────── */}
@@ -298,7 +312,7 @@ export default function BillItemEditor({
                   styles.segment,
                   active && (isPaid ? styles.segmentActivePaid : styles.segmentActiveUnpaid),
                 ]}
-                onPress={() => onPaymentStatusChange(s)}
+                onPress={() => editable ? onPaymentStatusChange(s) : undefined}
               >
                 <Ionicons
                   name={isPaid ? 'checkmark-circle-outline' : 'time-outline'}
@@ -331,7 +345,7 @@ export default function BillItemEditor({
                     styles.segment,
                     active && styles.segmentActivePaid,
                   ]}
-                  onPress={() => onPaymentMethodChange?.(m)}
+                  onPress={() => editable ? onPaymentMethodChange?.(m) : undefined}
                 >
                   <Ionicons
                     name={m === 'Cash' ? 'cash-outline' : 'globe-outline'}
@@ -413,6 +427,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: PRIMARY,
     fontWeight: '600',
+  },
+  noItemsText: {
+    fontSize: 13,
+    color: '#8A8A80',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
 
   // ── Item list

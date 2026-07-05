@@ -80,26 +80,30 @@ function SegmentedControl({
   counts: Record<TabKey, number>;
   onSelect: (k: TabKey) => void;
 }) {
-  const tabWidth = 100 / TABS.length;
+  const [containerW, setContainerW] = useState(0);
+  const tabW = useMemo(() => (containerW - 6) / TABS.length, [containerW]);
+  const startPad = 3;
 
-  const translateX = useSharedValue(
-    TABS.findIndex((t) => t.key === activeTab) * tabWidth
-  );
+  const leftVal = useSharedValue(startPad + TABS.findIndex((t) => t.key === activeTab) * tabW);
 
   useEffect(() => {
-    translateX.value = withTiming(
-      TABS.findIndex((t) => t.key === activeTab) * tabWidth,
-      { duration: 250, easing: Easing.out(Easing.cubic) }
-    );
-  }, [activeTab]);
+    if (tabW > 0) {
+      leftVal.value = withTiming(
+        startPad + TABS.findIndex((t) => t.key === activeTab) * tabW,
+        { duration: 250, easing: Easing.out(Easing.cubic) }
+      );
+    }
+  }, [activeTab, tabW]);
 
   const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: `${translateX.value}%` }],
+    left: leftVal.value,
   }));
 
   return (
-    <View style={segStyles.container}>
-      <Animated.View style={[segStyles.pill, { width: `${tabWidth}%` }, pillStyle]} />
+    <View style={segStyles.container} onLayout={(e) => setContainerW(e.nativeEvent.layout.width)}>
+      {containerW > 0 && (
+        <Animated.View pointerEvents="none" style={[segStyles.pill, { width: tabW }, pillStyle]} />
+      )}
       {TABS.map((tab) => {
         const active = activeTab === tab.key;
         return (
@@ -134,7 +138,6 @@ const segStyles = StyleSheet.create({
   pill: {
     position: 'absolute',
     top: 3,
-    left: 3,
     bottom: 3,
     backgroundColor: Colors.primary,
     borderRadius: 10,

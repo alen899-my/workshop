@@ -30,12 +30,31 @@ import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import type { Worker } from '@/features/repairs/services/worker.service';
 import { workerService } from '@/features/repairs/services/worker.service';
 import { getCurrentUser } from '@/services/auth.service';
-import { getCallingCode } from '@/utils/preload-countries';
+import { getCallingCode, countriesCache } from '@/utils/preload-countries';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const PRIORITY_COLORS: Record<string, string> = {
   Low: '#38A169', Medium: '#D69E2E', High: '#DD6B20', Urgent: '#E53E3E',
 };
+
+function stripCallingCode(fullNumber: string, defaultCC: string): { cc: string; number: string } {
+  if (!fullNumber) return { cc: defaultCC, number: '' };
+  const trimmed = fullNumber.trim();
+  if (!trimmed.startsWith('+')) return { cc: defaultCC, number: trimmed };
+  if (countriesCache) {
+    const entries = Object.entries(countriesCache) as any[];
+    const sorted = entries
+      .filter(([_, c]: any) => c.callingCode?.[0])
+      .sort(([_, a]: any, [__, b]: any) => (b.callingCode[0].length) - (a.callingCode[0].length));
+    for (const [_, country] of sorted) {
+      const code = `+${country.callingCode[0]}`;
+      if (trimmed.startsWith(code)) {
+        return { cc: code, number: trimmed.slice(code.length) };
+      }
+    }
+  }
+  return { cc: defaultCC, number: trimmed };
+}
 
 interface RepairForm {
   vehicleNumber: string;
@@ -155,6 +174,20 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     });
   }, []);
 
+  // On edit, strip calling code from existing phone numbers so they don't get double-coded
+  useEffect(() => {
+    if (initialRepair?.phone_number) {
+      const parsed = stripCallingCode(initialRepair.phone_number, shopCallingCode);
+      setPhoneCC(parsed.cc);
+      update('phoneNumber', parsed.number);
+    }
+    if (initialRepair?.whatsapp_number) {
+      const parsed = stripCallingCode(initialRepair.whatsapp_number, shopCallingCode);
+      setWhatsappCC(parsed.cc);
+      update('whatsappNumber', parsed.number);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isEdit && initialRepair?.id && initialRepair.bill_id) {
       billService.getByRepairId(initialRepair.id).then((res) => {
@@ -169,8 +202,11 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   }, [isEdit, initialRepair?.id, initialRepair?.bill_id]);
 
   useEffect(() => {
-    if (whatsappSame) update('whatsappNumber', form.phoneNumber);
-  }, [form.phoneNumber, whatsappSame]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (whatsappSame) {
+      update('whatsappNumber', form.phoneNumber);
+      setWhatsappCC(phoneCC);
+    }
+  }, [form.phoneNumber, whatsappSame, phoneCC]);
 
   useEffect(() => {
     vehicleService.getAll().then((res) => {
@@ -657,12 +693,12 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
                   {imageFiles.map((file, i) => (
                     <Image key={`new-${i}`} source={{ uri: file.uri }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
                   ))}
-                  {!imageFiles.length && vehicleImage && (
-                    <Image source={{ uri: vehicleImage }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
-                  )}
                   {!imageFiles.length && initialRepair?.images && initialRepair.images.map((url, i) => (
                     <Image key={`ext-${i}`} source={{ uri: url }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
                   ))}
+                  {!imageFiles.length && !initialRepair?.images?.length && vehicleImage && (
+                    <Image source={{ uri: vehicleImage }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                  )}
                 </View>
               </Card>
             )}

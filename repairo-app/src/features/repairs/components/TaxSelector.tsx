@@ -15,9 +15,10 @@ interface TaxSelectorProps {
   onChange: (selected: TaxSnapshotItem[]) => void;
   subtotal: number;
   serviceCharge: number;
+  editable?: boolean;
 }
 
-export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge }: TaxSelectorProps) {
+export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge, editable = true }: TaxSelectorProps) {
   const currency = useCurrency();
 
   const toggleTax = useCallback((tax: Tax) => {
@@ -41,7 +42,7 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
           <Pressable
             key={tax.id}
             style={[styles.taxRow, active && styles.taxRowActive]}
-            onPress={() => toggleTax(tax)}
+            onPress={() => editable ? toggleTax(tax) : undefined}
           >
             <Ionicons
               name={active ? 'toggle' : 'toggle-outline'}
