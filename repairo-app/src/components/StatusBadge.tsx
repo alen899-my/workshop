@@ -15,7 +15,6 @@ interface StatusBadgeProps {
 const DEFAULT_COLOR_MAP: Record<string, string> = {
   Pending: Colors.warning,
   Started: Colors.info,
-  'In Progress': Colors.primary,
   Completed: Colors.success,
   Paid: Colors.success,
   Unpaid: Colors.warning,

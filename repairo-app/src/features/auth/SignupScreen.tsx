@@ -130,6 +130,7 @@ export default function SignupScreen() {
         currency: form.currency,
         email: form.email,
         password: form.password,
+        callingCode,   // persisted so CreateRepairScreen pre-fills phone/WhatsApp calling code
       });
       setSuccess(true);
     } catch (err: any) {

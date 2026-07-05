@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import type { TaxSnapshotItem } from '@/features/repairs/services/bill.service';
 import type { Tax } from '@/features/repairs/services/tax.service';
+import { useCurrency } from '@/hooks/use-currency';
 
 const PRIMARY = '#3D7A78';
 
@@ -17,6 +18,8 @@ interface TaxSelectorProps {
 }
 
 export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge }: TaxSelectorProps) {
+  const currency = useCurrency();
+
   const toggleTax = useCallback((tax: Tax) => {
     const exists = selected.find((t) => t.id === tax.id);
     if (exists) {
@@ -33,6 +36,7 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
       <ThemedText style={styles.cardTitle}>Applicable Taxes</ThemedText>
       {taxes.map((tax) => {
         const active = selected.some((t) => t.id === tax.id);
+        const activeAmount = selected.find((t) => t.id === tax.id)?.amount;
         return (
           <Pressable
             key={tax.id}
@@ -51,7 +55,7 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
             {active && (
               <View style={styles.taxAmountWrap}>
                 <ThemedText style={styles.taxAmount}>
-                  ₹{selected.find((t) => t.id === tax.id)?.amount.toFixed(2)}
+                  {currency}{Number(activeAmount || 0).toFixed(2)}
                 </ThemedText>
               </View>
             )}

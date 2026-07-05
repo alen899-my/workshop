@@ -68,7 +68,9 @@ exports.registerShop = async (req, res) => {
         shopName,
         ownerName,
         phone,
-        role: 'shop_owner'
+        role: 'shop_owner',
+        shopCountry: country || 'IN',
+        shopCurrency: currency || 'INR'
       }
     });
 
@@ -86,7 +88,7 @@ exports.login = async (req, res) => {
   try {
     // We use LEFT JOIN to allow global admins (who might have no shop_id) to log in
     const userResult = await db.query(
-      'SELECT u.*, s.name as shop_name, s.owner_name, s.currency as shop_currency FROM users u LEFT JOIN shops s ON u.shop_id = s.id WHERE u.phone = $1',
+      'SELECT u.*, s.name as shop_name, s.owner_name, s.currency as shop_currency, s.country as shop_country FROM users u LEFT JOIN shops s ON u.shop_id = s.id WHERE u.phone = $1',
       [phone]
     );
 
@@ -118,6 +120,9 @@ exports.login = async (req, res) => {
         shopId: user.shop_id,
         shopName: user.shop_name || 'Global Systems',
         shopCurrency: user.shop_currency || 'INR',
+        shopCountry: user.shop_country || 'IN',
+        ownerName: user.owner_name || user.name,
+        phone: user.phone,
         roleId: user.role_id,
         role: user.role
       }

@@ -42,6 +42,11 @@ function AnimatedTab({
     transform: [{ scale: 0.8 + scale.value * 0.4 }],
   }));
 
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: scale.value,
+    transform: [{ scaleX: scale.value }],
+  }));
+
   return (
     <Pressable style={styles.item} onPress={onPress}>
       <Animated.View style={iconStyle}>
@@ -51,6 +56,7 @@ function AnimatedTab({
           color={focused ? Colors.floatingBar : Colors.mutedDark}
         />
       </Animated.View>
+      <Animated.View style={[styles.indicator, indicatorStyle]} />
       <Animated.Text
         style={[
           styles.label,
@@ -65,9 +71,13 @@ function AnimatedTab({
 
 export default function FloatingTabBar({ state, navigation }: any) {
   const { bottom } = useSafeAreaInsets();
-  const { can } = useRBAC();
+  const { can, loading } = useRBAC();
 
-  const visibleTabs = TABS.filter((tab) => !tab.permission || can(tab.permission));
+  // While permissions are loading, show all tabs to avoid a flash of only "Home".
+  // Once loaded, apply RBAC filtering correctly.
+  const visibleTabs = loading
+    ? TABS
+    : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(bottom, 16) }]}>
@@ -116,8 +126,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    gap: 2,
+    paddingVertical: 6,
+    gap: 1,
+  },
+  indicator: {
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.floatingBar,
+    marginTop: 2,
   },
   label: {
     fontSize: 10,

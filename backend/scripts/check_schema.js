@@ -8,10 +8,14 @@ async function check() {
   const shops = await db.query(
     "SELECT column_name FROM information_schema.columns WHERE table_name='shops' ORDER BY ordinal_position"
   );
+  const repair_bills = await db.query(
+    "SELECT column_name FROM information_schema.columns WHERE table_name='repair_bills' ORDER BY ordinal_position"
+  );
   const fs = require('fs');
   const out = {
     users: users.rows.map(r => r.column_name),
-    shops: shops.rows.map(r => r.column_name)
+    shops: shops.rows.map(r => r.column_name),
+    repair_bills: repair_bills.rows.map(r => r.column_name)
   };
   fs.writeFileSync('./scripts/schema_out.json', JSON.stringify(out, null, 2));
   console.log('Written to scripts/schema_out.json');

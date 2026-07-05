@@ -79,29 +79,43 @@ export const repairService = {
 
   async create(data: FormData): Promise<{ success: boolean; data?: Repair; error?: string }> {
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
-        body: data,
+      const token = await getStoredToken();
+      return await new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', API_URL);
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.onload = () => {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { resolve({ success: false, error: 'Invalid response' }); }
+        };
+        xhr.onerror = () => resolve({ success: false, error: 'Network error' });
+        xhr.send(data);
       });
-      return await res.json();
-    } catch {
-      return { success: false, error: 'Creation failed' };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Creation failed';
+      console.error('createRepair exception:', msg);
+      return { success: false, error: msg };
     }
   },
 
   async update(id: string | number, data: FormData): Promise<{ success: boolean; data?: Repair; error?: string }> {
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_URL}/${id}`, {
-        method: 'PUT',
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
-        body: data,
+      const token = await getStoredToken();
+      return await new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', `${API_URL}/${id}`);
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.onload = () => {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { resolve({ success: false, error: 'Invalid response' }); }
+        };
+        xhr.onerror = () => resolve({ success: false, error: 'Network error' });
+        xhr.send(data);
       });
-      return await res.json();
-    } catch {
-      return { success: false, error: 'Update failed' };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Update failed';
+      console.error('updateRepair exception:', msg);
+      return { success: false, error: msg };
     }
   },
 

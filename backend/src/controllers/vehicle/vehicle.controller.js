@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
+const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
 // @desc    Get all vehicles (scoped by shop)
 exports.getVehicles = async (req, res) => {
@@ -76,7 +76,7 @@ exports.createVehicle = async (req, res) => {
 
   try {
     if (req.file) {
-      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      vehicle_image = getFileUrl(req.file);
     }
 
     const result = await db.query(
@@ -103,7 +103,7 @@ exports.updateVehicle = async (req, res) => {
 
     if (req.file) {
       if (vehicle_image) await deleteFromR2(vehicle_image);
-      vehicle_image = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      vehicle_image = getFileUrl(req.file);
     }
 
     const result = await db.query(

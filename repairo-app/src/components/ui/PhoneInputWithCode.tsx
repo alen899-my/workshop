@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { FlagType, getAllCountries } from 'react-native-country-picker-modal';
 import ModalSheet from '@/components/ui/ModalSheet';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { getCallingCode, getCurrency, waitForCountries, countriesCache } from '@/utils/preload-countries';
 
 interface CountryData {
   cca2: string;
@@ -18,6 +18,7 @@ interface Props {
   onCountryChange: (c: CountryData) => void;
   onPhoneChange: (phone: string) => void;
   error?: string;
+  label?: string;
 }
 
 export default function PhoneInputWithCode({
@@ -26,28 +27,30 @@ export default function PhoneInputWithCode({
   onCountryChange,
   onPhoneChange,
   error,
+  label = 'Phone Number',
 }: Props) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [all, setAll] = useState<any[] | null>(null);
-  const [callingCode, setCallingCode] = useState('');
-  const loaded = useRef(false);
-  const mapRef = useRef<Record<string, any> | null>(null);
+  const [callingCode, setCallingCode] = useState(
+    getCallingCode(countryCode) || ''
+  );
 
   useEffect(() => {
-    if (!loaded.current) {
-      loaded.current = true;
-      getAllCountries(FlagType.EMOJI).then((map: Record<string, any>) => {
-        mapRef.current = map;
-        setAll(Object.values(map));
-        const c = map[countryCode];
-        if (c) setCallingCode(c.callingCode?.[0] ? `+${c.callingCode[0]}` : '');
-      });
-    } else if (mapRef.current) {
-      const c = mapRef.current[countryCode];
-      if (c) setCallingCode(c.callingCode?.[0] ? `+${c.callingCode[0]}` : '');
-    }
+    waitForCountries().then(() => {
+      // Populate the full country list once
+      if (countriesCache && !all) {
+        setAll(Object.values(countriesCache));
+      }
+      // Always sync the displayed calling code with the countryCode prop
+      const code = getCallingCode(countryCode);
+      if (code) {
+        setCallingCode(code);
+        onCountryChange({ cca2: countryCode, callingCode: code, currency: getCurrency(countryCode) });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countryCode]);
 
   const filtered = useMemo(() => {
@@ -73,10 +76,10 @@ export default function PhoneInputWithCode({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={[styles.label, { color: theme.text }]}>Phone Number</Text>
+      <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
       <View style={[styles.inputContainer, { borderColor: error ? theme.error : theme.border, backgroundColor: theme.card }]}>
         <Pressable style={styles.codeBtn} onPress={() => setOpen(true)}>
-          <Text style={[styles.codeText, { color: theme.dark }]}>{callingCode || '+1'}</Text>
+          <Text style={[styles.codeText, { color: theme.dark }]}>{callingCode}</Text>
           <MaterialCommunityIcons name="chevron-down" size={14} color={theme.textSecondary} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />

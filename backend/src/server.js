@@ -50,6 +50,16 @@ db.query('SELECT NOW()', (err, res) => {
   }
 });
 
+// Global error handler — catches multer/file errors and returns JSON
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message || err);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ success: false, error: 'File too large. Maximum size is 10MB.' });
+  }
+  const message = err.message || 'Internal server error';
+  res.status(500).json({ success: false, error: message });
+});
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 // Binding explicitly to '0.0.0.0' allows physical devices and Expo network IPs to successfully hit the server natively

@@ -1,6 +1,6 @@
 const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
-const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
+const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
 // Allowed roles a shop_owner can assign to members of their shop
 const OWNER_ASSIGNABLE_ROLES = ['worker', 'shop_owner'];
@@ -195,7 +195,7 @@ exports.updateUser = async (req, res) => {
     let finalProfileImage = existing.rows[0].profile_image;
     if (req.file) {
       if (finalProfileImage) await deleteFromR2(finalProfileImage);
-      finalProfileImage = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      finalProfileImage = getFileUrl(req.file);
     } else if (profile_image === "") {
       if (finalProfileImage) await deleteFromR2(finalProfileImage);
       finalProfileImage = null;

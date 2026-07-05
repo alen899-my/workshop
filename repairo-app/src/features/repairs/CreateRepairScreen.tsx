@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -22,12 +22,15 @@ import ServiceBlockEditor from './components/ServiceBlockEditor';
 import type { ServiceBlock } from './components/ServiceBlockEditor';
 import VehicleTypePicker from './components/VehicleTypePicker';
 import WorkerSelect from './components/WorkerSelect';
-
-const TABS = [
-  { key: 'vehicle', label: 'Vehicle' },
-  { key: 'service', label: 'Service' },
-  { key: 'billing', label: 'Billing' },
-];
+import { formatUTCToLocal, convertLocalToUTC } from '@/utils/date';
+import DateTimePickerInput from '@/components/ui/DateTimePickerInput';
+import SuccessModal from '@/components/ui/SuccessModal';
+import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
+import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
+import type { Worker } from '@/features/repairs/services/worker.service';
+import { workerService } from '@/features/repairs/services/worker.service';
+import { getCurrentUser } from '@/services/auth.service';
+import { getCallingCode } from '@/utils/preload-countries';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const PRIORITY_COLORS: Record<string, string> = {
@@ -60,16 +63,37 @@ interface CreateRepairScreenProps {
 export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuccess }: CreateRepairScreenProps) {
   const isEdit = mode === 'edit';
   const isView = mode === 'view';
+  const isCreate = mode === 'create';
+
+  const shopUser = getCurrentUser();
+  const shopCountry = shopUser?.shopCountry || 'IN';
+  // Resolve the shop's default calling code synchronously (from cache) or fall back to empty
+  const shopCallingCode = shopUser?.shopCallingCode || getCallingCode(shopCountry) || '';
+
+  const steps = useMemo<{ key: string; label: string }[]>(() => {
+    return [
+      { key: 'vehicle', label: 'Vehicle' },
+      { key: 'service', label: 'Service' },
+      { key: 'review', label: 'Review Job' },
+    ];
+  }, []);
 
   const [activeTab, setActiveTab] = useState('vehicle');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
   const [kbHeight, setKbHeight] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [workers, setWorkers] = useState<Worker[]>([]);
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (e) => setKbHeight(e.endCoordinates.height));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    workerService.getWorkers().then((res) => {
+      if (res.success && res.data) {
+        setWorkers(res.data);
+      }
+    });
     return () => { show.remove(); hide.remove(); };
   }, []);
 
@@ -87,21 +111,25 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     whatsappNumber: initialRepair?.whatsapp_number || '',
     kmReading: initialRepair?.km_reading || '',
     workerId: String(initialRepair?.attending_worker_id || ''),
-    repairDate: initialRepair?.repair_date || new Date().toISOString().split('T')[0],
+    repairDate: formatUTCToLocal(initialRepair?.repair_date) || formatUTCToLocal(new Date().toISOString()),
     priority: initialRepair?.priority || 'Medium',
-    expectedCompletion: initialRepair?.expected_completion?.split('T')[0] || '',
+    expectedCompletion: formatUTCToLocal(initialRepair?.expected_completion) || '',
     status: initialRepair?.status || 'Pending',
   });
 
   const [form, setForm] = useState<RepairForm>(initForm);
   const update = useCallback(<K extends keyof RepairForm>(key: K, val: RepairForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: val }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+    setErrors((prev) => { const next = { ...prev }; delete next[key as string]; return next; });
   }, []);
 
   const [whatsappSame, setWhatsappSame] = useState(!initialRepair?.whatsapp_number && !!initialRepair?.phone_number);
   const [vehicleImage, setVehicleImage] = useState<string | null>(initialRepair?.vehicle_image || null);
   const [imageFiles, setImageFiles] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  // Pre-initialize with shop's default calling code; will be overridden when PhoneInputWithCode mounts
+  const [phoneCC, setPhoneCC] = useState(shopCallingCode);
+  const [whatsappCC, setWhatsappCC] = useState(shopCallingCode);
   const [allVehicles, setAllVehicles] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -152,8 +180,11 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
 
   const handlePhoneChange = useCallback((val: string) => {
     update('phoneNumber', val);
-    if (whatsappSame) update('whatsappNumber', val);
-  }, [whatsappSame, update]);
+    if (whatsappSame) {
+      update('whatsappNumber', val);
+      setWhatsappCC(phoneCC);
+    }
+  }, [whatsappSame, update, phoneCC]);
 
   const handleVehicleNumberChange = useCallback((val: string) => {
     update('vehicleNumber', val);
@@ -176,7 +207,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     }, 300);
   }, [allVehicles, update]);
 
-  const handlePickImages = useCallback(async () => {
+  const pickFromGallery = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       showToast('Camera roll permission needed', 'error');
@@ -196,7 +227,27 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     }
   }, [showToast, isCreate]);
 
-  const isCreate = mode === 'create';
+  const takePhoto = useCallback(async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      showToast('Camera permission needed', 'error');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.82,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      if (isCreate) {
+        setImageFiles([result.assets[0]]);
+      } else {
+        setImageFiles((prev) => [...prev, ...result.assets]);
+      }
+    }
+  }, [showToast, isCreate]);
+
+  const handlePickImages = useCallback(() => {
+    setShowImagePicker(true);
+  }, []);
 
   const removeImage = useCallback((index: number) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
@@ -217,49 +268,52 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     setShowSuggestions(false);
   }, []);
 
-  const buildFormData = useCallback(() => {
+  const buildFormData = useCallback(async () => {
     const fd = new FormData();
-    fd.append('vehicle_number', form.vehicleNumber);
-    fd.append('vehicle_type', form.vehicleType);
-    fd.append('brand', form.brand);
-    fd.append('model_name', form.modelName);
-    fd.append('owner_name', form.ownerName);
-    fd.append('phone_number', form.phoneNumber);
-    fd.append('whatsapp_number', form.whatsappNumber);
-    fd.append('km_reading', form.kmReading);
+    fd.append('vehicle_number', String(form.vehicleNumber || ''));
+    fd.append('vehicle_type', String(form.vehicleType || 'Car'));
+    fd.append('brand', String(form.brand || ''));
+    fd.append('model_name', String(form.modelName || ''));
+    fd.append('owner_name', String(form.ownerName || ''));
+    fd.append('phone_number', `${phoneCC || ''}${form.phoneNumber || ''}`);
+    fd.append('whatsapp_number', `${whatsappCC || ''}${form.whatsappNumber || ''}`);
+    fd.append('km_reading', String(form.kmReading || ''));
     fd.append('complaints', JSON.stringify(serviceBlocks));
     fd.append('service_type', serviceBlocks.map((b) => b.type).join(', '));
-    fd.append('repair_date', form.repairDate);
-    fd.append('attending_worker_id', form.workerId);
-    fd.append('priority', form.priority);
-    fd.append('expected_completion', form.expectedCompletion);
-    fd.append('status', form.status);
-    imageFiles.forEach((file, i) => {
-      fd.append('vehicle_image[]', {
-        uri: file.uri,
-        type: file.mimeType || 'image/jpeg',
-        name: file.fileName || `vehicle_${i}.jpg`,
-      } as any);
-    });
+    fd.append('repair_date', String(convertLocalToUTC(form.repairDate) || ''));
+    fd.append('attending_worker_id', String(form.workerId || ''));
+    fd.append('priority', String(form.priority || 'Medium'));
+    if (form.expectedCompletion) {
+      fd.append('expected_completion', String(convertLocalToUTC(form.expectedCompletion) || ''));
+    }
+    fd.append('status', String(form.status || 'Pending'));
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      if (!file || !file.uri) continue;
+      const ext = file.uri.split('.').pop() || 'jpg';
+      const name = file.fileName || `vehicle_${i}.${ext}`;
+      const type = file.mimeType || `image/${ext === 'png' ? 'png' : 'jpeg'}`;
+      if (Platform.OS === 'web') {
+        const resp = await fetch(file.uri);
+        const blob = await resp.blob();
+        fd.append('vehicle_image[]', blob, name);
+      } else {
+        fd.append('vehicle_image[]', {
+          uri: Platform.OS === 'android' ? file.uri : file.uri.replace('file://', ''),
+          name,
+          type,
+        } as any);
+      }
+    }
     if (imageFiles.length === 0 && vehicleImage && !vehicleImage.startsWith('file')) {
-      fd.append('prefilled_image', vehicleImage);
+      fd.append('prefilled_image', String(vehicleImage));
     }
     if (isEdit) {
-      fd.append('payment_status', paymentStatus);
+      fd.append('payment_status', String(paymentStatus || 'Unpaid'));
     }
     return fd;
-  }, [form, serviceBlocks, imageFiles, vehicleImage, isEdit, paymentStatus]);
+  }, [form, serviceBlocks, imageFiles, vehicleImage, isEdit, paymentStatus, phoneCC, whatsappCC]);
 
-  const saveBill = useCallback(async (repairId: number) => {
-    if (billItems.length === 0 && serviceCharge === 0 && taxSnapshot.length === 0) return;
-    await billService.saveBill(repairId, {
-      items: billItems,
-      service_charge: serviceCharge,
-      tax_snapshot: taxSnapshot,
-      tax_total: taxSnapshot.reduce((s, t) => s + t.amount, 0),
-      payment_status: paymentStatus,
-    });
-  }, [billItems, serviceCharge, taxSnapshot, paymentStatus]);
 
   const handleStepNext = useCallback(async () => {
     if (activeTab === 'vehicle') {
@@ -272,7 +326,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     }
     setSubmitting(true);
     try {
-      const fd = buildFormData();
+      const fd = await buildFormData();
       if (repairIdRef.current) {
         const res = await repairService.update(repairIdRef.current, fd);
         if (!res.success) { showToast(res.error || 'Save failed', 'error'); return; }
@@ -281,19 +335,50 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
         if (!res.success) { showToast(res.error || 'Save failed', 'error'); return; }
         if (res.data?.id) repairIdRef.current = res.data.id;
       }
-      const idx = TABS.findIndex((t) => t.key === activeTab);
-      if (idx < TABS.length - 1) setActiveTab(TABS[idx + 1].key);
+      const idx = steps.findIndex((t) => t.key === activeTab);
+      if (idx < steps.length - 1) setActiveTab(steps[idx + 1].key);
     } catch {
       showToast('Something went wrong', 'error');
     } finally {
       setSubmitting(false);
     }
-  }, [activeTab, form, buildFormData, showToast]);
+  }, [activeTab, form, buildFormData, showToast, steps]);
 
   const handleStepBack = useCallback(() => {
-    const idx = TABS.findIndex((t) => t.key === activeTab);
-    if (idx > 0) setActiveTab(TABS[idx - 1].key);
-  }, [activeTab]);
+    const idx = steps.findIndex((t) => t.key === activeTab);
+    if (idx > 0) setActiveTab(steps[idx - 1].key);
+  }, [activeTab, steps]);
+
+  // Step-dot taps: always allow backward; only allow forward if this step's
+  // required fields are filled.
+  const handleStepBarPress = useCallback((key: string, targetIndex: number) => {
+    const currentIndex = steps.findIndex((t) => t.key === activeTab);
+
+    // Backward — always free
+    if (targetIndex <= currentIndex) {
+      setActiveTab(key);
+      return;
+    }
+
+    // Forward — validate current tab's required fields
+    if (activeTab === 'vehicle') {
+      const missing: string[] = [];
+      if (!form.vehicleNumber.trim()) missing.push('Vehicle Number');
+      if (!form.ownerName.trim()) missing.push('Owner Name');
+      if (!form.phoneNumber.trim()) missing.push('Phone Number');
+      if (missing.length > 0) {
+        showToast(`Fill required fields first: ${missing.join(', ')}`, 'info');
+        return;
+      }
+    }
+
+    if (!repairIdRef.current && activeTab !== 'vehicle') {
+      showToast('Please save this step first using "Next"', 'info');
+      return;
+    }
+
+    setActiveTab(key);
+  }, [activeTab, form.vehicleNumber, form.ownerName, form.phoneNumber, showToast, steps]);
 
   const handleSubmit = useCallback(async () => {
     if (!form.vehicleNumber.trim()) {
@@ -302,32 +387,24 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     }
     setSubmitting(true);
     try {
-      const fd = buildFormData();
+      const fd = await buildFormData();
       const id = repairIdRef.current;
       if (id) {
         const res = await repairService.update(id, fd);
         if (!res.success) { showToast(res.error || 'Update failed', 'error'); return; }
-        await saveBill(id);
       } else {
         const res = await repairService.create(fd);
         if (!res.success) { showToast(res.error || 'Creation failed', 'error'); return; }
-        if (res.data?.id) await saveBill(res.data.id);
       }
-      showToast('Repair saved', 'success');
-      setTimeout(onSuccess, 1000);
+      setShowSuccess(true);
     } catch {
       showToast('Something went wrong', 'error');
     } finally {
       setSubmitting(false);
     }
-  }, [form, buildFormData, repairIdRef, saveBill, showToast, onSuccess]);
+  }, [form, buildFormData, repairIdRef, showToast]);
 
-  const Card = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-    <View style={styles.card}>
-      {title && <ThemedText style={styles.cardTitle}>{title}</ThemedText>}
-      {children}
-    </View>
-  );
+
 
   const renderPriorityChips = () => {
     if (isView) {
@@ -394,11 +471,34 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               <InputField label="Owner Name" value={form.ownerName} onChangeText={(v) => update('ownerName', v)}
                 placeholder="Customer name" icon="account" editable={!isView}
                 required error={errors.owner_name} />
-              <InputField label="Phone Number" value={form.phoneNumber} onChangeText={handlePhoneChange}
-                placeholder="Contact number" keyboardType="phone-pad" icon="phone" editable={!isView}
-                required error={errors.phone_number} />
-              <InputField label="WhatsApp Number" value={form.whatsappNumber} onChangeText={(v) => update('whatsappNumber', v)}
-                placeholder="WhatsApp number" keyboardType="phone-pad" icon="whatsapp" editable={!isView} />
+              {!isView ? (
+                <PhoneInputWithCode
+                  countryCode={shopCountry}
+                  label="Phone Number"
+                  phone={form.phoneNumber}
+                  onCountryChange={(c) => {
+                    setPhoneCC(c.callingCode);
+                    if (whatsappSame) setWhatsappCC(c.callingCode);
+                  }}
+                  onPhoneChange={handlePhoneChange}
+                  error={errors.phone_number}
+                />
+              ) : (
+                <InputField label="Phone Number" value={form.phoneNumber} onChangeText={() => {}}
+                  icon="phone" editable={false} />
+              )}
+              {!isView ? (
+                <PhoneInputWithCode
+                  countryCode={shopCountry}
+                  label="WhatsApp Number"
+                  phone={form.whatsappNumber}
+                  onCountryChange={(c) => setWhatsappCC(c.callingCode)}
+                  onPhoneChange={(v) => update('whatsappNumber', v)}
+                />
+              ) : (
+                <InputField label="WhatsApp Number" value={form.whatsappNumber} onChangeText={() => {}}
+                  icon="whatsapp" editable={false} />
+              )}
               {!isView && (
                 <Pressable style={styles.checkboxRow} onPress={() => setWhatsappSame(!whatsappSame)}>
                   <Ionicons name={whatsappSame ? 'checkbox' : 'square-outline'} size={20} color={Colors.primary} />
@@ -410,8 +510,21 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
             <Card title="Photos">
               {!isView ? (
                 <View>
-                  {imageFiles.length > 0 ? (
+                  {(imageFiles.length > 0 || vehicleImage) ? (
                     <View style={styles.imageRow}>
+                      {/* Pre-filled registry image */}
+                      {vehicleImage && imageFiles.length === 0 && (
+                        <View style={styles.imageThumbWrap}>
+                          <Image source={{ uri: vehicleImage }} style={styles.imageThumb} contentFit="cover" />
+                          <View style={styles.prefilledBadge}>
+                            <ThemedText style={styles.prefilledBadgeText}>From Registry</ThemedText>
+                          </View>
+                          <Pressable style={styles.removeImgBtn} onPress={() => setVehicleImage(null)}>
+                            <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                          </Pressable>
+                        </View>
+                      )}
+                      {/* Locally picked files */}
                       {imageFiles.map((file, i) => (
                         <View key={i} style={styles.imageThumbWrap}>
                           <Image source={{ uri: file.uri }} style={styles.imageThumb} contentFit="cover" />
@@ -448,25 +561,21 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
       case 'service':
         return (
           <View style={styles.tabContent}>
-            <Card title="Service Details">
-              <ServiceBlockEditor blocks={serviceBlocks} onChange={setServiceBlocks} />
-            </Card>
+            <ServiceBlockEditor blocks={serviceBlocks} onChange={setServiceBlocks} />
 
             <Card title="Assignment">
               <WorkerSelect value={form.workerId} onChange={(v) => update('workerId', v)} />
-              <View style={styles.row2}>
-                <InputField label="Repair Date" value={form.repairDate} onChangeText={(v) => update('repairDate', v)}
-                  placeholder="YYYY-MM-DD" icon="calendar" containerStyle={{ flex: 1 }} editable={!isView} />
-                <InputField label="Expected Completion" value={form.expectedCompletion} onChangeText={(v) => update('expectedCompletion', v)}
-                  placeholder="YYYY-MM-DD" icon="calendar-check" containerStyle={{ flex: 1 }} editable={!isView} />
-              </View>
+              <DateTimePickerInput label="Repair Date" value={form.repairDate} onChange={(v) => update('repairDate', v)}
+                placeholder="Select Repair Date & Time" icon="calendar" editable={!isView} />
+              <DateTimePickerInput label="Expected Completion" value={form.expectedCompletion} onChange={(v) => update('expectedCompletion', v)}
+                placeholder="Select Expected Completion" icon="calendar-check" editable={!isView} />
               {renderPriorityChips()}
             </Card>
 
             <Card title="Status">
               {!isView ? (
                 <View style={styles.chipRow}>
-                  {['Pending', 'Started', 'In Progress', 'Completed'].map((s) => {
+                  {['Pending', 'Started', 'Completed'].map((s) => {
                     const active = form.status === s;
                     return (
                       <Pressable
@@ -486,14 +595,78 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
           </View>
         );
 
-      case 'billing':
+
+      case 'review':
         return (
-          <BillItemEditor
-            items={billItems} onChange={setBillItems}
-            serviceCharge={serviceCharge} onServiceChargeChange={setServiceCharge}
-            paymentStatus={paymentStatus} onPaymentStatusChange={setPaymentStatus}
-            taxes={taxes} taxSnapshot={taxSnapshot} onTaxChange={setTaxSnapshot}
-          />
+          <View style={styles.tabContent}>
+            <Card title="Vehicle Details">
+              <SummaryRow label="Vehicle Number" value={form.vehicleNumber} />
+              <SummaryRow label="Model / Brand" value={form.brand || form.modelName ? `${form.brand} ${form.modelName}` : '—'} />
+              <SummaryRow label="Vehicle Type" value={form.vehicleType} />
+              <SummaryRow label="KM Reading" value={form.kmReading} />
+            </Card>
+
+            <Card title="Customer Details">
+              <SummaryRow label="Owner Name" value={form.ownerName} />
+              <SummaryRow label="Phone Number" value={form.phoneNumber} />
+              <SummaryRow label="WhatsApp Number" value={form.whatsappNumber} />
+            </Card>
+
+            <Card title="Service Details">
+              <SummaryRow label="Priority" value={form.priority} />
+              <SummaryRow label="Repair Date" value={form.repairDate} />
+              <SummaryRow label="Expected Completion" value={form.expectedCompletion} />
+              <SummaryRow label="Status" value={form.status} />
+              <SummaryRow
+                label="Assigned Worker"
+                value={(() => {
+                  if (!form.workerId) return 'None';
+                  const w = workers.find((item) => item.id.toString() === form.workerId);
+                  if (w) return w.name;
+                  if (initialRepair && String(initialRepair.attending_worker_id) === form.workerId) {
+                    return initialRepair.attending_worker_name || `Worker #${form.workerId}`;
+                  }
+                  return `Worker #${form.workerId}`;
+                })()}
+              />
+            </Card>
+
+            <Card title="Complaints & Service Categories">
+              {serviceBlocks.map((block, bi) => (
+                <View key={bi} style={{ marginBottom: bi === serviceBlocks.length - 1 ? 0 : 12, borderBottomWidth: bi === serviceBlocks.length - 1 ? 0 : 1, borderBottomColor: '#F0ECE3', paddingBottom: bi === serviceBlocks.length - 1 ? 0 : 8 }}>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '700', color: '#3D7A78', marginBottom: 4 }}>
+                    {block.type}
+                  </ThemedText>
+                  {block.tasks.filter((t) => t.text.trim()).map((task, ti) => (
+                    <ThemedText key={ti} style={{ fontSize: 13, color: '#4A4A4A', marginLeft: 8, marginTop: 2 }}>
+                      • {task.text}
+                    </ThemedText>
+                  ))}
+                  {block.tasks.filter((t) => t.text.trim()).length === 0 && (
+                    <ThemedText style={{ fontSize: 12, color: '#8A8A80', fontStyle: 'italic', marginLeft: 8 }}>
+                      No items specified
+                    </ThemedText>
+                  )}
+                </View>
+              ))}
+            </Card>
+
+            {(imageFiles.length > 0 || !!vehicleImage || !!initialRepair?.images?.length) && (
+              <Card title="Photos">
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  {imageFiles.map((file, i) => (
+                    <Image key={`new-${i}`} source={{ uri: file.uri }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                  ))}
+                  {!imageFiles.length && vehicleImage && (
+                    <Image source={{ uri: vehicleImage }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                  )}
+                  {!imageFiles.length && initialRepair?.images && initialRepair.images.map((url, i) => (
+                    <Image key={`ext-${i}`} source={{ uri: url }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                  ))}
+                </View>
+              </Card>
+            )}
+          </View>
         );
 
       default:
@@ -502,23 +675,58 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   };
 
   return (
-    <FormScreen
-      title="New Repair"
-      tabs={TABS}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      onStepNext={handleStepNext}
-      onStepBack={handleStepBack}
-      onSubmit={handleSubmit}
-      onCancel={onClose}
-      submitLabel={isView ? 'Close' : 'Save'}
-      submitting={submitting}
-      keyboardPadding={kbHeight > 0 ? kbHeight + 80 : 0}
-      toast={<Toast visible={toast.visible} message={toast.message} type={toast.type}
-        onHide={() => setToast((p) => ({ ...p, visible: false }))} />}
-    >
-      {renderTab()}
-    </FormScreen>
+    <>
+      <FormScreen
+        title="New Repair"
+        tabs={steps}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onStepBarPress={handleStepBarPress}
+        onStepNext={handleStepNext}
+        onStepBack={handleStepBack}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+        submitLabel={isView ? 'Close' : 'Save'}
+        submitting={submitting}
+        keyboardPadding={kbHeight > 0 ? kbHeight + 80 : 0}
+        toast={<Toast visible={toast.visible} message={toast.message} type={toast.type}
+          onHide={() => setToast((p) => ({ ...p, visible: false }))} />}
+      >
+        {renderTab()}
+      </FormScreen>
+
+      <SuccessModal
+        visible={showSuccess}
+        onClose={onSuccess}
+        title={isCreate ? "Job Created!" : "Job Updated!"}
+        subtitle={isCreate ? "Repair job card has been successfully created." : "Repair job card details have been updated."}
+      />
+
+      <ImagePickerSheet
+        visible={showImagePicker}
+        onClose={() => setShowImagePicker(false)}
+        onCamera={takePhoto}
+        onGallery={pickFromGallery}
+      />
+    </>
+  );
+}
+
+function Card({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.card}>
+      {title && <ThemedText style={styles.cardTitle}>{title}</ThemedText>}
+      {children}
+    </View>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F0ECE3' }}>
+      <ThemedText style={{ fontSize: 13, fontWeight: '600', color: '#8A8A80' }}>{label}</ThemedText>
+      <ThemedText style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>{value || '—'}</ThemedText>
+    </View>
   );
 }
 
@@ -553,6 +761,12 @@ const styles = StyleSheet.create({
   imageThumb: { width: 100, height: 100, borderRadius: 12, backgroundColor: '#F0ECE3' },
   imageThumbWrap: { position: 'relative' },
   removeImgBtn: { position: 'absolute', top: -8, right: -8 },
+  prefilledBadge: {
+    position: 'absolute', bottom: 4, left: 4, right: 4,
+    backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 6,
+    paddingHorizontal: 4, paddingVertical: 2, alignItems: 'center',
+  },
+  prefilledBadgeText: { fontSize: 8, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.5 },
   addImageBtn: {
     width: 100, height: 100, borderRadius: 12,
     borderWidth: 2, borderStyle: 'dashed', borderColor: '#3D7A78' + '40',
@@ -596,5 +810,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#8A8A80',
     marginTop: 2,
+  },
+  submitBtnLarge: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#3D7A78',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    shadowColor: '#3D7A78',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

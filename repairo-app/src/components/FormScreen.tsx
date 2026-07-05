@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -12,6 +12,7 @@ interface FormScreenProps {
   tabs: FormTab[];
   activeTab: string;
   onTabChange: (key: string) => void;
+  onStepBarPress?: (key: string, index: number) => void;
   onStepNext: () => void;
   onStepBack: () => void;
   onSubmit: () => void;
@@ -23,15 +24,29 @@ interface FormScreenProps {
   children: React.ReactNode;
 }
 
-const STEP_LABELS = ['Vehicle', 'Service', 'Billing'];
 const PRIMARY = '#3D7A78';
 
 export default function FormScreen({
-  title, tabs, activeTab, onTabChange,
+  title, tabs, activeTab, onTabChange, onStepBarPress,
   onStepNext, onStepBack, onSubmit, onCancel,
   submitLabel = 'Save', submitting, toast, keyboardPadding, children,
 }: FormScreenProps) {
   const { bottom } = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   const currentStep = tabs.findIndex((t) => t.key === activeTab);
   const progress = ((currentStep + 1) / tabs.length) * 100;
   const isLastStep = currentStep === tabs.length - 1;
@@ -48,17 +63,17 @@ export default function FormScreen({
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
         <View style={styles.stepsRow}>
-          {STEP_LABELS.map((label, i) => {
+          {tabs.map((tab, i) => {
             const isActive = i === currentStep;
             const isDone = i < currentStep;
             return (
-              <Pressable key={label} style={styles.stepItem} onPress={() => onTabChange(tabs[i].key)}>
+              <Pressable key={tab.key} style={styles.stepItem} onPress={() => onStepBarPress ? onStepBarPress(tab.key, i) : onTabChange(tab.key)}>
                 <View style={[styles.stepDot, isActive && styles.stepDotActive, isDone && styles.stepDotDone]}>
                   <ThemedText style={[styles.stepNumber, (isActive || isDone) && styles.stepNumberActive]}>
                     {isDone ? '✓' : i + 1}
                   </ThemedText>
                 </View>
-                <ThemedText style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{label}</ThemedText>
+                <ThemedText style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{tab.label}</ThemedText>
               </Pressable>
             );
           })}
@@ -75,33 +90,36 @@ export default function FormScreen({
           style={styles.flex}
           contentContainerStyle={[styles.scrollContent, keyboardPadding ? { paddingBottom: keyboardPadding } : null]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[styles.footer, { paddingBottom: bottom || 0 }]}>
-        {currentStep === 0 ? (
-          <Pressable onPress={onCancel} style={styles.cancelBtn}>
-            <ThemedText style={styles.cancelText}>Cancel</ThemedText>
-          </Pressable>
-        ) : (
-          <Pressable onPress={onStepBack} style={styles.backBtn}>
-            <ThemedText style={styles.backText}>← Back</ThemedText>
-          </Pressable>
-        )}
-        {isLastStep ? (
-          <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, submitting && styles.saving]}>
-            <ThemedText style={styles.primaryText}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
-          </Pressable>
-        ) : (
-          <Pressable onPress={onStepNext} style={styles.primaryBtn}>
-            <ThemedText style={styles.primaryText}>Next →</ThemedText>
-          </Pressable>
-        )}
-      </View>
+      {!keyboardVisible && (
+        <View style={[styles.footer, { paddingBottom: bottom || 0 }]}>
+          {currentStep === 0 ? (
+            <Pressable onPress={onCancel} style={styles.cancelBtn}>
+              <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+            </Pressable>
+          ) : (
+            <Pressable onPress={onStepBack} style={styles.backBtn}>
+              <ThemedText style={styles.backText}>← Back</ThemedText>
+            </Pressable>
+          )}
+          {isLastStep ? (
+            <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, submitting && styles.saving]}>
+              <ThemedText style={styles.primaryText}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
+            </Pressable>
+          ) : (
+            <Pressable onPress={onStepNext} disabled={submitting} style={[styles.primaryBtn, submitting && styles.saving]}>
+              {submitting
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <ThemedText style={styles.primaryText}>Next →</ThemedText>}
+            </Pressable>
+          )}
+        </View>
+      )}
     </ThemedView>
   );
 }

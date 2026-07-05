@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
+const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ exports.getRepairs = async (req, res) => {
     // Single, clean SELECT — no duplicate columns
     const select = `
       SELECT 
-        r.id, r.shop_id, r.vehicle_id,
+        r.id, r.shop_id, r.vehicle_id, r.attending_worker_id,
         r.vehicle_number, r.model_name, r.owner_name, r.phone_number,
         r.complaints, r.repair_date, r.status, r.service_type, r.vehicle_type,
         r.created_at, r.updated_at, r.images,
@@ -73,7 +73,7 @@ exports.getRepairs = async (req, res) => {
       paramIndex++;
     }
 
-    // 'status' is repair progress (Pending/Started/In Progress/Completed)
+    // 'status' is repair progress (Pending/Started/Completed)
     // Exclude record-status values that accidentally end up in this param
     if (status && status !== 'Active' && status !== 'Inactive') {
       whereClauses.push(`r.status = $${paramIndex++}`);
@@ -192,13 +192,10 @@ exports.createRepair = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Upload images to R2
+    // Upload images to R2 (handled by multer-s3 middleware)
     if (req.files && req.files.length > 0) {
-      const urls = await Promise.all(
-        req.files.map((f) => uploadToR2(f.buffer, f.originalname, f.mimetype))
-      );
-      images = urls;
-      vehicle_image = urls[0]; // first image as primary
+      images = req.files.map((f) => getFileUrl(f));
+      vehicle_image = images[0]; // first image as primary
     }
 
     // 1. Upsert Customer by phone
@@ -299,7 +296,8 @@ exports.updateRepair = async (req, res) => {
     vehicle_number, model_name, owner_name, phone_number,
     complaints, repair_date, attending_worker_id,
     status, service_type, vehicle_type, payment_status,
-    brand, km_reading, whatsapp_number, priority, expected_completion
+    brand, km_reading, whatsapp_number, priority, expected_completion,
+    prefilled_image
   } = req.body;
 
   const parsedComplaints = parseComplaints(complaints);
@@ -332,11 +330,12 @@ exports.updateRepair = async (req, res) => {
         deleteFromR2(url).catch(e => console.error('R2 delete failed (non-critical):', e.message));
       });
 
-      const urls = await Promise.all(
-        req.files.map((f) => uploadToR2(f.buffer, f.originalname, f.mimetype))
-      );
-      images = urls;
-      vehicle_image = urls[0]; // first image as primary
+      images = req.files.map((f) => getFileUrl(f));
+      vehicle_image = images[0]; // first image as primary
+    } else if (prefilled_image !== undefined) {
+      // prefilled_image sent as empty string → clear; sent with value → use it
+      vehicle_image = prefilled_image || null;
+      if (!prefilled_image) images = [];
     }
 
     // 1. Upsert Customer
@@ -412,7 +411,7 @@ exports.updateRepair = async (req, res) => {
       [
         vehicleId, vehicle_number, model_name, owner_name, phone_number,
         JSON.stringify(parsedComplaints),
-        repair_date,
+        repair_date || null,
         attending_worker_id || null,
         status || 'Pending',
         service_type || 'Repair',

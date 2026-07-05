@@ -8,13 +8,50 @@
     "created_at",
     "name",
     "status",
-    "role_id"
+    "role_id",
+    "deleted_at",
+    "email",
+    "reset_password_token",
+    "reset_password_expires",
+    "profile_image"
   ],
   "shops": [
     "id",
     "name",
     "location",
     "owner_name",
-    "created_at"
+    "created_at",
+    "country",
+    "currency",
+    "state",
+    "city",
+    "address",
+    "phone",
+    "latitude",
+    "longitude",
+    "place_id",
+    "deleted_at",
+    "status",
+    "shop_image",
+    "owner_phone",
+    "operating_hours",
+    "services_offered",
+    "vehicle_types",
+    "is_public"
+  ],
+  "repair_bills": [
+    "id",
+    "repair_id",
+    "items",
+    "service_charge",
+    "total_amount",
+    "created_at",
+    "updated_at",
+    "tax_snapshot",
+    "tax_total",
+    "subtotal_before_tax",
+    "deleted_at",
+    "status",
+    "payment_status"
   ]
 }

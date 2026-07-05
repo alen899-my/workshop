@@ -8,7 +8,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import type { RepairFilters } from '@/features/repairs/services/repair.service';
 import { useTheme } from '@/hooks/use-theme';
 
-const STATUS_OPTIONS = ['Pending', 'Started', 'In Progress', 'Completed'];
+const STATUS_OPTIONS = ['Pending', 'Started', 'Completed'];
 const SERVICE_TYPE_OPTIONS = ['Repair', 'Servicing', 'Inspection', 'Modification', 'Other'];
 
 interface RepairFilterModalProps {

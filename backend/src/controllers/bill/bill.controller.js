@@ -55,20 +55,33 @@ exports.saveBill = async (req, res) => {
 
     const parsedTaxTotal = Number(tax_total || 0); // Kept for DB record purposes (represents total of all taxes)
     const totalAmount = subtotalBeforeTax + exclusiveTaxSum;
+    const paymentMethod = req.body.payment_method || null;
 
     const query = `
-      INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount, status, payment_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO repair_bills (repair_id, items, service_charge, tax_snapshot, tax_total, subtotal_before_tax, total_amount, status, payment_status, payment_method)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (repair_id) DO UPDATE 
       SET items = EXCLUDED.items, service_charge = EXCLUDED.service_charge, 
           tax_snapshot = EXCLUDED.tax_snapshot, tax_total = EXCLUDED.tax_total,
           subtotal_before_tax = EXCLUDED.subtotal_before_tax,
           total_amount = EXCLUDED.total_amount, status = EXCLUDED.status, 
           payment_status = EXCLUDED.payment_status,
+          payment_method = EXCLUDED.payment_method,
           updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
-    const params = [repairId, JSON.stringify(parsedItems), service_charge || 0, JSON.stringify(tax_snapshot), parsedTaxTotal, subtotalBeforeTax, totalAmount, req.body.status || 'Active', req.body.payment_status || 'Unpaid'];
+    const params = [
+      repairId, 
+      JSON.stringify(parsedItems), 
+      service_charge || 0, 
+      JSON.stringify(tax_snapshot), 
+      parsedTaxTotal, 
+      subtotalBeforeTax, 
+      totalAmount, 
+      req.body.status || 'Active', 
+      req.body.payment_status || 'Unpaid',
+      paymentMethod
+    ];
 
     const result = await db.query(query, params);
 
@@ -88,7 +101,7 @@ exports.getAllBills = async (req, res) => {
     let query = `
       SELECT 
         rb.id, rb.repair_id, rb.items, rb.service_charge, 
-        rb.tax_snapshot, rb.tax_total, rb.subtotal_before_tax, rb.total_amount, rb.payment_status, rb.created_at, rb.updated_at,
+        rb.tax_snapshot, rb.tax_total, rb.subtotal_before_tax, rb.total_amount, rb.payment_status, rb.payment_method, rb.created_at, rb.updated_at,
         r.vehicle_number, r.owner_name, r.repair_date, r.status, r.vehicle_image, r.vehicle_type, r.service_type, r.phone_number, r.complaints,
         u.name as attending_worker_name
       FROM repair_bills rb
@@ -161,22 +174,33 @@ exports.updatePaymentStatus = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
   const id = req.params.id;
-  const { payment_status } = req.body;
+    const { payment_status, payment_method } = req.body;
 
-  try {
-    // Verify ownership
-    const checkRes = await db.query(`
-      SELECT rb.id FROM repair_bills rb
-      JOIN repairs r ON rb.repair_id = r.id
-      WHERE rb.id = $1 ${isSuperAdmin ? '' : 'AND r.shop_id = $2'}
-    `, isSuperAdmin ? [id] : [id, shopId]);
+    try {
+      // Verify ownership
+      const checkRes = await db.query(`
+        SELECT rb.id FROM repair_bills rb
+        JOIN repairs r ON rb.repair_id = r.id
+        WHERE rb.id = $1 ${isSuperAdmin ? '' : 'AND r.shop_id = $2'}
+      `, isSuperAdmin ? [id] : [id, shopId]);
 
-    if (checkRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Bill not found' });
+      if (checkRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Bill not found' });
 
-    const result = await db.query(`UPDATE repair_bills SET payment_status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`, [payment_status, id]);
-    res.status(200).json({ success: true, data: result.rows[0], message: 'Payment status updated' });
-  } catch (error) {
-    console.error('updatePaymentStatus Error:', error);
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-};
+      let result;
+      if (payment_method !== undefined) {
+        result = await db.query(
+          `UPDATE repair_bills SET payment_status = $1, payment_method = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
+          [payment_status, payment_method, id]
+        );
+      } else {
+        result = await db.query(
+          `UPDATE repair_bills SET payment_status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+          [payment_status, id]
+        );
+      }
+      res.status(200).json({ success: true, data: result.rows[0], message: 'Payment status updated' });
+    } catch (error) {
+      console.error('updatePaymentStatus Error:', error);
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  };

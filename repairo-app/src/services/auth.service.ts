@@ -10,6 +10,10 @@ interface UserData {
   shopName?: string;
   ownerName?: string;
   role?: string;
+  shopCurrency?: string;
+  shopCountry?: string;
+  shopCallingCode?: string;
+  phone?: string;
 }
 
 let _currentUser: UserData | null = null;
@@ -48,6 +52,8 @@ export const authService = {
     if (res.token) {
       await setToken(res.token);
     }
+    // Persist the user data; shopCallingCode may come from backend or will be
+    // derived lazily in CreateRepairScreen via getCallingCode(shopCountry)
     await saveUser(res.data ?? null);
     return res;
   },
@@ -61,16 +67,23 @@ export const authService = {
     country: string;
     currency: string;
     password: string;
+    callingCode?: string;
   }) {
+    const { callingCode, ...payload } = data;
     const res: { success: boolean; token?: string; data?: UserData; error?: string } =
-      await api.post('/auth/register-shop', data);
+      await api.post('/auth/register-shop', payload);
     if (!res.success) {
       throw new Error(res.error || 'Registration failed');
     }
     if (res.token) {
       await setToken(res.token);
     }
-    await saveUser(res.data ?? null);
+    // Merge the callingCode from the signup form into the persisted user so
+    // CreateRepairScreen can use it without waiting for country data to load
+    const userData: UserData | null = res.data
+      ? { ...res.data, ...(callingCode ? { shopCallingCode: callingCode } : {}) }
+      : null;
+    await saveUser(userData);
     return res;
   },
 

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { Colors } from '@/constants/theme';
 import { RBACProvider } from '@/hooks/use-rbac';
+import '@/utils/preload-countries'; // kickstart country data fetch early
 
 SplashScreen.preventAutoHideAsync();
 

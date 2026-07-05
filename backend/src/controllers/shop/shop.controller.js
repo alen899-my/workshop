@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const { uploadToR2, deleteFromR2 } = require('../../middleware/upload');
+const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
 // @desc    Get all shops — Global Oversight for super-admin / admin, or public search
 exports.getShops = async (req, res) => {
@@ -122,7 +122,7 @@ exports.createShop = async (req, res) => {
   try {
     let finalShopImage = shop_image;
     if (req.file) {
-      finalShopImage = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      finalShopImage = getFileUrl(req.file);
     }
 
     let finalHours = operating_hours;
@@ -168,7 +168,7 @@ exports.updateShop = async (req, res) => {
     let finalShopImage = existing.rows[0].shop_image;
     if (req.file) {
       if (finalShopImage) await deleteFromR2(finalShopImage);
-      finalShopImage = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      finalShopImage = getFileUrl(req.file);
     } else if (shop_image === "") {
       if (finalShopImage) await deleteFromR2(finalShopImage);
       finalShopImage = null;

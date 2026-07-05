@@ -1,4 +1,5 @@
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,7 +10,6 @@ import type { Repair } from '@/features/repairs/services/repair.service';
 const STATUS_COLORS: Record<string, string> = {
   Pending: Colors.warning,
   Started: Colors.info,
-  'In Progress': Colors.primary,
   Completed: Colors.success,
 };
 
@@ -23,9 +23,9 @@ const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const ICON_TINTS: Record<string, string> = {
-  Car: Colors.blue,
+  Car: Colors.info,
   Bike: Colors.success,
-  Scooter: Colors.purple,
+  Scooter: Colors.primary,
   Bicycle: Colors.success,
   Auto: Colors.warning,
   Truck: Colors.info,
@@ -45,6 +45,25 @@ function getImageUrl(image?: string): string | null {
   return image;
 }
 
+function formatRepairDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const pad = (num: number) => String(num).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+
+  let hours = d.getHours();
+  const minutes = pad(d.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hh = pad(hours);
+
+  return `${dd}-${mm}-${yyyy} ${hh}:${minutes} ${ampm}`;
+}
+
 function handleCall(phone?: string) {
   if (!phone) return;
   Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
@@ -53,13 +72,54 @@ function handleCall(phone?: string) {
 interface RepairCardProps {
   repair: Repair;
   onPress?: (repair: Repair) => void;
+  onDelete?: (repair: Repair) => void;
 }
 
-export default function RepairCard({ repair, onPress }: RepairCardProps) {
+export default function RepairCard({ repair, onPress, onDelete }: RepairCardProps) {
+  const [showDelete, setShowDelete] = useState(false);
   const statusColor = STATUS_COLORS[repair.status] || Colors.textSecondary;
   const icon = getVehicleIcon(repair.vehicle_type);
   const iconTint = getIconTint(repair.vehicle_type);
   const imageUrl = getImageUrl(repair.vehicle_image);
+
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const isPriorityUrgentOrHigh = repair.priority === 'High' || repair.priority === 'Urgent';
+    if (isPriorityUrgentOrHigh) {
+      const animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, {
+            toValue: 0.3,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnim, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      animation.start();
+      return () => animation.stop();
+    } else {
+      blinkAnim.setValue(1);
+    }
+  }, [repair.priority]);
+
+  const handlePress = () => {
+    if (showDelete) {
+      setShowDelete(false);
+    } else {
+      onPress?.(repair);
+    }
+  };
+
+  const handleDeletePress = () => {
+    setShowDelete(false);
+    onDelete?.(repair);
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -68,13 +128,28 @@ export default function RepairCard({ repair, onPress }: RepairCardProps) {
       </View>
       <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-        onPress={() => onPress?.(repair)}
+        onPress={handlePress}
+        onLongPress={onDelete ? () => setShowDelete((prev) => !prev) : undefined}
+        delayLongPress={400}
       >
         <View style={styles.info}>
           <View style={styles.topRow}>
             <ThemedText style={styles.vehicleNumber} numberOfLines={1}>
               {repair.vehicle_number}
             </ThemedText>
+            {(repair.priority === 'High' || repair.priority === 'Urgent') && (
+              <Animated.View style={[
+                styles.priorityBadge,
+                {
+                  opacity: blinkAnim,
+                  backgroundColor: repair.priority === 'Urgent' ? '#E53E3E' : '#DD6B20'
+                }
+              ]}>
+                <ThemedText style={styles.priorityText}>
+                  {repair.priority.toUpperCase()}
+                </ThemedText>
+              </Animated.View>
+            )}
           </View>
 
           <View style={styles.metaRow}>
@@ -104,6 +179,13 @@ export default function RepairCard({ repair, onPress }: RepairCardProps) {
               </Pressable>
             )}
           </View>
+
+          {repair.repair_date && (
+            <View style={styles.dateRow}>
+              <Ionicons name="calendar-outline" size={11} color={Colors.mutedDark} />
+              <ThemedText style={styles.dateText}>{formatRepairDate(repair.repair_date)}</ThemedText>
+            </View>
+          )}
         </View>
 
         <View style={styles.mediaColumn}>
@@ -114,7 +196,13 @@ export default function RepairCard({ repair, onPress }: RepairCardProps) {
               <Ionicons name={icon} size={36} color={iconTint} />
             </View>
           )}
-          <Ionicons name="chevron-forward" size={16} color={Colors.mutedDark} />
+          {showDelete ? (
+            <Pressable onPress={handleDeletePress} style={styles.deleteBtn}>
+              <Ionicons name="trash-outline" size={16} color={Colors.textInverse} />
+            </Pressable>
+          ) : (
+            <Ionicons name="chevron-forward" size={16} color={Colors.mutedDark} />
+          )}
         </View>
       </Pressable>
     </View>
@@ -122,7 +210,7 @@ export default function RepairCard({ repair, onPress }: RepairCardProps) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { position: 'relative', marginHorizontal: Spacing.four, marginBottom: Spacing.two },
+  wrapper: { position: 'relative', marginHorizontal: Spacing.two, marginBottom: Spacing.two },
   card: {
     flexDirection: 'row',
     backgroundColor: Colors.nearBlack, borderRadius: 16,
@@ -145,6 +233,8 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 10, fontWeight: '700', color: Colors.mutedDark },
   ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   ownerName: { fontSize: 13, color: Colors.textInverse, fontWeight: '600' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  dateText: { fontSize: 11, fontWeight: '600', color: Colors.mutedDark },
   mediaColumn: { alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', marginVertical: Spacing.half },
   image: {
     width: 100, height: 100, borderRadius: 16,
@@ -157,5 +247,22 @@ const styles = StyleSheet.create({
   callBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center',
+  },
+  deleteBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: Colors.error, alignItems: 'center', justifyContent: 'center',
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  priorityText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });
