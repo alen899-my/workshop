@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,8 +20,9 @@ import { router } from 'expo-router';
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import Toast from '@/components/ui/Toast';
-import { Spacing, Colors } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useRBAC } from '@/hooks/use-rbac';
 import { authService } from '@/services/auth.service';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +30,7 @@ const IMG_H = 210;
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('US');
@@ -37,6 +39,7 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const { refresh: refreshRBAC } = useRBAC();
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -57,6 +60,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await authService.login(`${callingCode}${phone}`, password);
+      await refreshRBAC();
       setToast({ visible: true, message: 'Welcome back! Logged in successfully' });
       setTimeout(() => router.replace('/(tabs)'), 1200);
     } catch (err: any) {
@@ -64,7 +68,7 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
-  }, [phone, password]);
+  }, [phone, password, refreshRBAC]);
 
   return (
     <KeyboardAvoidingView
@@ -79,7 +83,7 @@ export default function LoginScreen() {
 
           {/* Back Button */}
           <Pressable style={[styles.back, { top: insets.top + 8 }]} hitSlop={12} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textInverse} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.primaryForeground} />
           </Pressable>
         </View>
 
@@ -126,17 +130,17 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={Colors.textInverse} />
+                  <ActivityIndicator color={theme.primaryForeground} />
                 ) : (
                   <>
-                    <MaterialCommunityIcons name="login" size={20} color={Colors.textInverse} />
-                    <Text style={[styles.btnText, { color: Colors.textInverse }]}>Log In</Text>
+                    <MaterialCommunityIcons name="login" size={20} color={theme.primaryForeground} />
+                    <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Log In</Text>
                   </>
                 )}
               </Pressable>
 
               {/* Bottom */}
-              <View style={[styles.bottom, { paddingBottom: insets.bottom + 8 }]}>
+              <View style={styles.bottom}>
                 <View style={styles.trustRow}>
                   <MaterialCommunityIcons name="shield-lock-outline" size={14} color={theme.textSecondary} />
                   <Text style={[styles.trustText, { color: theme.textSecondary }]}>
@@ -165,104 +169,105 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  heroWrap: {
-    height: IMG_H,
-    position: 'relative',
-  },
-  hero: {
-    width,
-    height: IMG_H,
-  },
-  gradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-  },
-  back: {
-    position: 'absolute',
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-  },
-  content: {
-    flex: 1,
-    paddingTop: Spacing.three,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  screenSub: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: Spacing.four,
-  },
-  fields: {
-    gap: 14,
-  },
-  forgotWrap: {
-    alignSelf: 'flex-end',
-    marginTop: Spacing.two,
-  },
-  forgotText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    borderRadius: 14,
-    gap: 8,
-    marginTop: Spacing.three,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textInverse,
-  },
-  bottom: {
-    gap: 10,
-    paddingTop: Spacing.three,
-  },
-  trustRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  trustText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  linkWrap: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  linkText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(() => StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    heroWrap: {
+      height: IMG_H,
+      position: 'relative',
+    },
+    hero: {
+      width,
+      height: IMG_H,
+    },
+    gradient: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 80,
+    },
+    back: {
+      position: 'absolute',
+      left: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    card: {
+      flex: 1,
+      paddingHorizontal: Spacing.four,
+      paddingTop: Spacing.three,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+    },
+    content: {
+      paddingTop: Spacing.three,
+    },
+    screenTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      marginBottom: 4,
+    },
+    screenSub: {
+      fontSize: 14,
+      fontWeight: '500',
+      marginBottom: Spacing.four,
+    },
+    fields: {
+      gap: 14,
+    },
+    forgotWrap: {
+      alignSelf: 'flex-end',
+      marginTop: Spacing.two,
+    },
+    forgotText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    btn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 52,
+      borderRadius: 14,
+      gap: 8,
+      marginTop: Spacing.three,
+    },
+    btnText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.primaryForeground,
+    },
+    bottom: {
+      gap: 10,
+      paddingTop: Spacing.three,
+    },
+    trustRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    trustText: {
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    linkWrap: {
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    linkText: {
+      fontSize: 13,
+      fontWeight: '500',
+    },
+  }), [theme]);
+}

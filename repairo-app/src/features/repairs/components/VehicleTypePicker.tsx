@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import ModalSheet from '@/components/ui/ModalSheet';
 import { ThemedText } from '@/components/themed-text';
-
-const PRIMARY = '#3D7A78';
+import { useTheme } from '@/hooks/use-theme';
 
 const MAIN_VEHICLES = ['Car', 'Motorbike', 'Scooter', 'Van', 'Truck'];
 
@@ -40,6 +39,8 @@ interface VehicleTypePickerProps {
 }
 
 export default function VehicleTypePicker({ value, onChange }: VehicleTypePickerProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -67,7 +68,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
               onPress={() => onChange(id)}
             >
               <View style={[styles.cardIconWrap, active && styles.cardIconWrapActive]}>
-                <Ionicons name={v.icon} size={22} color={active ? '#FFFFFF' : '#8A8A80'} />
+                <Ionicons name={v.icon} size={22} color={active ? theme.primaryForeground : theme.textSecondary} />
               </View>
               <ThemedText style={[styles.cardLabel, active && styles.cardLabelActive]}>{v.label}</ThemedText>
             </Pressable>
@@ -75,7 +76,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
         })}
         <Pressable style={[styles.card, styles.viewAllCard]} onPress={() => setModalVisible(true)}>
           <View style={styles.cardIconWrap}>
-            <Ionicons name="apps-outline" size={22} color={PRIMARY} />
+            <Ionicons name="apps-outline" size={22} color={theme.primary} />
           </View>
           <ThemedText style={styles.viewAllLabel}>View All</ThemedText>
         </Pressable>
@@ -83,7 +84,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
 
       {!isMain && value && selected && (
         <View style={styles.selectedChip}>
-          <Ionicons name={selected.icon} size={16} color={PRIMARY} />
+          <Ionicons name={selected.icon} size={16} color={theme.primary} />
           <ThemedText style={styles.selectedLabel}>{selected.label}</ThemedText>
         </View>
       )}
@@ -94,7 +95,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
           value={search}
           onChangeText={setSearch}
           placeholder="Search vehicles..."
-          placeholderTextColor="#B0AA97"
+          placeholderTextColor={theme.tabIconDefault}
         />
         <FlatList
           data={filtered}
@@ -110,7 +111,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
                 onPress={() => { onChange(item.id); setModalVisible(false); setSearch(''); }}
               >
                 <View style={[styles.gridIconWrap, active && styles.gridIconWrapActive]}>
-                  <Ionicons name={item.icon} size={22} color={active ? '#FFFFFF' : '#8A8A80'} />
+                  <Ionicons name={item.icon} size={22} color={active ? theme.primaryForeground : theme.textSecondary} />
                 </View>
                 <ThemedText style={[styles.gridLabel, active && styles.gridLabelActive]} numberOfLines={1}>
                   {item.label}
@@ -124,47 +125,50 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
   );
 }
 
-const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', color: '#8A8A80', marginBottom: 8 },
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+  label: { fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 8 },
   mainGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   card: {
     width: '30%', alignItems: 'center', gap: 6,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E8E0CC',
-    paddingVertical: 14, paddingHorizontal: 4, backgroundColor: '#FFFFFF',
+    borderRadius: 14, borderWidth: 1, borderColor: theme.border,
+    paddingVertical: 14, paddingHorizontal: 4, backgroundColor: theme.card,
   },
-  cardActive: { borderColor: PRIMARY, backgroundColor: PRIMARY + '08' },
+  cardActive: { borderColor: theme.primary, backgroundColor: theme.primary + '08' },
   cardIconWrap: {
     width: 44, height: 44, borderRadius: 12,
-    backgroundColor: '#F0ECE3', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: theme.divider, alignItems: 'center', justifyContent: 'center',
   },
-  cardIconWrapActive: { backgroundColor: PRIMARY },
-  cardLabel: { fontSize: 12, fontWeight: '600', color: '#8A8A80', textAlign: 'center' },
-  cardLabelActive: { color: PRIMARY, fontWeight: '700' },
-  viewAllCard: { borderColor: PRIMARY + '30', backgroundColor: PRIMARY + '04' },
-  viewAllLabel: { fontSize: 11, fontWeight: '700', color: PRIMARY, textAlign: 'center' },
+  cardIconWrapActive: { backgroundColor: theme.primary },
+  cardLabel: { fontSize: 12, fontWeight: '600', color: theme.textSecondary, textAlign: 'center' },
+  cardLabelActive: { color: theme.primary, fontWeight: '700' },
+  viewAllCard: { borderColor: theme.primary + '30', backgroundColor: theme.primary + '04' },
+  viewAllLabel: { fontSize: 11, fontWeight: '700', color: theme.primary, textAlign: 'center' },
   selectedChip: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
-    backgroundColor: PRIMARY + '10', marginTop: 6,
+    backgroundColor: theme.primary + '10', marginTop: 6,
   },
-  selectedLabel: { fontSize: 13, fontWeight: '700', color: PRIMARY },
+  selectedLabel: { fontSize: 13, fontWeight: '700', color: theme.primary },
   searchInput: {
-    margin: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E8E0CC',
+    margin: 16, borderRadius: 12, borderWidth: 1, borderColor: theme.border,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
-    backgroundColor: '#FFFFFF', color: '#1A1A1A',
+    backgroundColor: theme.card, color: theme.text,
   },
   gridList: { paddingHorizontal: 12, paddingBottom: 16 },
   gridItem: {
     flex: 1, alignItems: 'center', gap: 4,
     paddingVertical: 12, margin: 4,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E8E0CC', backgroundColor: '#FFFFFF',
+    borderRadius: 14, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card,
   },
-  gridItemActive: { borderColor: PRIMARY, backgroundColor: PRIMARY + '08' },
+  gridItemActive: { borderColor: theme.primary, backgroundColor: theme.primary + '08' },
   gridIconWrap: {
     width: 40, height: 40, borderRadius: 10,
-    backgroundColor: '#F0ECE3', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: theme.divider, alignItems: 'center', justifyContent: 'center',
   },
-  gridIconWrapActive: { backgroundColor: PRIMARY },
-  gridLabel: { fontSize: 10, fontWeight: '600', color: '#8A8A80', textAlign: 'center' },
-  gridLabelActive: { color: PRIMARY, fontWeight: '700' },
-});
+  gridIconWrapActive: { backgroundColor: theme.primary },
+  gridLabel: { fontSize: 10, fontWeight: '600', color: theme.textSecondary, textAlign: 'center' },
+  gridLabelActive: { color: theme.primary, fontWeight: '700' },
+}), [theme]);
+  return styles;
+};

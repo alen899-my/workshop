@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -21,10 +21,12 @@ import CountryPicker from '@/components/ui/CountryPicker';
 import InputField from '@/components/ui/InputField';
 import LocationPicker from '@/components/ui/LocationPicker';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
-import RegistrationSuccess from '@/components/ui/RegistrationSuccess';
-import { Spacing, Colors } from '@/constants/theme';
+import Toast from '@/components/ui/Toast';
+
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { authService } from '@/services/auth.service';
+import { getCallingCode } from '@/utils/preload-countries';
 
 const { width } = Dimensions.get('window');
 const IMG_H = 210;
@@ -47,12 +49,15 @@ interface FormData {
   email: string;
   password: string;
   confirmPassword: string;
+  countryName: string;
+  callingCode: string;
 }
 
 type Errors = Partial<Record<keyof FormData, string>>;
 
 export default function SignupScreen() {
   const theme = useTheme();
+  const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -66,11 +71,12 @@ export default function SignupScreen() {
     email: '',
     password: '',
     confirmPassword: '',
+    countryName: '',
+    callingCode: '',
   });
-  const [callingCode, setCallingCode] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [agree, setAgree] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -79,6 +85,11 @@ export default function SignupScreen() {
     const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
     return () => { show.remove(); hide.remove(); };
   }, []);
+
+  useEffect(() => {
+    const code = getCallingCode(form.country);
+    if (code) update('callingCode', code);
+  }, [form.country]);
 
   const update = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -124,25 +135,22 @@ export default function SignupScreen() {
       await authService.register({
         shopName: form.shopName,
         location: form.location,
-        phone: `${callingCode}${form.phone}`,
+        phone: `${form.callingCode}${form.phone}`,
         ownerName: form.ownerName,
         country: form.country,
         currency: form.currency,
         email: form.email,
         password: form.password,
-        callingCode,   // persisted so CreateRepairScreen pre-fills phone/WhatsApp calling code
+        callingCode: form.callingCode,
       });
-      setSuccess(true);
+      setLoading(false);
+      setToast({ visible: true, message: 'Account created! Redirecting to login...' });
+      setTimeout(() => router.replace('/auth/login'), 1500);
     } catch (err: any) {
       setErrors({ shopName: err?.message || 'Registration failed' });
-    } finally {
       setLoading(false);
     }
   }, [form, agree, validateStep]);
-
-  if (success) {
-    return <RegistrationSuccess onLogin={() => router.replace('/auth/login')} />;
-  }
 
   return (
     <View style={[styles.flex, { backgroundColor: theme.background }]}>
@@ -158,22 +166,21 @@ export default function SignupScreen() {
 
           {/* Back Button */}
           <Pressable style={[styles.back, { top: insets.top + 8 }]} hitSlop={12} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textInverse} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.primaryForeground} />
           </Pressable>
         </View>
 
         {/* Card */}
         <View style={[styles.card, { marginTop: -32, backgroundColor: theme.background, borderTopLeftRadius: 32, borderTopRightRadius: 32 }]}>
-          {/* Step Content */}
-          <View style={styles.content}>
-            <ScrollView
-              ref={scrollRef}
-              style={styles.scrollArea}
-              contentContainerStyle={[styles.scrollContent, kbHeight > 0 && { paddingBottom: kbHeight + 80 }]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-            >
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scrollArea}
+            contentContainerStyle={[styles.scrollContent, kbHeight > 0 && { paddingBottom: kbHeight + 80 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+          >
+            <View style={styles.content}>
               {/* Step Indicator */}
               <View style={styles.stepsWrap}>
                 <View style={styles.stepsRow}>
@@ -185,7 +192,7 @@ export default function SignupScreen() {
                           { backgroundColor: i <= step ? theme.primary : 'transparent', borderColor: i <= step ? theme.primary : theme.border },
                         ]}
                       >
-                        <Text style={[styles.stepDotText, { color: i <= step ? Colors.textInverse : theme.tabIconDefault }]}>{i + 1}</Text>
+                        <Text style={[styles.stepDotText, { color: i <= step ? theme.primaryForeground : theme.textMuted }]}>{i + 1}</Text>
                       </View>
                       {i < STEPS.length - 1 && (
                         <View style={[styles.stepLine, { backgroundColor: i < step ? theme.primary : theme.border }]} />
@@ -195,7 +202,7 @@ export default function SignupScreen() {
                 </View>
                 <View style={styles.stepsLabels}>
                   {STEPS.map((s, i) => (
-                    <Text key={s.key} style={[styles.stepLabel, { color: i <= step ? Colors.textInverse : theme.tabIconDefault, fontWeight: i <= step ? '700' : '500' }]} numberOfLines={1}>{s.title}</Text>
+                    <Text key={s.key} style={[styles.stepLabel, { color: i <= step ? theme.primary : theme.textMuted, fontWeight: i <= step ? '700' : '500' }]} numberOfLines={1}>{s.title}</Text>
                   ))}
                 </View>
               </View>
@@ -229,14 +236,16 @@ export default function SignupScreen() {
                   />
                   <PhoneInputWithCode
                     countryCode={form.country}
+                    callingCode={form.callingCode}
                     phone={form.phone}
-                    onCountryChange={(c) => { update('country', c.cca2); update('currency', c.currency); setCallingCode(c.callingCode); }}
+                    onCountryChange={(c) => { update('country', c.cca2); update('currency', c.currency); update('callingCode', c.callingCode); }}
                     onPhoneChange={(v) => update('phone', v)}
                     error={errors.phone}
                   />
                   <CountryPicker
                     value={form.country}
-                    onChange={(c) => { update('country', c.cca2); update('currency', c.currency); }}
+                    selectedName={form.countryName}
+                    onChange={(c) => { update('country', c.cca2); update('currency', c.currency); update('countryName', c.name); update('callingCode', c.callingCode); }}
                     error={errors.country}
                   />
                 </View>
@@ -289,85 +298,91 @@ export default function SignupScreen() {
                   />
                 </View>
               )}
-            </ScrollView>
-          </View>
 
-          {/* Bottom Actions — fixed at bottom */}
-          <View style={[styles.bottom, { paddingBottom: insets.bottom + 4 }]}>
-            {/* Agree checkbox – last step */}
-            {step === 2 && (
-              <Pressable style={styles.agreeRow} onPress={() => setAgree(!agree)}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    { borderColor: agree ? theme.primary : theme.border, backgroundColor: agree ? theme.primary : 'transparent' },
-                  ]}
-                >
-                  {agree && <MaterialCommunityIcons name="check" size={14} color={Colors.textInverse} />}
-                </View>
-                <Text style={[styles.agreeText, { color: theme.text }]}>
-                  I agree to the{' '}
-                  <Text style={{ color: theme.dark, fontWeight: '700' }}>Terms of Service</Text> and{' '}
-                  <Text style={{ color: theme.dark, fontWeight: '700' }}>Privacy Policy</Text>
-                </Text>
-              </Pressable>
-            )}
+              {/* Bottom Actions — now scrolling with content */}
+              <View style={styles.bottom}>
+                {/* Agree checkbox – last step */}
+                {step === 2 && (
+                  <Pressable style={styles.agreeRow} onPress={() => setAgree(!agree)}>
+                    <View
+                      style={[
+                        styles.checkbox,
+                        { borderColor: agree ? theme.primary : theme.border, backgroundColor: agree ? theme.primary : 'transparent' },
+                      ]}
+                    >
+                      {agree && <MaterialCommunityIcons name="check" size={14} color={theme.primaryForeground} />}
+                    </View>
+                    <Text style={[styles.agreeText, { color: theme.text }]}>
+                      I agree to the{' '}
+                      <Text style={{ color: theme.dark, fontWeight: '700' }}>Terms of Service</Text> and{' '}
+                      <Text style={{ color: theme.dark, fontWeight: '700' }}>Privacy Policy</Text>
+                    </Text>
+                  </Pressable>
+                )}
 
-            {step > 0 && step < 2 && (
-              <View style={styles.bottomRow}>
-                <Pressable style={[styles.btnHalf, { backgroundColor: Colors.text }]} onPress={prevStep}>
-                  <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textInverse} />
-                  <Text style={[styles.btnText, { color: Colors.textInverse }]}>Back</Text>
-                </Pressable>
-                <Pressable style={[styles.btnHalf, { backgroundColor: theme.primary }]} onPress={nextStep}>
-                  <Text style={[styles.btnText, { color: Colors.textInverse }]}>Continue</Text>
-                  <MaterialCommunityIcons name="arrow-right" size={18} color={Colors.textInverse} />
+                {step > 0 && step < 2 && (
+                  <View style={styles.bottomRow}>
+                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep}>
+                      <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primaryForeground} />
+                      <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Back</Text>
+                    </Pressable>
+                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.primary }]} onPress={nextStep}>
+                      <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Continue</Text>
+                      <MaterialCommunityIcons name="arrow-right" size={18} color={theme.primaryForeground} />
+                    </Pressable>
+                  </View>
+                )}
+
+                {step === 0 && (
+                  <Pressable style={[styles.btn, { backgroundColor: theme.primary }]} onPress={nextStep}>
+                    <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Continue</Text>
+                    <MaterialCommunityIcons name="arrow-right" size={18} color={theme.primaryForeground} />
+                  </Pressable>
+                )}
+
+                {step === 2 && (
+                  <View style={styles.bottomRow}>
+                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep}>
+                      <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primaryForeground} />
+                      <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Back</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.btnHalf, { backgroundColor: theme.primary, opacity: loading || !agree ? 0.6 : 1 }]}
+                      onPress={handleRegister}
+                      disabled={loading || !agree}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color={theme.primaryForeground} />
+                      ) : (
+                        <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Create Account</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                )}
+
+                {/* Login Link */}
+                <Pressable style={styles.linkWrap} onPress={() => router.replace('/auth/login')}>
+                  <Text style={[styles.linkText, { color: theme.textSecondary }]}>
+                    Already have an account?{' '}
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>Log in</Text>
+                  </Text>
                 </Pressable>
               </View>
-            )}
-
-            {step === 0 && (
-              <Pressable style={[styles.btn, { backgroundColor: theme.primary }]} onPress={nextStep}>
-                <Text style={[styles.btnText, { color: Colors.textInverse }]}>Continue</Text>
-                <MaterialCommunityIcons name="arrow-right" size={18} color={Colors.textInverse} />
-              </Pressable>
-            )}
-
-            {step === 2 && (
-              <View style={styles.bottomRow}>
-                <Pressable style={[styles.btnHalf, { backgroundColor: Colors.text }]} onPress={prevStep}>
-                  <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textInverse} />
-                  <Text style={[styles.btnText, { color: Colors.textInverse }]}>Back</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.btnHalf, { backgroundColor: theme.primary, opacity: loading || !agree ? 0.6 : 1 }]}
-                  onPress={handleRegister}
-                  disabled={loading || !agree}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={Colors.textInverse} />
-                  ) : (
-                    <Text style={[styles.btnText, { color: Colors.textInverse }]}>Create Account</Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
-
-            {/* Login Link */}
-            <Pressable style={styles.linkWrap} onPress={() => router.replace('/auth/login')}>
-              <Text style={[styles.linkText, { color: theme.textSecondary }]}>
-                Already have an account?{' '}
-                <Text style={{ color: theme.primary, fontWeight: '700' }}>Log in</Text>
-              </Text>
-            </Pressable>
-          </View>
+            </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type="success"
+        onHide={() => setToast({ visible: false, message: '' })}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMemo(() => StyleSheet.create({
   flex: {
     flex: 1,
   },
@@ -444,7 +459,6 @@ const styles = StyleSheet.create({
   },
   // ––– Content –––
   content: {
-    flex: 1,
     paddingTop: Spacing.one,
   },
   scrollArea: {
@@ -528,7 +542,7 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textInverse,
+    color: theme.primaryForeground,
   },
   backBtn: {
     flexDirection: 'row',
@@ -549,4 +563,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-});
+}), [theme]); return styles; };
+

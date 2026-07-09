@@ -1,17 +1,5 @@
 /**
- * Repairo Theme — light cream + green palette only.
- *
- * Token              Hex         Usage
- * ─────────────────────────────────────────────
- * bg-primary         #FAF6EE     App background
- * bg-card-dark       #1A1A1A     Balance/dark cards
- * bg-card-light      #FFFFFF     Elevated cards on cream
- * accent-primary     #8CE64B     CTAs, active states
- * text-primary       #1A1A1A     Headings
- * text-secondary     #8A8A80     Subtext
- * text-inverse       #FFFFFF     Text on dark cards
- * accent-gold        #F2C230     Rewards/coins
- * border-subtle      #E8E0CC     Card outlines
+ * Repairo Theme — Vercel/ShadCN-inspired white + black + teal.
  */
 
 import '@/global.css';
@@ -19,40 +7,85 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Colors = {
-  text: '#1A1A1A',
-  textSecondary: '#8A8A80',
+  text: '#09090B',
+  textSecondary: '#71717A',
   textInverse: '#FFFFFF',
-  background: '#FAF6EE',
-  backgroundElement: '#F3EDDD',
-  backgroundSelected: '#E8E0CC',
+  background: '#FFFFFF',
+  backgroundElement: '#FAFAFA',
+  backgroundSelected: '#F4F4F5',
   card: '#FFFFFF',
-  cardDark: '#1A1A1A',
-  primary: '#3D7A78',
-  primaryLight: '#E8F2F1',
+  cardDark: '#F4F4F5',
+  primary: '#0D9488',
+  primaryLight: '#CCFBF1',
   primaryForeground: '#FFFFFF',
   accent: '#F2C230',
-  accentForeground: '#1A1A1A',
-  border: '#E8E0CC',
-  tabIconDefault: '#B0AA97',
-  tabIconSelected: '#3D7A78',
-  destructive: '#E5544D',
+  accentForeground: '#09090B',
+  border: '#E4E4E7',
+  tabIconDefault: '#A1A1AA',
+  tabIconSelected: '#0D9488',
+  destructive: '#EF4444',
   gold: '#F2C230',
-  success: '#16A34A',
-  warning: '#D97706',
-  error: '#DC2626',
-  info: '#3D7A78',
-  greenTint: '#DCF2C8',
-  divider: '#D9D2BC',
-  dark: '#1A1A1A',
-  nearBlack: '#0F0F0F',
-  greenMid: '#16A34A',
-  greenDeep: '#2E5C2E',
-  mutedDark: '#B8B8B0',
-  borderDark: '#2E2E2E',
-  floatingBar: '#FDF8E1',
-  priorityHigh: '#DC2626',
-  priorityMedium: '#D97706',
-  priorityLow: '#16A34A',
+  success: '#0D9488',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#0D9488',
+  tealTint: '#CCFBF1',
+  divider: '#E4E4E7',
+  dark: '#09090B',
+  nearBlack: '#0A0A0A',
+  tealMid: '#14B8A6',
+  tealDeep: '#115E59',
+  mutedDark: '#A1A1AA',
+  borderDark: '#27272A',
+  floatingBar: '#FFFFFF',
+  priorityHigh: '#EF4444',
+  priorityMedium: '#F59E0B',
+  priorityLow: '#0D9488',
+  tealAccent: '#14B8A6',
+  tealAccentForeground: '#09090B',
+  cardElevated: '#FFFFFF',
+  surface: '#FFFFFF',
+} as const;
+
+export const DarkColors = {
+  text: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  textInverse: '#0A0A0A',
+  background: '#000000',
+  backgroundElement: '#09090B',
+  backgroundSelected: '#1A1A1A',
+  card: '#0A0A0A',
+  cardDark: '#000000',
+  primary: '#2DD4BF',
+  primaryLight: '#134E4A',
+  primaryForeground: '#0A0A0A',
+  accent: '#F2C230',
+  accentForeground: '#0A0A0A',
+  border: '#27272A',
+  tabIconDefault: '#52525B',
+  tabIconSelected: '#2DD4BF',
+  destructive: '#EF4444',
+  gold: '#F2C230',
+  success: '#2DD4BF',
+  warning: '#FBBF24',
+  error: '#EF4444',
+  info: '#2DD4BF',
+  tealTint: '#134E4A',
+  divider: '#27272A',
+  dark: '#0A0A0A',
+  nearBlack: '#09090B',
+  tealMid: '#14B8A6',
+  tealDeep: '#115E59',
+  mutedDark: '#52525B',
+  borderDark: '#3B3B3B',
+  floatingBar: '#000000',
+  priorityHigh: '#EF4444',
+  priorityMedium: '#FBBF24',
+  priorityLow: '#2DD4BF',
+  tealAccent: '#2DD4BF',
+  tealAccentForeground: '#0A0A0A',
+  cardElevated: '#141414',
+  surface: '#000000',
 } as const;
 
 export type ThemeColor = keyof typeof Colors;

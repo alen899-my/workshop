@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Keyboard, KeyboardAvoidingView,
   Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import VehicleTypePicker from '@/features/repairs/components/VehicleTypePicker';
@@ -31,6 +31,8 @@ export default function CreateVehicleScreen({
   onSuccess,
 }: CreateVehicleScreenProps) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const isEdit = mode === 'edit';
 
   const [form, setForm] = useState({
@@ -232,12 +234,12 @@ export default function CreateVehicleScreen({
               <View style={styles.imagePreviewWrap}>
                 <Image source={{ uri: vehicleImage }} style={styles.imagePreview} contentFit="cover" />
                 <Pressable style={styles.removeImageBtn} onPress={() => { setVehicleImage(null); setImageFile(null); }}>
-                  <Ionicons name="close-circle" size={24} color={Colors.error} />
+                  <Ionicons name="close-circle" size={24} color={theme.error} />
                 </Pressable>
               </View>
             ) : (
               <Pressable style={styles.addPhotoBtn} onPress={() => setShowImagePicker(true)}>
-                <Ionicons name="camera-outline" size={28} color={Colors.primary} />
+                <Ionicons name="camera-outline" size={28} color={theme.primary} />
                 <ThemedText style={styles.addPhotoText}>Tap to add photo</ThemedText>
               </Pressable>
             )}
@@ -280,76 +282,79 @@ export default function CreateVehicleScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F7F4' },
-  flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#E8E0CC',
-    backgroundColor: '#FFFFFF',
-  },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F8F7F4',
-  },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
-  scrollContent: { padding: 16, gap: 14, paddingBottom: 120 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  label: { fontSize: 13, fontWeight: '600', color: '#8A8A80', textTransform: 'uppercase', letterSpacing: 0.3 },
-  input: {
-    backgroundColor: '#F8F7F4',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E8E0CC',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '500',
-  },
-  divider: { height: 1, backgroundColor: '#F0ECE3', marginVertical: 4 },
-  imagePreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
-  imagePreview: {
-    width: 120, height: 120, borderRadius: 16,
-    backgroundColor: '#F0ECE3',
-  },
-  removeImageBtn: { position: 'absolute', top: -8, right: -8 },
-  addPhotoBtn: {
-    borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.primary + '40',
-    borderRadius: 14, paddingVertical: 24,
-    alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: Colors.primary + '06',
-  },
-  addPhotoText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 16, paddingTop: 12,
-    backgroundColor: '#F8F7F4',
-    borderTopWidth: 1, borderTopColor: '#E8E0CC',
-  },
-  submitBtn: {
-    height: 50, borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  submitText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.82 },
-  disabled: { opacity: 0.6 },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    flex: { flex: 1 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingBottom: 14,
+      borderBottomWidth: 1.5,
+      borderBottomColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    backBtn: {
+      width: 38, height: 38, borderRadius: 19,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: theme.muted,
+    },
+    headerTitle: { fontSize: 17, fontWeight: '800', color: theme.text },
+    scrollContent: { padding: 16, gap: 14, paddingBottom: 120 },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 16,
+      gap: 10,
+      shadowColor: theme.text,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    label: { fontSize: 13, fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
+    input: {
+      backgroundColor: theme.muted,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: theme.text,
+      fontWeight: '500',
+    },
+    divider: { height: 1, backgroundColor: theme.border, marginVertical: 4 },
+    imagePreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
+    imagePreview: {
+      width: 120, height: 120, borderRadius: 16,
+      backgroundColor: theme.muted,
+    },
+    removeImageBtn: { position: 'absolute', top: -8, right: -8 },
+    addPhotoBtn: {
+      borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.primary + '40',
+      borderRadius: 14, paddingVertical: 24,
+      alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.primary + '06',
+    },
+    addPhotoText: { fontSize: 13, fontWeight: '600', color: theme.primary },
+    footer: {
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      paddingHorizontal: 16, paddingTop: 12,
+      backgroundColor: theme.card,
+      borderTopWidth: 1, borderTopColor: theme.border,
+    },
+    submitBtn: {
+      height: 50, borderRadius: 14,
+      backgroundColor: theme.primary,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    submitText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    pressed: { opacity: 0.82 },
+    disabled: { opacity: 0.6 },
+  }), [theme]);
+  return styles;
+};

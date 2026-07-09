@@ -14,3 +14,13 @@
   --color-border: #E8E0CC;
   --color-muted: #8A8A80;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #121212;
+    --color-foreground: #F0F0F0;
+    --color-card: #1C1C1C;
+    --color-border: #2E2E2E;
+    --color-muted: #A0A098;
+  }
+}

@@ -18,7 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,8 @@ interface CalendarModalProps {
 }
 
 function CalendarModal({ visible, selectedDate, onSelect, onClear, onClose }: CalendarModalProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const today = todayISO();
 
   const [cursor, setCursor] = useState<{ year: number; month: number }>(() => {
@@ -109,35 +112,35 @@ function CalendarModal({ visible, selectedDate, onSelect, onClear, onClose }: Ca
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={cal.overlay}>
-        <Pressable style={cal.backdrop} onPress={onClose} />
-        <View style={cal.sheet}>
+      <View style={styles.cal.overlay}>
+        <Pressable style={styles.cal.backdrop} onPress={onClose} />
+        <View style={styles.cal.sheet}>
           {/* Header */}
-          <View style={cal.navRow}>
-            <Pressable onPress={prevMonth} style={cal.navBtn}>
+          <View style={styles.cal.navRow}>
+            <Pressable onPress={prevMonth} style={styles.cal.navBtn}>
               <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
             </Pressable>
-            <ThemedText style={cal.monthLabel}>
+            <ThemedText style={styles.cal.monthLabel}>
               {MONTH_NAMES[cursor.month]} {cursor.year}
             </ThemedText>
-            <Pressable onPress={nextMonth} style={cal.navBtn}>
+            <Pressable onPress={nextMonth} style={styles.cal.navBtn}>
               <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
             </Pressable>
           </View>
 
           {/* Day-of-week headers */}
-          <View style={cal.weekRow}>
+          <View style={styles.cal.weekRow}>
             {DAY_LABELS.map((d, i) => (
-              <ThemedText key={i} style={cal.weekLabel}>{d}</ThemedText>
+              <ThemedText key={i} style={styles.cal.weekLabel}>{d}</ThemedText>
             ))}
           </View>
 
           {/* Day grid */}
-          <View style={cal.grid}>
+          <View style={styles.cal.grid}>
             {rows.map((row, ri) => (
-              <View key={ri} style={cal.row}>
+              <View key={ri} style={styles.cal.row}>
                 {row.map((day, ci) => {
-                  if (!day) return <View key={ci} style={cal.cell} />;
+                  if (!day) return <View key={ci} style={styles.cal.cell} />;
                   const iso = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                   const isSelected = selectedDate === iso;
                   const isToday = today === iso;
@@ -145,16 +148,16 @@ function CalendarModal({ visible, selectedDate, onSelect, onClear, onClose }: Ca
                     <Pressable
                       key={ci}
                       style={[
-                        cal.cell,
-                        isSelected && cal.cellSelected,
-                        !isSelected && isToday && cal.cellToday,
+                        styles.cal.cell,
+                        isSelected && styles.cal.cellSelected,
+                        !isSelected && isToday && styles.cal.cellToday,
                       ]}
                       onPress={() => handleDay(day)}
                     >
                       <ThemedText style={[
-                        cal.cellText,
-                        isSelected && cal.cellTextSelected,
-                        !isSelected && isToday && cal.cellTextToday,
+                        styles.cal.cellText,
+                        isSelected && styles.cal.cellTextSelected,
+                        !isSelected && isToday && styles.cal.cellTextToday,
                       ]}>
                         {day}
                       </ThemedText>
@@ -166,12 +169,12 @@ function CalendarModal({ visible, selectedDate, onSelect, onClear, onClose }: Ca
           </View>
 
           {/* Actions */}
-          <View style={cal.actions}>
-            <Pressable style={cal.clearBtn} onPress={() => { onClear(); onClose(); }}>
-              <ThemedText style={cal.clearText}>Clear</ThemedText>
+          <View style={styles.cal.actions}>
+            <Pressable style={styles.cal.clearBtn} onPress={() => { onClear(); onClose(); }}>
+              <ThemedText style={styles.cal.clearText}>Clear</ThemedText>
             </Pressable>
-            <Pressable style={cal.doneBtn} onPress={onClose}>
-              <ThemedText style={cal.doneText}>Close</ThemedText>
+            <Pressable style={styles.cal.doneBtn} onPress={onClose}>
+              <ThemedText style={styles.cal.doneText}>Close</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -183,6 +186,8 @@ function CalendarModal({ visible, selectedDate, onSelect, onClear, onClose }: Ca
 // ─── DateStrip ────────────────────────────────────────────────────────────────
 
 export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Last 7 days (oldest to newest, left to right, ending with Today)
@@ -211,31 +216,49 @@ export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
     : null;
 
   return (
-    <View style={strip.root}>
+    <View style={styles.strip.root}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={strip.scroll}
+        contentContainerStyle={styles.strip.scroll}
       >
         {/* Calendar open button */}
         <Pressable
           style={[
-            strip.calBtn,
-            (calendarOpen || selectedDate !== null) && strip.calBtnActive
+            styles.strip.calBtn,
+            (calendarOpen || selectedDate !== null) && styles.strip.calBtnActive
           ]}
           onPress={() => setCalendarOpen(true)}
         >
           <Ionicons
             name="calendar-outline"
             size={18}
-            color={(calendarOpen || selectedDate !== null) ? '#FFF' : Colors.primary}
+            color={(calendarOpen || selectedDate !== null) ? '#FFF' : theme.primary}
           />
           {todayLabel && !days.some((d) => d.iso === selectedDate) && (
             <ThemedText style={[
-              strip.calBtnLabel,
+              styles.strip.calBtnLabel,
               (calendarOpen || selectedDate !== null) && { color: '#FFF' }
             ]}>{todayLabel}</ThemedText>
           )}
+        </Pressable>
+
+        {/* "All" reset pill — always visible, clears date filter */}
+        <Pressable
+          style={[
+            styles.strip.pill,
+            selectedDate === null && styles.strip.pillActive,
+          ]}
+          onPress={() => onChange(null)}
+        >
+          <ThemedText style={[
+            styles.strip.pillWeekday,
+            selectedDate === null && styles.strip.pillTextActive,
+          ]}>All</ThemedText>
+          <ThemedText style={[
+            styles.strip.pillDay,
+            selectedDate === null && styles.strip.pillTextActive,
+          ]}>✓</ThemedText>
         </Pressable>
 
         {/* 7-day pills */}
@@ -245,22 +268,23 @@ export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
             <Pressable
               key={d.iso}
               style={[
-                strip.pill,
-                d.isToday && strip.pillToday,
-                active && strip.pillActive,
+                styles.strip.pill,
+                d.isToday && styles.strip.pillToday,
+                active && styles.strip.pillActive,
               ]}
               onPress={() => handlePill(d.iso)}
             >
               <ThemedText style={[
-                strip.pillWeekday,
-                d.isToday && strip.pillWeekdayToday,
-                active && strip.pillTextActive,
+                styles.strip.pillWeekday,
+                d.isToday && styles.strip.pillWeekdayToday,
+                active && styles.strip.pillTextActive,
               ]}>
                 {d.isToday ? 'Today' : d.weekday}
               </ThemedText>
               <ThemedText style={[
-                strip.pillDay,
-                active && strip.pillTextActive,
+                styles.strip.pillDay,
+                d.isToday && styles.strip.pillDayToday,
+                active && styles.strip.pillTextActive,
               ]}>
                 {d.day}
               </ThemedText>
@@ -280,222 +304,231 @@ export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
   );
 }
 
-// ─── Strip styles ─────────────────────────────────────────────────────────────
+// ─── Styles hook ──────────────────────────────────────────────────────────────
 
-const strip = StyleSheet.create({
-  root: {
-    paddingVertical: 12,
-  },
-  scroll: {
-    paddingHorizontal: 8,
-    gap: 8,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(() => {
+    const strip = StyleSheet.create({
+      root: {
+        paddingVertical: 12,
+      },
+      scroll: {
+        paddingHorizontal: 8,
+        gap: 8,
+        flexDirection: 'row',
+        alignItems: 'stretch',
+      },
 
-  // Calendar icon button
-  calBtn: {
-    width: 44,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: Colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  calBtnActive: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  calBtnLabel: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: Colors.primary,
-    textAlign: 'center',
-  },
+      // Calendar icon button
+      calBtn: {
+        width: 44,
+        height: 60,
+        borderRadius: 12,
+        backgroundColor: theme.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 3,
+        paddingHorizontal: 6,
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+      },
+      calBtnActive: {
+        backgroundColor: theme.primary,
+        shadowColor: theme.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4,
+      },
+      calBtnLabel: {
+        fontSize: 8,
+        fontWeight: '700',
+        color: theme.primary,
+        textAlign: 'center',
+      },
 
-  // Day pills - flat design, no borders on inactive
-  pill: {
-    width: 52,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: Colors.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  pillToday: {
-    backgroundColor: Colors.primaryLight,
-  },
-  pillActive: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  pillWeekday: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  pillWeekdayToday: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  pillDay: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-    lineHeight: 20,
-    textAlign: 'center',
-    includeFontPadding: false,
-  },
-  pillTextActive: {
-    color: '#FFFFFF',
-  },
-});
+      // Day pills - flat design, no borders on inactive
+      pill: {
+        width: 52,
+        height: 60,
+        borderRadius: 12,
+        backgroundColor: theme.backgroundElement,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+      },
+      pillToday: {
+        backgroundColor: '#000000',
+      },
+      pillActive: {
+        backgroundColor: theme.primary,
+        shadowColor: theme.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4,
+      },
+      pillWeekday: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: theme.textSecondary,
+        textAlign: 'center',
+      },
+      pillWeekdayToday: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+      },
+      pillDay: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: theme.text,
+        lineHeight: 20,
+        textAlign: 'center',
+        includeFontPadding: false,
+      },
+      pillDayToday: {
+        color: '#FFFFFF',
+      },
+      pillTextActive: {
+        color: '#FFFFFF',
+      },
+    });
 
-// ─── Calendar modal styles ────────────────────────────────────────────────────
+    // ─── Calendar modal styles ────────────────────────────────────────────────
 
-const cal = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.52)',
-  },
-  sheet: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: Colors.primary,
-    borderRadius: 24,
-    padding: 16,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
+    const cal = StyleSheet.create({
+      overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+      },
+      backdrop: {
+        ...StyleSheet.absoluteFill,
+        backgroundColor: 'rgba(0,0,0,0.52)',
+      },
+      sheet: {
+        width: '100%',
+        maxWidth: 320,
+        backgroundColor: theme.primary,
+        borderRadius: 24,
+        padding: 16,
+        gap: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 8,
+      },
 
-  // Month nav
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 4,
-  },
-  navBtn: {
-    width: 32, height: 32, borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  monthLabel: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
+      // Month nav
+      navRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: 4,
+      },
+      navBtn: {
+        width: 32, height: 32, borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        alignItems: 'center', justifyContent: 'center',
+      },
+      monthLabel: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#FFFFFF',
+      },
 
-  // Day-of-week headers
-  weekRow: {
-    flexDirection: 'row',
-  },
-  weekLabel: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.72)',
-  },
+      // Day-of-week headers
+      weekRow: {
+        flexDirection: 'row',
+      },
+      weekLabel: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 11,
+        fontWeight: '800',
+        color: 'rgba(255,255,255,0.72)',
+      },
 
-  // Grid
-  grid: {
-    gap: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 2,
-  },
-  cell: {
-    flex: 1,
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cellSelected: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-  },
-  cellToday: {
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    borderRadius: 8,
-  },
-  cellText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    lineHeight: 13,
-    includeFontPadding: false,
-  },
-  cellTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  cellTextToday: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
+      // Grid
+      grid: {
+        gap: 2,
+      },
+      row: {
+        flexDirection: 'row',
+        width: '100%',
+        gap: 2,
+      },
+      cell: {
+        flex: 1,
+        aspectRatio: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      cellSelected: {
+        backgroundColor: theme.primary,
+        borderRadius: 8,
+      },
+      cellToday: {
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
+        borderRadius: 8,
+      },
+      cellText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        lineHeight: 13,
+        includeFontPadding: false,
+      },
+      cellTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+      },
+      cellTextToday: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+      },
 
-  // Actions
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  clearBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  doneBtn: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  doneText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-});
+      // Actions
+      actions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 8,
+      },
+      clearBtn: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      clearText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFFFFF',
+      },
+      doneBtn: {
+        flex: 2,
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      doneText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: theme.primary,
+      },
+    });
+
+    return { strip, cal };
+  }, [theme]);
+};

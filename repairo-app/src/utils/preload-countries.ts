@@ -33,6 +33,14 @@ export function getCurrency(cca2: string): string {
   return cache?.[cca2]?.currency?.[0] ?? 'USD';
 }
 
+/** Synchronous lookup – returns the common name or empty string if cache not ready */
+export function getCountryName(cca2: string): string {
+  if (!cca2) return '';
+  const c = cache?.[cca2];
+  if (c) return typeof c.name === 'string' ? c.name : c.name?.common ?? '';
+  return '';
+}
+
 /** True once country data is cached */
 export function isCountriesReady(): boolean {
   return resolved;

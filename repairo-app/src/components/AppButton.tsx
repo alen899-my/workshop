@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 interface AppButtonProps {
   title: string;
@@ -10,8 +10,10 @@ interface AppButtonProps {
 }
 
 export default function AppButton({ title, fullWidth = false, onPress, variant = 'white' }: AppButtonProps) {
-  const bg = variant === 'white' ? Colors.card : variant === 'black' ? Colors.cardDark : Colors.primary;
-  const fg = variant === 'black' ? Colors.textInverse : variant === 'green' ? Colors.textInverse : Colors.dark;
+  const theme = useTheme();
+
+  const bg = variant === 'white' ? theme.card : variant === 'black' ? theme.cardDark : theme.primary;
+  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.textInverse : theme.dark;
 
   return (
     <Pressable

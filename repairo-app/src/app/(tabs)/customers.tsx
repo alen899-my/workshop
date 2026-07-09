@@ -4,9 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing, Colors } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function CustomersScreen() {
+  const theme = useTheme();
   const { bottom } = useSafeAreaInsets();
 
   return (
@@ -14,7 +16,7 @@ export default function CustomersScreen() {
       <View style={[styles.content, { paddingBottom: Math.max(bottom, 16) + 80 }]}>
         <ThemedText type="title" style={styles.title}>Customers</ThemedText>
         <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={48} color={Colors.textSecondary} />
+          <Ionicons name="people-outline" size={48} color={theme.textSecondary} />
           <ThemedText themeColor="textSecondary" style={styles.emptyText}>
             No customers yet
           </ThemedText>

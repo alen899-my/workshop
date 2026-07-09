@@ -1,9 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ const CATEGORIES: {
     id: 'Servicing',
     label: 'Servicing',
     icon: 'sync-outline',
-    color: '#3D7A78',
+    color: '#0D9488',
     bg: '#EEF6F5',
     placeholder: 'e.g. Oil change, air filter…',
   },
@@ -87,6 +87,8 @@ function ServiceBlockCard({
   block, index, total,
   onTypeChange, onAddTask, onUpdateTaskText, onToggleTask, onRemoveTask, onRemoveBlock,
 }: BlockProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const cfg = CATEGORIES.find((c) => c.id === block.type) || CATEGORIES[0];
 
   return (
@@ -106,7 +108,7 @@ function ServiceBlockCard({
         </View>
         {total > 1 && (
           <Pressable onPress={onRemoveBlock} hitSlop={10} style={styles.deleteBtn}>
-            <Ionicons name="trash-outline" size={15} color={Colors.error} />
+            <Ionicons name="trash-outline" size={15} color={theme.error} />
           </Pressable>
         )}
       </View>
@@ -131,7 +133,7 @@ function ServiceBlockCard({
               <Ionicons
                 name={cat.icon}
                 size={13}
-                color={active ? '#FFFFFF' : Colors.textSecondary}
+                color={active ? '#FFFFFF' : theme.textSecondary}
               />
               <ThemedText style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>
                 {cat.label}
@@ -153,7 +155,7 @@ function ServiceBlockCard({
               value={task.text}
               onChangeText={(t) => onUpdateTaskText(ti, t)}
               placeholder={cfg.placeholder}
-              placeholderTextColor={Colors.tabIconDefault}
+              placeholderTextColor={theme.tabIconDefault}
               multiline={false}
             />
             <Pressable
@@ -161,7 +163,7 @@ function ServiceBlockCard({
               hitSlop={8}
               style={styles.issueRemove}
             >
-              <Ionicons name="trash-outline" size={16} color={Colors.error} />
+              <Ionicons name="trash-outline" size={16} color={theme.error} />
             </Pressable>
           </View>
         ))}
@@ -240,6 +242,9 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
     onChange(u);
   }, [blocks, onChange]);
 
+  const theme = useTheme();
+  const styles = useStyles(theme);
+
   return (
     <View style={styles.root}>
       {blocks.map((block, bi) => (
@@ -259,7 +264,7 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
 
       <Pressable style={styles.addBlockBtn} onPress={addBlock}>
         <View style={styles.addBlockIcon}>
-          <Ionicons name="add" size={16} color={Colors.primary} />
+          <Ionicons name="add" size={16} color={theme.primary} />
         </View>
         <ThemedText style={styles.addBlockText}>Add Service Category</ThemedText>
       </Pressable>
@@ -269,133 +274,136 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: { gap: 14 },
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+    root: { gap: 14 },
 
-  // Block Card Container
-  block: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-  },
-  blockHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  blockIconWrap: {
-    width: 38, height: 38, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  blockCategoryLabel: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
-  blockSubLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginTop: 1 },
-  deleteBtn: {
-    width: 30, height: 30, borderRadius: 8,
-    backgroundColor: '#FFF0F0',
-    alignItems: 'center', justifyContent: 'center',
-  },
+    // Block Card Container
+    block: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      overflow: 'hidden',
+    },
+    blockHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 10,
+    },
+    blockIconWrap: {
+      width: 38, height: 38, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    blockCategoryLabel: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
+    blockSubLabel: { fontSize: 11, color: theme.textSecondary, fontWeight: '500', marginTop: 1 },
+    deleteBtn: {
+      width: 30, height: 30, borderRadius: 8,
+      backgroundColor: '#FFF0F0',
+      alignItems: 'center', justifyContent: 'center',
+    },
 
-  // Category Selector row
-  categoryScroll: {
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-    gap: 6,
-    flexDirection: 'row',
-  },
-  categoryChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  categoryChipText: {
-    fontSize: 12, fontWeight: '700', color: Colors.textSecondary,
-  },
-  categoryChipTextActive: { color: '#FFFFFF' },
+    // Category Selector row
+    categoryScroll: {
+      paddingHorizontal: 14,
+      paddingBottom: 12,
+      gap: 6,
+      flexDirection: 'row',
+    },
+    categoryChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      paddingHorizontal: 10, paddingVertical: 6,
+      borderRadius: 20, borderWidth: 1.5,
+      borderColor: theme.border,
+      backgroundColor: theme.background,
+    },
+    categoryChipText: {
+      fontSize: 12, fontWeight: '700', color: theme.textSecondary,
+    },
+    categoryChipTextActive: { color: '#FFFFFF' },
 
-  divider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 0 },
+    divider: { height: 1, backgroundColor: theme.border, marginHorizontal: 0 },
 
-  // Inputs list inside card
-  issueList: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 6,
-    gap: 8,
-  },
-  issueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  issueInput: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.text,
-    paddingVertical: 0,
-    height: '100%',
-  },
-  issueRemove: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
+    // Inputs list inside card
+    issueList: {
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 6,
+      gap: 8,
+    },
+    issueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      height: 52,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+    },
+    issueInput: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '500',
+      color: theme.text,
+      paddingVertical: 0,
+      height: '100%',
+    },
+    issueRemove: {
+      width: 28,
+      height: 28,
+      borderRadius: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
 
-  // Inside-card add item button
-  addTaskCardBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 44,
-    borderRadius: 12,
-    marginHorizontal: 14,
-    marginBottom: 14,
-    marginTop: 6,
-  },
-  addTaskCardText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
+    // Inside-card add item button
+    addTaskCardBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      height: 44,
+      borderRadius: 12,
+      marginHorizontal: 14,
+      marginBottom: 14,
+      marginTop: 6,
+    },
+    addTaskCardText: {
+      fontSize: 13,
+      fontWeight: '800',
+    },
 
-  // Bottom Add Category Button
-  addBlockBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: Colors.primary + '60',
-    backgroundColor: Colors.primary + '05',
-  },
-  addBlockIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addBlockText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-});
+    // Bottom Add Category Button
+    addBlockBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: theme.primary + '60',
+      backgroundColor: theme.primary + '05',
+    },
+    addBlockIcon: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.primary + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    addBlockText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.primary,
+    },
+  }), [theme]);
+  return styles;
+};

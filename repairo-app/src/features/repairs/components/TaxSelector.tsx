@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -6,8 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import type { TaxSnapshotItem } from '@/features/repairs/services/bill.service';
 import type { Tax } from '@/features/repairs/services/tax.service';
 import { useCurrency } from '@/hooks/use-currency';
-
-const PRIMARY = '#3D7A78';
+import { useTheme } from '@/hooks/use-theme';
 
 interface TaxSelectorProps {
   taxes: Tax[];
@@ -19,6 +18,23 @@ interface TaxSelectorProps {
 }
 
 export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge, editable = true }: TaxSelectorProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: theme.card, borderRadius: 16,
+      padding: 16, gap: 4,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    },
+    cardTitle: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 6 },
+    taxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10 },
+    taxRowActive: { backgroundColor: theme.primary + '08' },
+    taxInfo: { flex: 1 },
+    taxName: { fontSize: 14, fontWeight: '600', color: theme.text },
+    taxNameActive: { color: theme.primary },
+    taxRate: { fontSize: 12, color: theme.textSecondary, marginTop: 1 },
+    taxAmountWrap: { backgroundColor: theme.primary + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    taxAmount: { fontSize: 13, fontWeight: '700', color: theme.primary },
+  }), [theme]);
   const currency = useCurrency();
 
   const toggleTax = useCallback((tax: Tax) => {
@@ -47,7 +63,7 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
             <Ionicons
               name={active ? 'toggle' : 'toggle-outline'}
               size={24}
-              color={active ? PRIMARY : '#B0AA97'}
+              color={active ? theme.primary : theme.tabIconDefault}
             />
             <View style={styles.taxInfo}>
               <ThemedText style={[styles.taxName, active && styles.taxNameActive]}>{tax.name}</ThemedText>
@@ -66,20 +82,3 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16,
-    padding: 16, gap: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
-  },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 6 },
-  taxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10 },
-  taxRowActive: { backgroundColor: PRIMARY + '08' },
-  taxInfo: { flex: 1 },
-  taxName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-  taxNameActive: { color: PRIMARY },
-  taxRate: { fontSize: 12, color: '#8A8A80', marginTop: 1 },
-  taxAmountWrap: { backgroundColor: PRIMARY + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  taxAmount: { fontSize: 13, fontWeight: '700', color: PRIMARY },
-});

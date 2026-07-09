@@ -2,12 +2,13 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import LandingScreen from '@/features/landing/LandingScreen';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { router, useFocusEffect } from 'expo-router';
 import { getStoredToken } from '@/services/api';
 import { loadStoredUser } from '@/services/auth.service';
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -33,8 +34,8 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }

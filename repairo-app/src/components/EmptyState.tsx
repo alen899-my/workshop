@@ -3,7 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -13,9 +14,10 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
+  const theme = useTheme();
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={56} color={Colors.tabIconDefault} />
+      <Ionicons name={icon} size={56} color={theme.tabIconDefault} />
       <ThemedText style={styles.title}>{title}</ThemedText>
       {subtitle && <ThemedText themeColor="textSecondary" style={styles.subtitle}>{subtitle}</ThemedText>}
       {action && <View style={styles.action}>{action}</View>}

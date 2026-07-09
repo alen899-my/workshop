@@ -8,7 +8,7 @@ import FormScreen from '@/components/FormScreen';
 import InputField from '@/components/ui/InputField';
 import Toast from '@/components/ui/Toast';
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Repair } from '@/features/repairs/services/repair.service';
 import { repairService } from '@/features/repairs/services/repair.service';
 import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill.service';
@@ -84,6 +84,8 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   const isView = mode === 'view';
   const isCreate = mode === 'create';
 
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const shopUser = getCurrentUser();
   const shopCountry = shopUser?.shopCountry || 'IN';
   // Resolve the shop's default calling code synchronously (from cache) or fall back to empty
@@ -474,7 +476,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
       case 'vehicle':
         return (
           <View style={styles.tabContent}>
-            <Card title="Vehicle Information">
+            <Card title="Vehicle Information" styles={styles}>
               <View>
                 <InputField label="Vehicle Number" value={form.vehicleNumber} onChangeText={handleVehicleNumberChange}
                   placeholder="e.g. KA-01-AB-1234" icon="car-side" editable={!isView}
@@ -503,7 +505,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
                 placeholder="e.g. 45,000" keyboardType="phone-pad" icon="counter" editable={!isView} />
             </Card>
 
-            <Card title="Customer">
+            <Card title="Customer" styles={styles}>
               <InputField label="Owner Name" value={form.ownerName} onChangeText={(v) => update('ownerName', v)}
                 placeholder="Customer name" icon="account" editable={!isView}
                 required error={errors.owner_name} />
@@ -537,13 +539,13 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               )}
               {!isView && (
                 <Pressable style={styles.checkboxRow} onPress={() => setWhatsappSame(!whatsappSame)}>
-                  <Ionicons name={whatsappSame ? 'checkbox' : 'square-outline'} size={20} color={Colors.primary} />
+                  <Ionicons name={whatsappSame ? 'checkbox' : 'square-outline'} size={20} color={theme.primary} />
                   <ThemedText style={styles.checkboxLabel}>Same as phone number</ThemedText>
                 </Pressable>
               )}
             </Card>
 
-            <Card title="Photos">
+            <Card title="Photos" styles={styles}>
               {!isView ? (
                 <View>
                   {(imageFiles.length > 0 || vehicleImage) ? (
@@ -556,7 +558,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
                             <ThemedText style={styles.prefilledBadgeText}>From Registry</ThemedText>
                           </View>
                           <Pressable style={styles.removeImgBtn} onPress={() => setVehicleImage(null)}>
-                            <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            <Ionicons name="close-circle" size={22} color={theme.destructive} />
                           </Pressable>
                         </View>
                       )}
@@ -565,18 +567,18 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
                         <View key={i} style={styles.imageThumbWrap}>
                           <Image source={{ uri: file.uri }} style={styles.imageThumb} contentFit="cover" />
                           <Pressable style={styles.removeImgBtn} onPress={() => removeImage(i)}>
-                            <Ionicons name="close-circle" size={22} color="#E53E3E" />
+                            <Ionicons name="close-circle" size={22} color={theme.destructive} />
                           </Pressable>
                         </View>
                       ))}
                       <Pressable style={styles.addImageBtn} onPress={handlePickImages}>
-                        <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+                        <Ionicons name="camera-outline" size={24} color={theme.primary} />
                       </Pressable>
                     </View>
                   ) : (
                     <Pressable style={styles.addImageLarge} onPress={handlePickImages}>
                       <View style={styles.addImageIconWrap}>
-                        <Ionicons name="camera-outline" size={36} color={Colors.primary} />
+                        <Ionicons name="camera-outline" size={36} color={theme.primary} />
                       </View>
                       <ThemedText style={styles.addImageLabel}>Tap to add vehicle photo</ThemedText>
                       <ThemedText style={styles.addImageHint}>JPG, PNG • Max 10MB</ThemedText>
@@ -599,7 +601,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
           <View style={styles.tabContent}>
             <ServiceBlockEditor blocks={serviceBlocks} onChange={setServiceBlocks} />
 
-            <Card title="Assignment">
+            <Card title="Assignment" styles={styles}>
               <WorkerSelect value={form.workerId} onChange={(v) => update('workerId', v)} />
               <DateTimePickerInput label="Repair Date" value={form.repairDate} onChange={(v) => update('repairDate', v)}
                 placeholder="Select Repair Date & Time" icon="calendar" editable={!isView} />
@@ -608,7 +610,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               {renderPriorityChips()}
             </Card>
 
-            <Card title="Status">
+            <Card title="Status" styles={styles}>
               {!isView ? (
                 <View style={styles.chipRow}>
                   {['Pending', 'Started', 'Completed'].map((s) => {
@@ -635,25 +637,25 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
       case 'review':
         return (
           <View style={styles.tabContent}>
-            <Card title="Vehicle Details">
-              <SummaryRow label="Vehicle Number" value={form.vehicleNumber} />
-              <SummaryRow label="Model / Brand" value={form.brand || form.modelName ? `${form.brand} ${form.modelName}` : '—'} />
-              <SummaryRow label="Vehicle Type" value={form.vehicleType} />
-              <SummaryRow label="KM Reading" value={form.kmReading} />
+            <Card title="Vehicle Details" styles={styles}>
+              <SummaryRow theme={theme} label="Vehicle Number" value={form.vehicleNumber} />
+              <SummaryRow theme={theme} label="Model / Brand" value={form.brand || form.modelName ? `${form.brand} ${form.modelName}` : '—'} />
+              <SummaryRow theme={theme} label="Vehicle Type" value={form.vehicleType} />
+              <SummaryRow theme={theme} label="KM Reading" value={form.kmReading} />
             </Card>
 
-            <Card title="Customer Details">
-              <SummaryRow label="Owner Name" value={form.ownerName} />
-              <SummaryRow label="Phone Number" value={form.phoneNumber} />
-              <SummaryRow label="WhatsApp Number" value={form.whatsappNumber} />
+            <Card title="Customer Details" styles={styles}>
+              <SummaryRow theme={theme} label="Owner Name" value={form.ownerName} />
+              <SummaryRow theme={theme} label="Phone Number" value={form.phoneNumber} />
+              <SummaryRow theme={theme} label="WhatsApp Number" value={form.whatsappNumber} />
             </Card>
 
-            <Card title="Service Details">
-              <SummaryRow label="Priority" value={form.priority} />
-              <SummaryRow label="Repair Date" value={form.repairDate} />
-              <SummaryRow label="Expected Completion" value={form.expectedCompletion} />
-              <SummaryRow label="Status" value={form.status} />
-              <SummaryRow
+            <Card title="Service Details" styles={styles}>
+              <SummaryRow theme={theme} label="Priority" value={form.priority} />
+              <SummaryRow theme={theme} label="Repair Date" value={form.repairDate} />
+              <SummaryRow theme={theme} label="Expected Completion" value={form.expectedCompletion} />
+              <SummaryRow theme={theme} label="Status" value={form.status} />
+              <SummaryRow theme={theme}
                 label="Assigned Worker"
                 value={(() => {
                   if (!form.workerId) return 'None';
@@ -667,19 +669,19 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               />
             </Card>
 
-            <Card title="Complaints & Service Categories">
+            <Card title="Complaints & Service Categories" styles={styles}>
               {serviceBlocks.map((block, bi) => (
                 <View key={bi} style={{ marginBottom: bi === serviceBlocks.length - 1 ? 0 : 12, borderBottomWidth: bi === serviceBlocks.length - 1 ? 0 : 1, borderBottomColor: '#F0ECE3', paddingBottom: bi === serviceBlocks.length - 1 ? 0 : 8 }}>
-                  <ThemedText style={{ fontSize: 14, fontWeight: '700', color: '#3D7A78', marginBottom: 4 }}>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary, marginBottom: 4 }}>
                     {block.type}
                   </ThemedText>
                   {block.tasks.filter((t) => t.text.trim()).map((task, ti) => (
-                    <ThemedText key={ti} style={{ fontSize: 13, color: '#4A4A4A', marginLeft: 8, marginTop: 2 }}>
+                    <ThemedText key={ti} style={{ fontSize: 13, color: theme.textSecondary, marginLeft: 8, marginTop: 2 }}>
                       • {task.text}
                     </ThemedText>
                   ))}
                   {block.tasks.filter((t) => t.text.trim()).length === 0 && (
-                    <ThemedText style={{ fontSize: 12, color: '#8A8A80', fontStyle: 'italic', marginLeft: 8 }}>
+                    <ThemedText style={{ fontSize: 12, color: theme.textSecondary, fontStyle: 'italic', marginLeft: 8 }}>
                       No items specified
                     </ThemedText>
                   )}
@@ -688,16 +690,16 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
             </Card>
 
             {(imageFiles.length > 0 || !!vehicleImage || !!initialRepair?.images?.length) && (
-              <Card title="Photos">
+<Card title="Photos" styles={styles}>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                   {imageFiles.map((file, i) => (
-                    <Image key={`new-${i}`} source={{ uri: file.uri }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                    <Image key={`new-${i}`} source={{ uri: file.uri }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: theme.divider }} contentFit="cover" />
                   ))}
                   {!imageFiles.length && initialRepair?.images && initialRepair.images.map((url, i) => (
-                    <Image key={`ext-${i}`} source={{ uri: url }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                    <Image key={`ext-${i}`} source={{ uri: url }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: theme.divider }} contentFit="cover" />
                   ))}
                   {!imageFiles.length && !initialRepair?.images?.length && vehicleImage && (
-                    <Image source={{ uri: vehicleImage }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: '#F0ECE3' }} contentFit="cover" />
+                    <Image source={{ uri: vehicleImage }} style={{ width: 80, height: 80, borderRadius: 10, backgroundColor: theme.divider }} contentFit="cover" />
                   )}
                 </View>
               </Card>
@@ -748,53 +750,38 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   );
 }
 
-function Card({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.card}>
-      {title && <ThemedText style={styles.cardTitle}>{title}</ThemedText>}
-      {children}
-    </View>
-  );
-}
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F0ECE3' }}>
-      <ThemedText style={{ fontSize: 13, fontWeight: '600', color: '#8A8A80' }}>{label}</ThemedText>
-      <ThemedText style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>{value || '—'}</ThemedText>
-    </View>
-  );
-}
 
-const styles = StyleSheet.create({
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
   tabContent: { gap: 12, paddingBottom: 16 },
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16,
+    backgroundColor: theme.card, borderRadius: 16,
     padding: 16, gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
   row2: { flexDirection: 'row', gap: 10 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#8A8A80', marginBottom: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 6 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-    borderWidth: 1, borderColor: '#E8E0CC', backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card,
   },
-  chipActive: { backgroundColor: '#3D7A78' + '15', borderColor: '#3D7A78' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
-  chipTextActive: { color: '#3D7A78', fontWeight: '700' },
+  chipActive: { backgroundColor: theme.primary + '15', borderColor: theme.primary },
+  chipText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
+  chipTextActive: { color: theme.primary, fontWeight: '700' },
   priChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-    borderWidth: 1, borderColor: '#E8E0CC', backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card,
   },
   priDot: { width: 8, height: 8, borderRadius: 4 },
-  priText: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
+  priText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  checkboxLabel: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
+  checkboxLabel: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
   imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  imageThumb: { width: 100, height: 100, borderRadius: 12, backgroundColor: '#F0ECE3' },
+  imageThumb: { width: 100, height: 100, borderRadius: 12, backgroundColor: theme.divider },
   imageThumbWrap: { position: 'relative' },
   removeImgBtn: { position: 'absolute', top: -8, right: -8 },
   prefilledBadge: {
@@ -805,27 +792,27 @@ const styles = StyleSheet.create({
   prefilledBadgeText: { fontSize: 8, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.5 },
   addImageBtn: {
     width: 100, height: 100, borderRadius: 12,
-    borderWidth: 2, borderStyle: 'dashed', borderColor: '#3D7A78' + '40',
-    backgroundColor: '#3D7A78' + '06',
+    borderWidth: 2, borderStyle: 'dashed', borderColor: theme.primary + '40',
+    backgroundColor: theme.primary + '06',
     alignItems: 'center', justifyContent: 'center',
   },
   addImageLarge: {
     borderRadius: 16, borderWidth: 2, borderStyle: 'dashed',
-    borderColor: '#3D7A78' + '40', backgroundColor: '#3D7A78' + '06',
+    borderColor: theme.primary + '40', backgroundColor: theme.primary + '06',
     alignItems: 'center', justifyContent: 'center',
     paddingVertical: 32, gap: 8,
   },
   addImageIconWrap: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#3D7A78' + '12',
+    backgroundColor: theme.primary + '12',
     alignItems: 'center', justifyContent: 'center',
   },
-  addImageLabel: { fontSize: 15, fontWeight: '600', color: '#3D7A78' },
-  addImageHint: { fontSize: 12, fontWeight: '500', color: '#B0AA97' },
+  addImageLabel: { fontSize: 15, fontWeight: '600', color: theme.primary },
+  addImageHint: { fontSize: 12, fontWeight: '500', color: theme.tabIconDefault },
   suggestionsList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: '#E8E0CC',
+    borderColor: theme.border,
     borderRadius: 12,
     marginTop: 4,
     overflow: 'hidden',
@@ -834,34 +821,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0ECE3',
+    borderBottomColor: theme.divider,
   },
   suggestionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.text,
   },
   suggestionSub: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#8A8A80',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   submitBtnLarge: {
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#3D7A78',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
-    shadowColor: '#3D7A78',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 3,
   },
   submitBtnText: {
-    color: '#FFFFFF',
+    color: theme.primaryForeground,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -871,4 +858,24 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-});
+}), [theme]);
+  return styles;
+};
+
+function Card({ title, children, styles }: { title?: string; children: React.ReactNode; styles: any }) {
+  return (
+    <View style={styles.card}>
+      {title && <ThemedText style={styles.cardTitle}>{title}</ThemedText>}
+      {children}
+    </View>
+  );
+}
+
+function SummaryRow({ label, value, theme: t }: { label: string; value: string; theme: any }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.divider }}>
+      <ThemedText style={{ fontSize: 13, fontWeight: '600', color: t.textSecondary }}>{label}</ThemedText>
+      <ThemedText style={{ fontSize: 13, fontWeight: '700', color: t.text }}>{value || '—'}</ThemedText>
+    </View>
+  );
+}

@@ -12,7 +12,7 @@ import FAB from '@/components/FAB';
 import ScreenLayout from '@/components/ScreenLayout';
 import Toast from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import type { Repair, RepairFilters } from '@/features/repairs/services/repair.service';
 import { repairService } from '@/features/repairs/services/repair.service';
@@ -51,26 +51,6 @@ function sortRepairs(a: Repair, b: Repair): number {
   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
 
-// ─── Filter FAB ───────────────────────────────────────────────────────────────
-
-const FILTER_SIZE = 46;
-
-function FilterFAB({ onPress, count }: { onPress: () => void; count: number }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={styles.filterFab}
-    >
-      <Ionicons name="funnel-outline" size={20} color={Colors.textInverse} />
-      {count > 0 && (
-        <View style={styles.filterFabBadge}>
-          <ThemedText style={styles.filterFabBadgeText}>{count}</ThemedText>
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
 // ─── Segmented Control ────────────────────────────────────────────────────────
 
 function SegmentedControl({
@@ -80,9 +60,70 @@ function SegmentedControl({
   counts: Record<TabKey, number>;
   onSelect: (k: TabKey) => void;
 }) {
+  const theme = useTheme();
   const [containerW, setContainerW] = useState(0);
   const tabW = useMemo(() => (containerW - 6) / TABS.length, [containerW]);
   const startPad = 3;
+
+  const segStyles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      backgroundColor: theme.backgroundElement,
+      borderRadius: 10,
+      padding: 2,
+      position: 'relative',
+    },
+    pill: {
+      position: 'absolute',
+      top: 2,
+      bottom: 2,
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      zIndex: 1,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      letterSpacing: -0.2,
+    },
+    labelActive: {
+      color: theme.primaryForeground,
+      fontWeight: '700',
+    },
+    badge: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      paddingHorizontal: 5,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.backgroundSelected,
+    },
+    badgeActive: {
+      backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textAlign: 'center',
+      lineHeight: 16,
+      includeFontPadding: false,
+    },
+    badgeTextActive: {
+      color: theme.primaryForeground,
+    },
+  }), [theme]);
 
   const leftVal = useSharedValue(startPad + TABS.findIndex((t) => t.key === activeTab) * tabW);
 
@@ -127,73 +168,12 @@ function SegmentedControl({
   );
 }
 
-const segStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: Colors.backgroundElement,
-    borderRadius: 12,
-    padding: 3,
-    position: 'relative',
-  },
-  pill: {
-    position: 'absolute',
-    top: 3,
-    bottom: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 9,
-    paddingHorizontal: 4,
-    zIndex: 1,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  labelActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.backgroundSelected,
-  },
-  badgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    includeFontPadding: false,
-  },
-  badgeTextActive: {
-    color: '#FFFFFF',
-  },
-});
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function RepairsListScreen() {
+  const theme = useTheme();
+  const styles = useStyles(theme);
+
   const { can } = useRBAC();
 
   const [repairs,              setRepairs]           = useState<Repair[]>([]);
@@ -292,12 +272,6 @@ export default function RepairsListScreen() {
       .map((r) => r.vehicle_type)
       .filter((v): v is string => !!v && !seen.has(v) && !!seen.add(v))
       .map((v) => ({ value: v, label: v }));
-  }, [repairs]);
-
-  const todayCount = useMemo(() => {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return repairs.filter((r) => r.repair_date && r.repair_date.split('T')[0] === today).length;
   }, [repairs]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -454,8 +428,8 @@ export default function RepairsListScreen() {
   ), [loading, filteredRepairs.length, activeTab, tabCounts, handleTabSelect, selectedDate]);
 
   const ListFooter = useMemo(() => {
-    if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={Colors.primary} /></View>;
-    if (hasMore) return <View style={styles.footer}><ActivityIndicator size="small" color={Colors.primary} /></View>;
+    if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={theme.primary} /></View>;
+    if (hasMore) return <View style={styles.footer}><ActivityIndicator size="small" color={theme.primary} /></View>;
     return null;
   }, [loading, hasMore]);
 
@@ -463,8 +437,8 @@ export default function RepairsListScreen() {
     if (loading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <View style={[styles.emptyIconWrap, { backgroundColor: Colors.primaryLight }]}>
-          <Ionicons name="build-outline" size={32} color={Colors.primary} />
+        <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryLight }]}>
+          <Ionicons name="build-outline" size={32} color={theme.primary} />
         </View>
         <ThemedText style={styles.emptyTitle}>No {activeTab} Jobs</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.emptySubtitle}>
@@ -477,7 +451,18 @@ export default function RepairsListScreen() {
   return (
     <ScreenLayout
       title="Repairs"
-      description={`Today • ${todayCount} repair${todayCount !== 1 ? 's' : ''}`}
+      description="Track and manage vehicle repairs"
+      rightAction={
+        <Pressable onPress={() => setFilterModalVisible(true)} style={styles.headerFilterBtn}>
+          <Ionicons name="funnel-outline" size={16} color={theme.primaryForeground} />
+          <ThemedText style={styles.headerFilterText}>Filter</ThemedText>
+          {activeFilterCount > 0 && (
+            <View style={styles.headerFilterBadge}>
+              <ThemedText style={styles.headerFilterBadgeText}>{activeFilterCount}</ThemedText>
+            </View>
+          )}
+        </Pressable>
+      }
     >
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
 
@@ -496,9 +481,8 @@ export default function RepairsListScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.floatingColumn}>
-        <FilterFAB onPress={() => setFilterModalVisible(true)} count={activeFilterCount} />
-        <FAB onPress={handleNewRepair} />
+      <View style={styles.fabWrap}>
+        <FAB onPress={handleNewRepair} label="New" />
       </View>
 
       <RepairFilterModal
@@ -571,49 +555,60 @@ export default function RepairsListScreen() {
 
 const GAP = 14;
 
-const styles = StyleSheet.create({
-  // Tab bar
-  tabBarWrap: {
-    paddingHorizontal: 8,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+    tabBarWrap: {
+      paddingHorizontal: 16,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
 
-  // List
-  listContent: { paddingBottom: 200, flexGrow: 1 },
-  listHeader: { paddingHorizontal: 16, paddingVertical: 4 },
-  listHeaderText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  footer: { paddingVertical: 16, alignItems: 'center' },
-  loadingContainer: { flex: 1, paddingTop: 80, alignItems: 'center' },
+    listContent: { paddingBottom: 200, flexGrow: 1, paddingTop: 4 },
+    listHeader: { paddingHorizontal: 20, paddingVertical: 8 },
+    listHeaderText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      letterSpacing: 0.2,
+    },
+    footer: { paddingVertical: 20, alignItems: 'center' },
+    loadingContainer: { flex: 1, paddingTop: 80, alignItems: 'center' },
 
-  // Empty
-  emptyContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    gap: 8, paddingHorizontal: 16, paddingTop: 60,
-  },
-  emptyIconWrap: {
-    width: 64, height: 64, borderRadius: 32,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+    emptyContainer: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      gap: 6, paddingHorizontal: 24, paddingTop: 40,
+    },
+    emptyIconWrap: {
+      width: 56, height: 56, borderRadius: 28,
+      alignItems: 'center', justifyContent: 'center',
+      marginBottom: 12,
+    },
+    emptyTitle: {
+      fontSize: 16, fontWeight: '700', textAlign: 'center',
+      color: theme.text,
+    },
+    emptySubtitle: {
+      fontSize: 13, textAlign: 'center', lineHeight: 18,
+      color: theme.textSecondary,
+    },
 
-  // Floating buttons
-  floatingColumn: {
-    position: 'absolute', bottom: 130, right: 24,
-    alignItems: 'center', gap: GAP,
-  },
-  filterFab: {
-    width: FILTER_SIZE, height: FILTER_SIZE, borderRadius: FILTER_SIZE / 2,
-    backgroundColor: Colors.dark, alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.text, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
-  },
-  filterFabBadge: {
-    position: 'absolute', top: -4, right: -4,
-    backgroundColor: Colors.primary, borderRadius: 10,
-    width: 20, height: 20, alignItems: 'center', justifyContent: 'center',
-  },
-  filterFabBadgeText: { color: Colors.primaryForeground, fontSize: 11, fontWeight: '800' },
-});
+    fabWrap: {
+      position: 'absolute', bottom: 120, right: 20,
+    },
+    headerFilterBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+      backgroundColor: theme.primary,
+    },
+    headerFilterText: {
+      fontSize: 13, fontWeight: '700', color: theme.primaryForeground,
+    },
+    headerFilterBadge: {
+      position: 'absolute', top: -5, right: -5,
+      backgroundColor: theme.background, borderRadius: 7,
+      width: 16, height: 16, alignItems: 'center', justifyContent: 'center',
+    },
+    headerFilterBadgeText: { color: theme.text, fontSize: 9, fontWeight: '800' },
+  }), [theme]);
+  return styles;
+};

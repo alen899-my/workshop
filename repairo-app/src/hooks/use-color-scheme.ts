@@ -1,3 +1,5 @@
+import { Appearance } from 'react-native';
+
 export function useColorScheme() {
-  return 'light' as const;
+  return Appearance.getColorScheme() ?? 'light';
 }

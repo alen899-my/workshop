@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
   withDelay,
-  withSequence,
   runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,185 +34,79 @@ export default function SuccessModal({
   subtitle = 'Job card created successfully',
   actionButtons,
 }: SuccessModalProps) {
-  // Animation values
   const bgOpacity = useSharedValue(0);
-  const cardScale = useSharedValue(0);
   const circleScale = useSharedValue(0);
-  const checkmarkScale = useSharedValue(0);
-  const rippleScale = useSharedValue(0.5);
-  const rippleOpacity = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(15);
+  const checkScale = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      // 1. Fade in backdrop
-      bgOpacity.value = withTiming(1, { duration: 300 });
-
-      // 2. Spring up card container
-      cardScale.value = withSpring(1, { damping: 15, stiffness: 100 });
-
-      // 3. Scale up primary circle
-      circleScale.value = withDelay(
-        200,
-        withSpring(1, { damping: 12, stiffness: 120 })
-      );
-
-      // 4. Start Google Pay ring ripple effect
-      rippleOpacity.value = withDelay(400, withTiming(0.6, { duration: 100 }));
-      rippleScale.value = withDelay(
-        400,
-        withTiming(1.6, { duration: 600 }, (finished) => {
-          if (finished) {
-            rippleOpacity.value = withTiming(0, { duration: 200 });
-          }
-        })
-      );
-
-      // 5. Pop the checkmark icon
-      checkmarkScale.value = withDelay(
-        500,
-        withSequence(
-          withSpring(1.2, { damping: 10, stiffness: 150 }),
-          withSpring(1.0, { damping: 8, stiffness: 120 })
-        )
-      );
-
-      // 6. Fade and slide in text info
-      textOpacity.value = withDelay(700, withTiming(1, { duration: 450 }));
-      textTranslateY.value = withDelay(700, withSpring(0, { damping: 12 }));
-
-      // 7. Auto close after 3 seconds ONLY if no action buttons are present
-      if (!actionButtons || actionButtons.length === 0) {
-        const timer = setTimeout(() => {
-          handleDismiss();
-        }, 3000);
-        return () => clearTimeout(timer);
-      }
+      bgOpacity.value = withTiming(1, { duration: 250 });
+      circleScale.value = withSpring(1, { damping: 10, stiffness: 100 });
+      checkScale.value = withDelay(350, withSpring(1, { damping: 8, stiffness: 120 }));
     } else {
-      // Reset values
       bgOpacity.value = 0;
-      cardScale.value = 0;
       circleScale.value = 0;
-      checkmarkScale.value = 0;
-      rippleScale.value = 0.5;
-      rippleOpacity.value = 0;
-      textOpacity.value = 0;
-      textTranslateY.value = 15;
+      checkScale.value = 0;
     }
   }, [visible]);
 
   const handleDismiss = () => {
-    // Fade out elements before closing
-    bgOpacity.value = withTiming(0, { duration: 250 });
-    cardScale.value = withTiming(0, { duration: 250 }, (finished) => {
-      if (finished) {
-        runOnJS(onClose)();
-      }
+    bgOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
+      if (finished) runOnJS(onClose)();
     });
   };
 
-  // Animated styles
-  const rBgStyle = useAnimatedStyle(() => ({
-    opacity: bgOpacity.value,
-  }));
-
-  const rCardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
-
-  const rCircleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value }],
-  }));
-
-  const rCheckmarkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkmarkScale.value }],
-  }));
-
-  const rRippleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: rippleScale.value }],
-    opacity: rippleOpacity.value,
-  }));
-
-  const rTextStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-    transform: [{ translateY: textTranslateY.value }],
-  }));
+  const rBg = useAnimatedStyle(() => ({ opacity: bgOpacity.value }));
+  const rCircle = useAnimatedStyle(() => ({ transform: [{ scale: circleScale.value }] }));
+  const rCheck = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="none"
-      onRequestClose={handleDismiss}
-    >
+    <Modal transparent visible={visible} animationType="none" onRequestClose={handleDismiss}>
       <View style={styles.fullscreen}>
-        {/* Backdrop overlay */}
-        <Animated.View style={[styles.backdrop, rBgStyle]}>
+        <Animated.View style={[styles.backdrop, rBg]}>
           <Pressable style={styles.flex} onPress={handleDismiss} />
         </Animated.View>
 
-        {/* Success Card */}
-        <Animated.View style={[styles.card, rCardStyle]}>
-          {/* Animated Ripples */}
-          <Animated.View style={[styles.ripple, rRippleStyle]} />
-
-          {/* Icon Circle */}
-          <Animated.View style={[styles.circle, rCircleStyle]}>
-            <Animated.View style={rCheckmarkStyle}>
-              <Ionicons name="checkmark" size={48} color="#FFFFFF" />
+        <Animated.View style={[styles.card, rCircle]}>
+          <View style={styles.circle}>
+            <Animated.View style={rCheck}>
+              <Ionicons name="checkmark" size={44} color="#FFFFFF" />
             </Animated.View>
-          </Animated.View>
+          </View>
 
-          {/* Details */}
-          <Animated.View style={[styles.details, rTextStyle]}>
+          <View style={styles.details}>
             <ThemedText style={styles.title}>{title}</ThemedText>
             <ThemedText style={styles.subtitle}>{subtitle}</ThemedText>
-          </Animated.View>
+          </View>
 
-          {/* Dynamic Action Buttons or Done Button */}
-          <Animated.View style={[styles.btnContainer, rTextStyle]}>
+          <View style={styles.btnContainer}>
             {actionButtons && actionButtons.length > 0 ? (
               <View style={styles.actionButtonsCol}>
-                {actionButtons.map((btn, index) => {
-                  const isPrimary = btn.primary !== false;
-                  return (
-                    <Pressable
-                      key={index}
-                      onPress={btn.onPress}
-                      disabled={btn.loading}
-                      style={({ pressed }) => [
-                        isPrimary ? styles.primaryBtn : styles.secondaryBtn,
-                        pressed && (isPrimary ? styles.primaryBtnPressed : styles.secondaryBtnPressed),
-                        btn.loading && styles.btnDisabled,
-                      ]}
-                    >
-                      {btn.loading ? (
-                        <ActivityIndicator color={isPrimary ? '#FFFFFF' : '#3D7A78'} size="small" />
-                      ) : (
-                        <View style={styles.btnContent}>
-                          <Ionicons name={btn.icon} size={18} color={isPrimary ? '#FFFFFF' : '#3D7A78'} />
-                          <ThemedText style={isPrimary ? styles.primaryText : styles.secondaryText}>
-                            {btn.label}
-                          </ThemedText>
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                })}
+                {actionButtons.map((btn, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={btn.onPress}
+                    disabled={btn.loading}
+                    style={({ pressed }) => [
+                      btn.primary !== false ? styles.primaryBtn : styles.secondaryBtn,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <View style={styles.btnContent}>
+                      <Ionicons name={btn.icon} size={18} color={btn.primary !== false ? '#FFFFFF' : '#0D9488'} />
+                      <ThemedText style={btn.primary !== false ? styles.primaryText : styles.secondaryText}>
+                        {btn.label}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                ))}
               </View>
             ) : (
-              <Pressable
-                onPress={handleDismiss}
-                style={({ pressed }) => [
-                  styles.doneBtn,
-                  pressed && styles.doneBtnPressed,
-                ]}
-              >
+              <Pressable onPress={handleDismiss} style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.8 }]}>
                 <ThemedText style={styles.doneText}>Done</ThemedText>
               </Pressable>
             )}
-          </Animated.View>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -237,78 +130,58 @@ const styles = StyleSheet.create({
     width: '82%',
     maxWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    paddingVertical: 36,
+    borderRadius: 24,
+    paddingVertical: 32,
     paddingHorizontal: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 8,
-    overflow: 'visible',
-    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
   },
   circle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#3D7A78', // Matching app theme green
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#0D9488',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
-  },
-  ripple: {
-    position: 'absolute',
-    top: 36, // Centered behind the circle
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: '#3D7A78',
-    backgroundColor: '#3D7A78' + '15',
-    zIndex: 1,
   },
   details: {
     alignItems: 'center',
-    marginTop: 24,
-    gap: 8,
+    marginTop: 20,
+    gap: 6,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1A1A1A',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#8A8A80',
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 12,
+    lineHeight: 19,
+    paddingHorizontal: 8,
   },
   btnContainer: {
-    marginTop: 28,
+    marginTop: 24,
     width: '100%',
   },
   doneBtn: {
     width: '100%',
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#3D7A78' + '10', // Light green bg for secondary feel
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#0D9488',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#3D7A78' + '30',
-  },
-  doneBtnPressed: {
-    backgroundColor: '#3D7A78' + '20',
   },
   doneText: {
-    color: '#3D7A78',
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
   },
   actionButtonsCol: {
@@ -317,50 +190,36 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     width: '100%',
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#3D7A78',
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#0D9488',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3D7A78',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  primaryBtnPressed: {
-    opacity: 0.85,
   },
   secondaryBtn: {
     width: '100%',
-    height: 48,
-    borderRadius: 14,
+    height: 44,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#3D7A78',
-  },
-  secondaryBtnPressed: {
-    backgroundColor: '#3D7A78' + '10',
-  },
-  btnDisabled: {
-    opacity: 0.6,
+    borderWidth: 1,
+    borderColor: '#0D9488',
   },
   btnContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   primaryText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   secondaryText: {
-    color: '#3D7A78',
-    fontSize: 15,
+    color: '#0D9488',
+    fontSize: 14,
     fontWeight: '700',
   },
 });

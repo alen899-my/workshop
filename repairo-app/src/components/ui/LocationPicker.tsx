@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
 import { useTheme } from '@/hooks/use-theme';
-import { Colors } from '@/constants/theme';
 
 interface LocationPickerProps {
   label: string;
@@ -24,6 +23,7 @@ export default function LocationPicker({
   error,
 }: LocationPickerProps) {
   const theme = useTheme();
+  const styles = useStyles(theme);
   const ref = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -93,9 +93,9 @@ export default function LocationPicker({
           hitSlop={6}
         >
           {locating ? (
-            <ActivityIndicator size={14} color={Colors.textInverse} />
+            <ActivityIndicator size={14} color={theme.primaryForeground} />
           ) : (
-            <MaterialCommunityIcons name="crosshairs-gps" size={16} color={Colors.textInverse} />
+            <MaterialCommunityIcons name="crosshairs-gps" size={16} color={theme.primaryForeground} />
           )}
         </Pressable>
       </Pressable>
@@ -110,56 +110,62 @@ export default function LocationPicker({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  focusedShadow: {
-    shadowColor: Colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  icon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    paddingVertical: 0,
-  },
-  gpsBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  errorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 2,
-    marginTop: 2,
-  },
-  error: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(
+    () =>
+      StyleSheet.create({
+        wrapper: {
+          gap: 6,
+        },
+        label: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginLeft: 2,
+        },
+        inputContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1.5,
+          borderRadius: 14,
+          paddingHorizontal: 14,
+          height: 52,
+        },
+        focusedShadow: {
+          shadowColor: theme.text,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 3,
+        },
+        icon: {
+          marginRight: 10,
+        },
+        input: {
+          flex: 1,
+          fontSize: 15,
+          fontWeight: '500',
+          paddingVertical: 0,
+        },
+        gpsBtn: {
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: 8,
+        },
+        errorRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          marginLeft: 2,
+          marginTop: 2,
+        },
+        error: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+      }),
+    [theme],
+  );
+};

@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 
 interface ScreenLayoutProps {
   title: string;
@@ -15,15 +16,18 @@ interface ScreenLayoutProps {
 
 export default function ScreenLayout({ title, description, rightAction, children }: ScreenLayoutProps) {
   const { top } = useSafeAreaInsets();
+  const theme = useTheme();
 
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.content]}>
-        <View style={[styles.header, { paddingTop: top + Spacing.two }]}>
+        <View style={[styles.header, { paddingTop: top }]}>
           <View style={styles.titleWrap}>
-            <ThemedText style={styles.title}>{title}</ThemedText>
+            <ThemedText style={[styles.title, { color: theme.text }]}>{title}</ThemedText>
             {description && (
-              <ThemedText style={styles.description}>{description}</ThemedText>
+              <ThemedText style={[styles.description, { color: theme.textSecondary }]}>
+                {description}
+              </ThemedText>
             )}
           </View>
           {rightAction && <View style={styles.rightAction}>{rightAction}</View>}
@@ -40,12 +44,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, maxWidth: MaxContentWidth, alignSelf: 'center', width: '100%' },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    paddingHorizontal: Spacing.four, paddingTop: Spacing.two, paddingBottom: Spacing.three,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingBottom: 2,
   },
-  titleWrap: { flex: 1, gap: 2 },
-  title: { fontSize: 32, fontWeight: '700', lineHeight: 38, color: Colors.text },
-  description: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
-  rightAction: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: 4 },
+  titleWrap: { flex: 1, gap: 1 },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  description: { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  rightAction: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   body: { flex: 1 },
 });

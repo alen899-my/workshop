@@ -10,8 +10,8 @@ import ScreenLayout from '@/components/ScreenLayout';
 import Toast from '@/components/ui/Toast';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import ModalSheet from '@/components/ui/ModalSheet';
-import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 import { vehicleService } from '@/features/vehicles/services/vehicle.service';
 import { useRBAC } from '@/hooks/use-rbac';
@@ -23,21 +23,10 @@ import VehicleActionsModal from './components/VehicleActionsModal';
 
 const PAGE_SIZE = 20;
 
-function FilterFAB({ onPress, count }: { onPress: () => void; count: number }) {
-  return (
-    <Pressable onPress={onPress} style={styles.filterFab}>
-      <Ionicons name="funnel-outline" size={20} color={Colors.textInverse} />
-      {count > 0 && (
-        <View style={styles.filterFabBadge}>
-          <ThemedText style={styles.filterFabBadgeText}>{count}</ThemedText>
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
 export default function VehiclesListScreen() {
   const { can } = useRBAC();
+  const theme = useTheme();
+  const styles = useStyles(theme);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,17 +186,17 @@ export default function VehiclesListScreen() {
   ), [loading, vehicles.length]);
 
   const ListFooter = useMemo(() => {
-    if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={Colors.primary} /></View>;
-    if (hasMore) return <View style={styles.footer}><ActivityIndicator size="small" color={Colors.primary} /></View>;
+    if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={theme.primary} /></View>;
+    if (hasMore) return <View style={styles.footer}><ActivityIndicator size="small" color={theme.primary} /></View>;
     return null;
-  }, [loading, hasMore]);
+  }, [loading, hasMore, theme]);
 
   const ListEmpty = useMemo(() => {
     if (loading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <View style={[styles.emptyIconWrap, { backgroundColor: Colors.primaryLight }]}>
-          <Ionicons name="car-outline" size={32} color={Colors.primary} />
+        <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryLight }]}>
+          <Ionicons name="car-outline" size={32} color={theme.primary} />
         </View>
         <ThemedText style={styles.emptyTitle}>No Vehicles</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.emptySubtitle}>
@@ -215,7 +204,20 @@ export default function VehiclesListScreen() {
         </ThemedText>
       </View>
     );
-  }, [loading, filterStatus]);
+  }, [loading, filterStatus, theme]);
+
+  function FilterFAB({ onPress, count }: { onPress: () => void; count: number }) {
+    return (
+      <Pressable onPress={onPress} style={styles.filterFab}>
+        <Ionicons name="funnel-outline" size={20} color={theme.textInverse} />
+        {count > 0 && (
+          <View style={styles.filterFabBadge}>
+            <ThemedText style={styles.filterFabBadgeText}>{count}</ThemedText>
+          </View>
+        )}
+      </Pressable>
+    );
+  }
 
   return (
     <ScreenLayout title="Vehicles">
@@ -238,7 +240,7 @@ export default function VehiclesListScreen() {
 
       <View style={styles.floatingColumn}>
         <FilterFAB onPress={() => setFilterModalVisible(true)} count={filterCount} />
-        <FAB onPress={handleNewVehicle} />
+        <FAB onPress={handleNewVehicle} label="New" />
       </View>
 
       <VehicleActionsModal
@@ -308,51 +310,54 @@ export default function VehiclesListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  listContent: { paddingBottom: 200, flexGrow: 1 },
-  listHeader: { paddingHorizontal: 16, paddingVertical: 8 },
-  listHeaderText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  footer: { paddingVertical: 16, alignItems: 'center' },
-  loadingContainer: { flex: 1, paddingTop: 80, alignItems: 'center' },
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+    listContent: { paddingBottom: 200, flexGrow: 1 },
+    listHeader: { paddingHorizontal: 16, paddingVertical: 8 },
+    listHeaderText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
+    footer: { paddingVertical: 16, alignItems: 'center' },
+    loadingContainer: { flex: 1, paddingTop: 80, alignItems: 'center' },
 
-  emptyContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    gap: 8, paddingHorizontal: 16, paddingTop: 60,
-  },
-  emptyIconWrap: {
-    width: 64, height: 64, borderRadius: 32,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+    emptyContainer: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      gap: 8, paddingHorizontal: 16, paddingTop: 60,
+    },
+    emptyIconWrap: {
+      width: 64, height: 64, borderRadius: 32,
+      alignItems: 'center', justifyContent: 'center',
+      marginBottom: 8,
+    },
+    emptyTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
+    emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
-  floatingColumn: {
-    position: 'absolute', bottom: 130, right: 24,
-    alignItems: 'center', gap: 14,
-  },
-  filterFab: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: Colors.dark, alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.text, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
-  },
-  filterFabBadge: {
-    position: 'absolute', top: -4, right: -4,
-    backgroundColor: Colors.primary, borderRadius: 10,
-    width: 20, height: 20, alignItems: 'center', justifyContent: 'center',
-  },
-  filterFabBadgeText: { color: Colors.primaryForeground, fontSize: 11, fontWeight: '800' },
+    floatingColumn: {
+      position: 'absolute', bottom: 130, right: 24,
+      alignItems: 'center', gap: 14,
+    },
+    filterFab: {
+      width: 46, height: 46, borderRadius: 23,
+      backgroundColor: theme.dark, alignItems: 'center', justifyContent: 'center',
+      shadowColor: theme.text, shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
+    },
+    filterFabBadge: {
+      position: 'absolute', top: -4, right: -4,
+      backgroundColor: theme.primary, borderRadius: 10,
+      width: 20, height: 20, alignItems: 'center', justifyContent: 'center',
+    },
+    filterFabBadgeText: { color: theme.primaryForeground, fontSize: 11, fontWeight: '800' },
 
-  filterSection: { padding: 16, gap: 10 },
-  filterLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
-  filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  filterChip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1, borderColor: '#E8E0CC',
-    backgroundColor: '#F8F7F4',
-  },
-  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
-  filterChipTextActive: { color: '#FFFFFF' },
-});
+    filterSection: { padding: 16, gap: 10 },
+    filterLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+    filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    filterChip: {
+      paddingHorizontal: 14, paddingVertical: 8,
+      borderRadius: 10, borderWidth: 1, borderColor: '#E8E0CC',
+      backgroundColor: '#F8F7F4',
+    },
+    filterChipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
+    filterChipText: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
+    filterChipTextActive: { color: '#FFFFFF' },
+  }), [theme]);
+  return styles;
+};

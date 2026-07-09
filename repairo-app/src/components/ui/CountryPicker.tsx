@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-import { FlagType, getAllCountries } from 'react-native-country-picker-modal';
 
 import ModalSheet from '@/components/ui/ModalSheet';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { waitForCountries, countriesCache } from '@/utils/preload-countries';
 
 interface CountryData {
   cca2: string;
@@ -19,30 +18,29 @@ interface Props {
   value: string;
   onChange: (country: CountryData) => void;
   error?: string;
+  selectedName?: string;
 }
 
-export default function CountryPicker({ value, onChange, error }: Props) {
+export default function CountryPicker({ value, onChange, error, selectedName: controlledName }: Props) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [all, setAll] = useState<any[] | null>(null);
-  const [selectedName, setSelectedName] = useState('');
-  const loaded = useRef(false);
-  const mapRef = useRef<Record<string, any> | null>(null);
+  const [localName, setLocalName] = useState('');
+
+  const displayName = controlledName || localName;
 
   useEffect(() => {
-    if (!loaded.current) {
-      loaded.current = true;
-      getAllCountries(FlagType.EMOJI).then((map: Record<string, any>) => {
-        mapRef.current = map;
-        setAll(Object.values(map));
-        const c = map[value];
-        if (c) setSelectedName(typeof c.name === 'string' ? c.name : c.name?.common ?? '');
-      });
-    } else if (mapRef.current) {
-      const c = mapRef.current[value];
-      if (c) setSelectedName(typeof c.name === 'string' ? c.name : c.name?.common ?? '');
-    }
+    waitForCountries().then(() => {
+      if (countriesCache && !all) {
+        setAll(Object.values(countriesCache));
+      }
+      if (!controlledName) {
+        const c = countriesCache?.[value];
+        if (c) setLocalName(typeof c.name === 'string' ? c.name : c.name?.common ?? '');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   const filtered = useMemo(() => {
@@ -58,7 +56,7 @@ export default function CountryPicker({ value, onChange, error }: Props) {
   const handleSelect = useCallback(
     (country: any) => {
       const name = typeof country.name === 'string' ? country.name : country.name?.common ?? '';
-      setSelectedName(name);
+      setLocalName(name);
       onChange({
         cca2: country.cca2,
         name,
@@ -82,10 +80,10 @@ export default function CountryPicker({ value, onChange, error }: Props) {
         onPress={() => setOpen(true)}
       >
         <Text
-          style={[styles.triggerText, { color: selectedName ? theme.text : theme.tabIconDefault }]}
+          style={[styles.triggerText, { color: displayName ? theme.text : theme.tabIconDefault }]}
           numberOfLines={1}
         >
-          {selectedName || 'Select Country'}
+          {displayName || 'Select Country'}
         </Text>
         <MaterialCommunityIcons name="chevron-down" size={20} color={theme.textSecondary} />
       </Pressable>

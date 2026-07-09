@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   Image as RNImage,
   Linking,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   TextInput,
   View,
@@ -15,11 +18,15 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import StatusBadge from '@/components/StatusBadge';
+import { getCurrentUser } from '@/services/auth.service';
 import type { Repair } from '@/features/repairs/services/repair.service';
+import GenerateBillScreen from '@/features/repairs/GenerateBillScreen';
 import { repairService } from '@/features/repairs/services/repair.service';
 import { formatUTCToLocal } from '@/utils/date';
 import type { Worker } from '@/features/repairs/services/worker.service';
@@ -48,6 +55,8 @@ export default function ViewRepairScreen({
   onUpdateRepair,
 }: ViewRepairScreenProps) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = useStyles(theme);
 
   const getPriorityStyle = (p?: string) => {
     if (p === 'Low') return { bg: styles.priorityLow, text: styles.priorityTextLow };
@@ -96,6 +105,30 @@ export default function ViewRepairScreen({
   const [newCategory, setNewCategory] = useState('Repair');
   const [newComplaintText, setNewComplaintText] = useState('');
   const [isCustomCategory, setIsCustomCategory] = useState(false);
+
+  const [imageViewerIndex, setImageViewerIndex] = useState(0);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [billModalVisible, setBillModalVisible] = useState(false);
+  const allImages = useMemo(() => {
+    const imgs: string[] = [];
+    if (repair.vehicle_image) imgs.push(repair.vehicle_image);
+    if (repair.images?.length) {
+      repair.images.forEach((url) => {
+        if (!imgs.includes(url)) imgs.push(url);
+      });
+    }
+    return imgs;
+  }, [repair.vehicle_image, repair.images]);
+  const flatListRef = useRef<FlatList>(null);
+
+  const handleBillClose = useCallback(() => {
+    setBillModalVisible(false);
+  }, []);
+
+  const handleBillSuccess = useCallback(() => {
+    setBillModalVisible(false);
+    onUpdateRepair?.(repair);
+  }, [onUpdateRepair, repair]);
 
   const handleAddComplaint = async () => {
     const categoryName = newCategory.trim() || 'General';
@@ -236,97 +269,108 @@ export default function ViewRepairScreen({
 
   return (
     <ThemedView style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <Pressable style={styles.headerBack} onPress={onClose}>
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
+        </Pressable>
+        <ThemedText style={styles.headerTitle}>Job Card</ThemedText>
+        <Pressable style={styles.headerEdit} onPress={onEdit}>
+          <Ionicons name="create-outline" size={18} color={theme.primaryForeground} />
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Hero Header */}
-        <View style={styles.heroSection}>
-          {vehicleImg ? (
-            <Image source={{ uri: vehicleImg }} style={styles.heroImage} contentFit="cover" />
-          ) : (
-            <View style={styles.placeholderHero}>
-              <Ionicons name={vehicleIcon} size={84} color="#3D7A78" style={styles.placeholderIcon} />
+        {/* Vehicle Info Card */}
+        <View style={styles.vehicleCard}>
+          <Pressable
+            style={styles.vehicleImageWrap}
+            onPress={() => {
+              if (allImages.length > 0) {
+                setImageViewerIndex(0);
+                setImageViewerVisible(true);
+              }
+            }}
+          >
+            {vehicleImg ? (
+              <Image source={{ uri: vehicleImg }} style={styles.vehicleImage} contentFit="cover" />
+            ) : (
+              <View style={[styles.vehicleImage, styles.vehicleImagePlaceholder]}>
+                <Ionicons name={vehicleIcon} size={32} color={theme.primary} />
+              </View>
+            )}
+          </Pressable>
+          <View style={styles.vehicleInfo}>
+            <View style={styles.plate}>
+              <View style={styles.plateBadge}>
+                <ThemedText style={styles.plateBadgeText}>{getCurrentUser()?.shopCountry || 'IND'}</ThemedText>
+              </View>
+              <ThemedText style={styles.plateNumber} numberOfLines={1}>{repair.vehicle_number}</ThemedText>
             </View>
-          )}
-
-          {/* Floating Actions on Hero */}
-          <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 16) }]}>
-            <Pressable style={styles.headerBtn} onPress={onClose}>
-              <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
-            </Pressable>
-            <Pressable style={[styles.headerBtn, styles.editBtn]} onPress={onEdit}>
-              <Ionicons name="create-outline" size={22} color="#3D7A78" />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Info Content Wrapper */}
-        <View style={styles.infoWrapper}>
-          {/* Main Title Block */}
-          <View style={styles.titleBlock}>
-            <ThemedText style={styles.vehicleNo}>{repair.vehicle_number}</ThemedText>
-            <ThemedText style={styles.modelText}>
+            <ThemedText style={styles.vehicleModel} numberOfLines={1}>
               {repair.brand || repair.model_name ? `${repair.brand || ''} ${repair.model_name || ''}`.trim() : 'Unspecified Model'}
             </ThemedText>
-
             <View style={styles.badgeRow}>
-              <StatusBadge status={repair.status} size="md" dot />
+              <StatusBadge status={repair.status} size="sm" dot />
               {repair.priority && (() => {
                 const pri = getPriorityStyle(repair.priority);
                 return (
-                  <View style={[styles.priorityBadge, pri.bg]}>
-                    <ThemedText style={[styles.priorityText, pri.text]}>
-                      {repair.priority} Priority
-                    </ThemedText>
+                  <View style={[styles.priBadge, pri.bg]}>
+                    <ThemedText style={[styles.priBadgeText, pri.text]}>{repair.priority}</ThemedText>
                   </View>
                 );
               })()}
-              <View style={styles.typeBadge}>
-                <ThemedText style={styles.typeText}>{repair.vehicle_type || 'Car'}</ThemedText>
-              </View>
             </View>
           </View>
+        </View>
 
-          {/* Customer Card */}
-          <Card title="Customer Contact">
-            <View style={styles.customerRow}>
-              <View style={styles.customerInfo}>
+        {/* Customer Contact */}
+        <View style={styles.card}>
+          <ThemedText style={styles.cardTitle}>Customer</ThemedText>
+          <View style={styles.customerRow}>
+            <View style={styles.customerLeft}>
+              <Ionicons name="person-outline" size={16} color={theme.textSecondary} />
+              <View>
                 <ThemedText style={styles.customerName}>{repair.owner_name || 'Walk-in Customer'}</ThemedText>
-                <ThemedText style={styles.customerPhone}>{repair.phone_number || 'No phone number'}</ThemedText>
-              </View>
-              <View style={styles.actionButtons}>
-                {repair.phone_number && (
-                  <Pressable style={styles.actionCircle} onPress={handleCall}>
-                    <Ionicons name="call" size={18} color="#3D7A78" />
-                  </Pressable>
-                )}
-                {(repair.phone_number || repair.whatsapp_number) && (
-                  <Pressable style={[styles.actionCircle, styles.whatsappCircle]} onPress={handleWhatsApp}>
-                    <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-                  </Pressable>
-                )}
+                <ThemedText style={styles.customerPhone}>{repair.phone_number || 'No phone'}</ThemedText>
               </View>
             </View>
-          </Card>
+            <View style={styles.customerActions}>
+              {repair.phone_number && (
+                <Pressable style={styles.circleBtn} onPress={handleCall}>
+                  <Ionicons name="call" size={15} color={theme.primary} />
+                </Pressable>
+              )}
+              {(repair.phone_number || repair.whatsapp_number) && (
+                <Pressable style={[styles.circleBtn, { backgroundColor: '#25D366' + '15' }]} onPress={handleWhatsApp}>
+                  <Ionicons name="logo-whatsapp" size={15} color="#25D366" />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
 
-          {/* Job Details Card */}
-          <Card title="Job Details">
-            <DetailRow
-              label="Attending Worker"
-              value={(() => {
-                if (repair.attending_worker_id) {
-                  const w = workers.find((item) => String(item.id) === String(repair.attending_worker_id));
-                  if (w) return w.name;
-                }
-                return repair.attending_worker_name || 'Unassigned';
-              })()}
-              icon="person-outline"
-            />
-            <DetailRow label="Repair Registered" value={formatUTCToLocal(repair.repair_date)} icon="calendar-outline" />
-            <DetailRow label="Expected Completion" value={formatUTCToLocal(repair.expected_completion) || 'Not specified'} icon="calendar-outline" />
-            <DetailRow label="KM Reading" value={repair.km_reading ? `${repair.km_reading} KM` : 'Not recorded'} icon="speedometer-outline" />
-          </Card>
+        {/* Job Details */}
+        <View style={styles.card}>
+          <ThemedText style={styles.cardTitle}>Details</ThemedText>
+          <DetailRow styles={styles} theme={theme}
+            label="Worker"
+            value={(() => {
+              if (repair.attending_worker_id) {
+                const w = workers.find((item) => String(item.id) === String(repair.attending_worker_id));
+                if (w) return w.name;
+              }
+              return repair.attending_worker_name || 'Unassigned';
+            })()}
+            icon="person-outline"
+          />
+          <DetailRow styles={styles} theme={theme} label="Registered" value={formatUTCToLocal(repair.repair_date)} icon="calendar-outline" />
+          <DetailRow styles={styles} theme={theme} label="Completion" value={formatUTCToLocal(repair.expected_completion) || 'Not set'} icon="calendar-outline" />
+          <DetailRow styles={styles} theme={theme} label="KM" value={repair.km_reading ? `${repair.km_reading} KM` : 'Not recorded'} icon="speedometer-outline" />
+        </View>
 
-          {/* Service/Complaints Items Card */}
-          <Card title="Services & Complaints">
+        {/* Services & Complaints */}
+        <View style={styles.card}>
+          <ThemedText style={styles.cardTitle}>Services & Complaints</ThemedText>
             {localComplaints.length > 0 ? (
               localComplaints.map((block: any, bi: number) => (
                 <View key={bi} style={[styles.serviceBlock, bi > 0 && styles.serviceDivider]}>
@@ -356,7 +400,7 @@ export default function ViewRepairScreen({
 
                         <View style={styles.taskActions}>
                           {isLoading ? (
-                            <ActivityIndicator size="small" color="#3D7A78" />
+                            <ActivityIndicator size="small" color={theme.primary} />
                           ) : (
                             <>
                               <Pressable 
@@ -370,7 +414,7 @@ export default function ViewRepairScreen({
                                 <Ionicons 
                                   name={isCompleted ? "checkmark" : "checkmark-outline"} 
                                   size={16} 
-                                  color={isCompleted ? "#FFFFFF" : "#3D7A78"} 
+                                  color={isCompleted ? "#FFFFFF" : theme.primary} 
                                 />
                               </Pressable>
 
@@ -385,7 +429,7 @@ export default function ViewRepairScreen({
                                 <Ionicons 
                                   name={isFailed ? "close" : "close-outline"} 
                                   size={16} 
-                                  color={isFailed ? "#FFFFFF" : "#E53E3E"} 
+                                  color={isFailed ? "#FFFFFF" : theme.destructive} 
                                 />
                               </Pressable>
                             </>
@@ -406,44 +450,63 @@ export default function ViewRepairScreen({
               style={styles.addComplaintBtn}
               onPress={() => setShowAddModal(true)}
             >
-              <Ionicons name="add-circle-outline" size={18} color="#3D7A78" />
+              <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
               <ThemedText style={styles.addComplaintBtnText}>Add Additional Complaint</ThemedText>
             </Pressable>
-          </Card>
+          </View>
 
           {/* Additional Photos Card */}
           {repair.images && repair.images.length > 1 && (
-            <Card title="Photos">
+            <View style={styles.card}>
+              <ThemedText style={styles.cardTitle}>Photos</ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosScroll}>
                 {repair.images.map((url, index) => (
-                  <Pressable key={index}>
+                  <Pressable key={index} onPress={() => {
+                    const idx = allImages.indexOf(url);
+                    setImageViewerIndex(idx >= 0 ? idx : index);
+                    setImageViewerVisible(true);
+                  }}>
                     <Image source={{ uri: url }} style={styles.photoThumb} contentFit="cover" />
                   </Pressable>
                 ))}
               </ScrollView>
-            </Card>
+            </View>
           )}
 
           {/* Bill Overview Card */}
-          {repair.bill_id && (
-            <Card title="Billing Details">
-              <View style={styles.billRow}>
-                <ThemedText style={styles.billLabel}>Payment Status</ThemedText>
-                <View style={[styles.statusBadgeSmall, { backgroundColor: repair.payment_status === 'Paid' ? '#EBF8FF' : '#FFF5F5' }]}>
-                  <ThemedText style={[styles.statusBadgeTextSmall, { color: repair.payment_status === 'Paid' ? '#2B6CB0' : '#C53030' }]}>
-                    {repair.payment_status || 'Unpaid'}
+          <View style={styles.card}>
+            <ThemedText style={styles.cardTitle}>Billing</ThemedText>
+            <View style={styles.billRow}>
+              <View style={styles.billStatusLeft}>
+                <ThemedText style={styles.billLabel}>
+                  {repair.bill_id ? 'Payment Status' : 'Invoice'}
+                </ThemedText>
+                <ThemedText style={styles.billValue}>
+                  {repair.bill_id
+                    ? (repair.payment_status === 'Paid' ? 'Payment received' : 'Pending payment')
+                    : 'No invoice yet'}
+                </ThemedText>
+              </View>
+              {repair.bill_id && (
+                <View style={[styles.statusBadgeSmall, {
+                  backgroundColor: repair.payment_status === 'Paid' ? '#DCFCE7' : '#FEF9C3'
+                }]}>
+                  <ThemedText style={[styles.statusBadgeTextSmall, {
+                    color: repair.payment_status === 'Paid' ? '#16A34A' : '#CA8A04'
+                  }]}>
+                    {repair.payment_status === 'Paid' ? 'Paid' : 'Unpaid'}
                   </ThemedText>
                 </View>
-              </View>
-              <Pressable style={styles.viewBillBtn} onPress={onEdit}>
-                <ThemedText style={styles.viewBillText}>Manage Invoice & Billing</ThemedText>
-                <Ionicons name="arrow-forward" size={14} color="#3D7A78" />
-              </Pressable>
-            </Card>
-          )}
-        </View>
+              )}
+            </View>
+            <Pressable style={styles.viewBillBtn} onPress={() => setBillModalVisible(true)}>
+              <ThemedText style={styles.viewBillText}>
+                {repair.bill_id ? 'Manage Invoice & Billing' : 'Create Invoice'}
+              </ThemedText>
+              <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+            </Pressable>
+          </View>
       </ScrollView>
-
 
       {/* Add Additional Complaint Modal Sheet */}
       <Modal
@@ -502,7 +565,7 @@ export default function ViewRepairScreen({
               <TextInput
                 style={styles.modalInput}
                 placeholder="Enter custom category (e.g., Electrical)"
-                placeholderTextColor="#8A8A80"
+                placeholderTextColor={theme.textSecondary}
                 value={newCategory}
                 onChangeText={setNewCategory}
               />
@@ -515,7 +578,7 @@ export default function ViewRepairScreen({
               multiline
               numberOfLines={3}
               placeholder="Describe the complaint or task..."
-              placeholderTextColor="#8A8A80"
+              placeholderTextColor={theme.textSecondary}
               value={newComplaintText}
               onChangeText={setNewComplaintText}
             />
@@ -565,7 +628,7 @@ export default function ViewRepairScreen({
               multiline
               numberOfLines={3}
               placeholder="e.g. Parts out of stock, customer requested to defer, special tool needed..."
-              placeholderTextColor="#8A8A80"
+              placeholderTextColor={theme.textSecondary}
               value={reasonText}
               onChangeText={setReasonText}
             />
@@ -582,7 +645,7 @@ export default function ViewRepairScreen({
                 <ThemedText style={styles.modalCancelBtnText}>Cancel</ThemedText>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, styles.modalAddBtn, { backgroundColor: '#E53E3E' }]}
+                style={[styles.modalBtn, styles.modalAddBtn, { backgroundColor: theme.destructive }]}
                 onPress={handleReasonSubmit}
               >
                 <ThemedText style={styles.modalAddBtnText}>Submit Reason</ThemedText>
@@ -591,230 +654,301 @@ export default function ViewRepairScreen({
           </View>
         </View>
       </Modal>
+
+      {/* Image Lightbox */}
+      <Modal
+        visible={imageViewerVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setImageViewerVisible(false)}
+      >
+        <View style={styles.lightboxOverlay}>
+          <StatusBar barStyle="light-content" backgroundColor="#000" />
+          <Pressable
+            style={styles.lightboxClose}
+            hitSlop={16}
+            onPress={() => setImageViewerVisible(false)}
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </Pressable>
+
+          {allImages.length > 1 && (
+            <View style={styles.lightboxCounter}>
+              <ThemedText style={styles.lightboxCounterText}>
+                {imageViewerIndex + 1} / {allImages.length}
+              </ThemedText>
+            </View>
+          )}
+
+          <FlatList
+            ref={flatListRef}
+            data={allImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, i) => String(i)}
+            initialScrollIndex={imageViewerIndex}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setImageViewerIndex(idx);
+            }}
+            renderItem={({ item }) => (
+              <View style={styles.lightboxPage}>
+                <Image
+                  source={{ uri: item }}
+                  style={styles.lightboxImage}
+                  contentFit="contain"
+                />
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
+
+      {/* Billing Screen Modal */}
+      <Modal visible={billModalVisible} animationType="slide" onRequestClose={handleBillClose}>
+        <GenerateBillScreen
+          repair={repair}
+          onClose={handleBillClose}
+          onSuccess={handleBillSuccess}
+        />
+      </Modal>
     </ThemedView>
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.card}>
-      <ThemedText style={styles.cardTitle}>{title}</ThemedText>
-      <View style={styles.cardContent}>{children}</View>
-    </View>
-  );
-}
 
-function DetailRow({ label, value, icon }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap | keyof typeof MaterialCommunityIcons.glyphMap }) {
-  return (
-    <View style={styles.detailRow}>
-      <Ionicons name={icon as any} size={18} color="#8A8A80" style={styles.detailIcon} />
-      <View style={styles.detailTextContainer}>
-        <ThemedText style={styles.detailLabel}>{label}</ThemedText>
-        <ThemedText style={styles.detailValue}>{value}</ThemedText>
-      </View>
-    </View>
-  );
-}
 
-const styles = StyleSheet.create({
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F7F4', // Premium cream bg
+    backgroundColor: theme.backgroundElement,
   },
   scrollContent: {
+    padding: 16,
     paddingBottom: 40,
+    gap: 12,
   },
-  heroSection: {
-    height: 250,
-    width: '100%',
-    position: 'relative',
-    backgroundColor: '#EAE5D9',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderHero: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3D7A78' + '0C', // Light teal tint
-  },
-  placeholderIcon: {
-    opacity: 0.6,
-  },
-  headerOverlay: {
-    ...StyleSheet.absoluteFill,
+
+  // ── Header ──
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: theme.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
   },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  headerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.backgroundElement,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  headerEdit: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.primary,
+  },
+
+  // ── Vehicle card ──
+  vehicleCard: {
+    flexDirection: 'row',
+    backgroundColor: theme.card,
+    borderRadius: 14,
+    padding: 12,
+    gap: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  editBtn: {
-    backgroundColor: '#FFFFFF',
+  vehicleImageWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: theme.backgroundSelected,
   },
-  infoWrapper: {
-    paddingHorizontal: 16,
-    gap: 14,
-    marginTop: -20, // Slide info block slightly over image
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: '#F8F7F4',
-    paddingTop: 24,
+  vehicleImage: {
+    width: '100%',
+    height: '100%',
   },
-  titleBlock: {
-    marginBottom: 6,
+  vehicleImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  vehicleNo: {
-    fontSize: 26,
+  vehicleInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  plate: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: theme.backgroundSelected,
+    marginBottom: 4,
+  },
+  plateBadge: {
+    backgroundColor: theme.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  plateBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.background,
     letterSpacing: 0.5,
   },
-  modelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8A8A80',
-    marginTop: 2,
-    marginBottom: 12,
+  plateNumber: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: theme.text,
+    letterSpacing: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  vehicleModel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.textSecondary,
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
   },
-  priorityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  priBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  priBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   priorityLow: { backgroundColor: '#F0FFF4' },
   priorityMedium: { backgroundColor: '#FEFCBF' },
   priorityHigh: { backgroundColor: '#FEEBC8' },
   priorityUrgent: { backgroundColor: '#FED7D7' },
-  priorityText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
   priorityTextLow: { color: '#38A169' },
   priorityTextMedium: { color: '#B7791F' },
   priorityTextHigh: { color: '#DD6B20' },
   priorityTextUrgent: { color: '#E53E3E' },
-  typeBadge: {
-    backgroundColor: '#F0ECE3',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  typeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8A8A80',
-  },
+
+  // ── Cards ──
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.card,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#3D7A78',
+    color: theme.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,
   },
-  cardContent: {
-    gap: 12,
-  },
+
+  // ── Customer ──
   customerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  customerInfo: {
+  customerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     flex: 1,
-    gap: 2,
   },
   customerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.text,
   },
   customerPhone: {
-    fontSize: 13,
-    color: '#8A8A80',
+    fontSize: 12,
+    color: theme.textSecondary,
     fontWeight: '500',
+    marginTop: 1,
   },
-  actionButtons: {
+  customerActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  actionCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#3D7A78' + '10',
+  circleBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.primary + '12',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  whatsappCircle: {
-    backgroundColor: '#25D366' + '10',
-  },
+
+  // ── Details ──
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  detailIcon: {
-    marginRight: 12,
-  },
-  detailTextContainer: {
-    flex: 1,
-    gap: 2,
+    gap: 10,
+    paddingVertical: 6,
   },
   detailLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8A8A80',
+    color: theme.textSecondary,
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: theme.text,
+    marginTop: 1,
   },
   serviceBlock: {
     gap: 6,
   },
   serviceDivider: {
     borderTopWidth: 1,
-    borderTopColor: '#F0ECE3',
+    borderTopColor: theme.divider,
     paddingTop: 12,
     marginTop: 6,
   },
   serviceBlockType: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: theme.text,
     marginBottom: 2,
   },
   taskItem: {
@@ -826,7 +960,7 @@ const styles = StyleSheet.create({
   taskText: {
     flex: 1,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: theme.text,
     fontWeight: '500',
     marginRight: 12,
   },
@@ -836,7 +970,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0ECE3',
+    borderBottomColor: theme.divider,
   },
   taskActions: {
     flexDirection: 'row',
@@ -849,32 +983,32 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0ECE3',
+    backgroundColor: theme.divider,
   },
   actionBtnCompleted: {
-    backgroundColor: '#3D7A78',
+    backgroundColor: theme.primary,
   },
   actionBtnFailed: {
-    backgroundColor: '#E53E3E',
+    backgroundColor: theme.destructive,
   },
   taskTextCompleted: {
     textDecorationLine: 'line-through',
-    color: '#8A8A80',
+    color: theme.textSecondary,
   },
   taskTextFailed: {
     textDecorationLine: 'line-through',
-    color: '#E53E3E',
+    color: theme.destructive,
     fontStyle: 'italic',
   },
   taskReasonText: {
     fontSize: 12,
-    color: '#E53E3E',
+    color: theme.destructive,
     fontStyle: 'italic',
     marginTop: 2,
   },
   noTasks: {
     fontSize: 13,
-    color: '#8A8A80',
+    color: theme.textSecondary,
     fontStyle: 'italic',
     paddingLeft: 4,
   },
@@ -885,20 +1019,30 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 10,
-    backgroundColor: '#F0ECE3',
+    backgroundColor: theme.divider,
   },
   billRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0ECE3',
+    borderBottomColor: theme.divider,
     paddingBottom: 12,
   },
+  billStatusLeft: {
+    gap: 2,
+    flex: 1,
+  },
   billLabel: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: theme.textSecondary,
+    textTransform: 'uppercase',
+  },
+  billValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.text,
   },
   statusBadgeSmall: {
     paddingHorizontal: 8,
@@ -913,37 +1057,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
+    paddingTop: 12,
   },
   viewBillText: {
-    color: '#3D7A78',
+    color: theme.primary,
     fontSize: 13,
-    fontWeight: '700',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    backgroundColor: '#F8F7F4',
-    borderTopWidth: 1,
-    borderTopColor: '#E8E0CC',
-  },
-  closeBtn: {
-    width: '100%',
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#3D7A78',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  closeBtnText: {
-    color: '#3D7A78',
-    fontSize: 15,
     fontWeight: '700',
   },
   addComplaintBtn: {
@@ -953,14 +1071,14 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#3D7A78',
+    borderColor: theme.primary,
     borderRadius: 12,
     paddingVertical: 12,
-    backgroundColor: '#3D7A78' + '0A',
+    backgroundColor: theme.primary + '0A',
     marginTop: 14,
   },
   addComplaintBtnText: {
-    color: '#3D7A78',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -972,7 +1090,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     width: '90%',
     maxWidth: 380,
     borderRadius: 20,
@@ -986,13 +1104,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.text,
     marginBottom: 16,
   },
   modalLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A80',
+    color: theme.textSecondary,
     textTransform: 'uppercase',
     marginBottom: 8,
     marginTop: 12,
@@ -1008,30 +1126,30 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F0ECE3',
-    backgroundColor: '#F8F7F4',
+    borderColor: theme.divider,
+    backgroundColor: theme.background,
   },
   categoryChipSelected: {
-    backgroundColor: '#3D7A78',
-    borderColor: '#3D7A78',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   categoryChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8A8A80',
+    color: theme.textSecondary,
   },
   categoryChipTextSelected: {
-    color: '#FFFFFF',
+    color: theme.primaryForeground,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#F0ECE3',
+    borderColor: theme.divider,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
-    backgroundColor: '#F8F7F4',
+    color: theme.text,
+    backgroundColor: theme.background,
     width: '100%',
   },
   modalTextArea: {
@@ -1052,19 +1170,76 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCancelBtn: {
-    backgroundColor: '#F0ECE3',
+    backgroundColor: theme.divider,
   },
   modalCancelBtnText: {
-    color: '#8A8A80',
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: '700',
   },
   modalAddBtn: {
-    backgroundColor: '#3D7A78',
+    backgroundColor: theme.primary,
   },
   modalAddBtnText: {
-    color: '#FFFFFF',
+    color: theme.primaryForeground,
     fontSize: 14,
     fontWeight: '700',
   },
-});
+
+  // ── Image Lightbox ──
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+  },
+  lightboxClose: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lightboxCounter: {
+    position: 'absolute',
+    top: 64,
+    left: 20,
+    zIndex: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  lightboxCounterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  lightboxPage: {
+    width: SCREEN_WIDTH,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxImage: {
+    width: SCREEN_WIDTH,
+    height: '100%',
+  },
+}), [theme]);
+  return styles;
+};
+
+function DetailRow({ label, value, icon, styles, theme: t }: { label: string; value: string; icon: any; styles: any; theme: any }) {
+  return (
+    <View style={styles.detailRow}>
+      <Ionicons name={icon as any} size={16} color={t.textSecondary} />
+      <View style={{ flex: 1, gap: 1 }}>
+        <ThemedText style={styles.detailLabel}>{label}</ThemedText>
+        <ThemedText style={styles.detailValue}>{value}</ThemedText>
+      </View>
+    </View>
+  );
+}

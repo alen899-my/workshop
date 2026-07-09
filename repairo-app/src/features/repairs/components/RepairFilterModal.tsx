@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import ModalSheet from '@/components/ui/ModalSheet';
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { RepairFilters } from '@/features/repairs/services/repair.service';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -24,6 +24,7 @@ export default function RepairFilterModal({
   visible, onClose, onApply, initialFilters, availableWorkers, availableVehicleTypes,
 }: RepairFilterModalProps) {
   const theme = useTheme();
+  const styles = useStyles(theme);
   const [search, setSearch] = useState(initialFilters?.search || '');
   const [status, setStatus] = useState(initialFilters?.status || '');
   const [serviceType, setServiceType] = useState(initialFilters?.serviceType || '');
@@ -117,7 +118,7 @@ export default function RepairFilterModal({
         <View style={styles.actions}>
           {activeCount > 0 && (
             <Pressable style={styles.resetBtn} onPress={handleReset}>
-              <MaterialCommunityIcons name="close-circle-outline" size={18} color={Colors.textSecondary} />
+              <MaterialCommunityIcons name="close-circle-outline" size={18} color={theme.textSecondary} />
               <ThemedText themeColor="textSecondary" style={styles.resetText}>Reset ({activeCount})</ThemedText>
             </Pressable>
           )}
@@ -130,34 +131,36 @@ export default function RepairFilterModal({
   );
 }
 
-const styles = StyleSheet.create({
-  body: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, maxHeight: 500 },
-  searchInput: {
-    borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, marginBottom: Spacing.four,
-  },
-  chipGroup: { marginBottom: Spacing.three },
-  chipLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100,
-    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card,
-  },
-  chipActive: { backgroundColor: Colors.primary + '15', borderColor: Colors.primary },
-  chipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
-  chipTextActive: { color: Colors.primary },
-  dateRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.four },
-  dateGroup: { flex: 1 },
-  dateInput: {
-    borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 13,
-  },
-  actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.two, marginBottom: Spacing.four },
-  resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  resetText: { fontSize: 13, fontWeight: '600' },
-  applyBtn: {
-    backgroundColor: Colors.primary, borderRadius: 12,
-    paddingHorizontal: 24, paddingVertical: 12,
-  },
-  applyText: { color: Colors.primaryForeground, fontSize: 15, fontWeight: '700' },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(() => StyleSheet.create({
+    body: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, maxHeight: 500 },
+    searchInput: {
+      borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12,
+      fontSize: 15, marginBottom: Spacing.four,
+    },
+    chipGroup: { marginBottom: Spacing.three },
+    chipLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    chip: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100,
+      borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card,
+    },
+    chipActive: { backgroundColor: theme.primary + '15', borderColor: theme.primary },
+    chipText: { fontSize: 13, fontWeight: '500', color: theme.textMuted },
+    chipTextActive: { color: theme.primary },
+    dateRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.four },
+    dateGroup: { flex: 1 },
+    dateInput: {
+      borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10,
+      fontSize: 13,
+    },
+    actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.two, marginBottom: Spacing.four },
+    resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    resetText: { fontSize: 13, fontWeight: '600' },
+    applyBtn: {
+      backgroundColor: theme.primary, borderRadius: 12,
+      paddingHorizontal: 24, paddingVertical: 12,
+    },
+    applyText: { color: theme.primaryForeground, fontSize: 15, fontWeight: '700' },
+  }), [theme]);
+};

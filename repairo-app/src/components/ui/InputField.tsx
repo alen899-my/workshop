@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { Spacing, Colors } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 const ICON_MAP: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -65,13 +65,13 @@ export default function InputField({
             borderColor: error ? theme.error : focused ? theme.dark : theme.border,
             backgroundColor: theme.card,
           },
-          focused && !error && styles.focusedShadow,
+          focused && !error && { shadowColor: theme.text },
         ]}
       >
         <MaterialCommunityIcons
           name={iconName}
           size={18}
-          color={error ? theme.error : focused ? theme.dark : theme.textSecondary}
+          color={error ? theme.error : focused ? theme.text : theme.textSecondary}
           style={styles.icon}
         />
         <TextInput
@@ -126,13 +126,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     height: 52,
-  },
-  focusedShadow: {
-    shadowColor: Colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
   icon: {
     marginRight: 10,

@@ -9,7 +9,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/theme';
 import { useRBAC } from '@/hooks/use-rbac';
 
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; permission?: string }[] = [
@@ -24,10 +23,14 @@ function AnimatedTab({
   tab,
   focused,
   onPress,
+  tabIconSelected,
+  tabIconDefault,
 }: {
   tab: (typeof TABS)[number];
   focused: boolean;
   onPress: () => void;
+  tabIconSelected: string;
+  tabIconDefault: string;
 }) {
   const scale = useSharedValue(focused ? 1 : 0);
 
@@ -53,14 +56,14 @@ function AnimatedTab({
         <Ionicons
           name={tab.icon}
           size={22}
-          color={focused ? Colors.floatingBar : Colors.mutedDark}
+          color={focused ? tabIconSelected : tabIconDefault}
         />
       </Animated.View>
-      <Animated.View style={[styles.indicator, indicatorStyle]} />
+      <Animated.View style={[styles.indicator, { backgroundColor: tabIconSelected }, indicatorStyle]} />
       <Animated.Text
         style={[
           styles.label,
-          { color: focused ? Colors.floatingBar : Colors.mutedDark },
+          { color: focused ? tabIconSelected : tabIconDefault },
         ]}
       >
         {tab.label}
@@ -73,15 +76,15 @@ export default function FloatingTabBar({ state, navigation }: any) {
   const { bottom } = useSafeAreaInsets();
   const { can, loading } = useRBAC();
 
-  // While permissions are loading, show all tabs to avoid a flash of only "Home".
-  // Once loaded, apply RBAC filtering correctly.
   const visibleTabs = loading
     ? TABS
     : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
+  const barShadow = 'rgba(0,0,0,0.5)';
+
   return (
     <View style={[styles.wrapper, { bottom: Math.max(bottom, 16) }]}>
-      <View style={styles.bar}>
+      <View style={[styles.bar, { shadowColor: barShadow }]}>  
         {visibleTabs.map((tab) => {
           const routeIndex = state.routes.findIndex((r: any) => r.name === tab.name);
           const focused = state.index === routeIndex;
@@ -92,6 +95,8 @@ export default function FloatingTabBar({ state, navigation }: any) {
               tab={tab}
               focused={focused}
               onPress={() => navigation.navigate(tab.name)}
+              tabIconSelected={'#2DD4BF'}
+              tabIconDefault={'#A1A1AA'}
             />
           );
         })}
@@ -112,11 +117,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: Colors.dark,
     borderRadius: 28,
     height: 64,
     paddingHorizontal: 4,
-    shadowColor: Colors.text,
+    backgroundColor: '#111318',
+    borderWidth: 1,
+    borderColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -133,7 +139,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: Colors.floatingBar,
     marginTop: 2,
   },
   label: {

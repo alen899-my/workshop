@@ -1,13 +1,14 @@
-import { Dimensions, StyleSheet, Text, View, Platform } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 
 import AppButton from '@/components/AppButton';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function LandingScreen() {
+  const theme = useTheme();
   const player = useVideoPlayer(require('@/assets/bgvideo.mp4'), (p) => {
     p.loop = true;
     p.muted = true;
@@ -59,12 +60,12 @@ export default function LandingScreen() {
               fullWidth
               onPress={() => router.push('/auth/login' as any)}
             />
-            <AppButton
-              title="CREATE ACCOUNT"
-              variant="black"
-              fullWidth
+            <Pressable
+              style={({ pressed }) => [styles.createBtn, pressed && { opacity: 0.85 }]}
               onPress={() => router.push('/auth/signup' as any)}
-            />
+            >
+              <Text style={styles.createBtnText}>CREATE ACCOUNT</Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -77,7 +78,7 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: '#09090B',
   },
   video: {
     width,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
       android: 'rgba(255,255,255,0.92)',
       default: 'transparent',
     }),
-    shadowColor: Colors.dark,
+    shadowColor: '#09090B',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -127,19 +128,34 @@ const styles = StyleSheet.create({
     fontSize: 44,
     fontWeight: '900',
     letterSpacing: 6,
-    color: Colors.dark,
+    color: '#09090B',
     textAlign: 'center',
     marginBottom: 6,
   },
   tagline: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: '#71717A',
     textAlign: 'center',
     marginBottom: 36,
     letterSpacing: 1.2,
   },
   ctaSection: {
     gap: 14,
+  },
+  createBtn: {
+    borderRadius: 28,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    backgroundColor: '#09090B',
+  },
+  createBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: '#FFFFFF',
   },
 });

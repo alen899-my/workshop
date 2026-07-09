@@ -1,43 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { getCurrentUser } from '@/services/auth.service';
 import { Animated, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Repair } from '@/features/repairs/services/repair.service';
-
-const STATUS_COLORS: Record<string, string> = {
-  Pending: Colors.warning,
-  Started: Colors.info,
-  Completed: Colors.success,
-};
-
-const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Car: 'car-outline',
-  Bike: 'bicycle-outline',
-  Scooter: 'bicycle-outline',
-  Bicycle: 'bicycle-outline',
-  Auto: 'car-sport-outline',
-  Truck: 'car-outline',
-};
-
-const ICON_TINTS: Record<string, string> = {
-  Car: Colors.info,
-  Bike: Colors.success,
-  Scooter: Colors.primary,
-  Bicycle: Colors.success,
-  Auto: Colors.warning,
-  Truck: Colors.info,
-};
-
-function getVehicleIcon(type?: string): keyof typeof Ionicons.glyphMap {
-  return (type && VEHICLE_ICONS[type]) || 'build-outline';
-}
-
-function getIconTint(type?: string): string {
-  return (type && ICON_TINTS[type]) || Colors.primary;
-}
 
 function getImageUrl(image?: string): string | null {
   if (!image) return null;
@@ -64,9 +34,25 @@ function formatRepairDate(dateStr?: string): string {
   return `${dd}-${mm}-${yyyy} ${hh}:${minutes} ${ampm}`;
 }
 
+// Splits the combined "dd-mm-yyyy hh:mm AM" string into separate date / time
+// parts so they can be shown on their own rows, like the reference design.
+function splitRepairDate(dateStr?: string): { date: string; time: string } {
+  const combined = formatRepairDate(dateStr);
+  if (!combined) return { date: '', time: '' };
+  const [datePart, ...rest] = combined.split(' ');
+  return { date: datePart, time: rest.join(' ') };
+}
+
 function handleCall(phone?: string) {
   if (!phone) return;
   Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+}
+
+function formatKm(km?: string): string {
+  if (!km) return '';
+  const num = parseInt(km.replace(/\D/g, ''), 10);
+  if (isNaN(num)) return km;
+  return `${num.toLocaleString()} km`;
 }
 
 interface RepairCardProps {
@@ -76,11 +62,26 @@ interface RepairCardProps {
 }
 
 export default function RepairCard({ repair, onPress, onDelete }: RepairCardProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
+
+  const STATUS_COLORS: Record<string, string> = {
+    Pending: theme.warning,
+    Started: theme.info,
+    Completed: theme.success,
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    Pending: 'PENDING',
+    Started: 'IN PROGRESS',
+    Completed: 'COMPLETED',
+  };
+
   const [showDelete, setShowDelete] = useState(false);
-  const statusColor = STATUS_COLORS[repair.status] || Colors.textSecondary;
-  const icon = getVehicleIcon(repair.vehicle_type);
-  const iconTint = getIconTint(repair.vehicle_type);
+  const statusColor = STATUS_COLORS[repair.status] || theme.textSecondary;
+  const statusLabel = STATUS_LABELS[repair.status] || repair.status;
   const imageUrl = getImageUrl(repair.vehicle_image);
+  const { date: repairDate, time: repairTime } = splitRepairDate(repair.repair_date);
 
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
@@ -121,148 +122,257 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
     onDelete?.(repair);
   };
 
+  const shopCountry = useMemo(() => getCurrentUser()?.shopCountry, []);
+  const countryCode = shopCountry || 'IND';
+  const isHighPriority = repair.status !== 'Completed' && (repair.priority === 'High' || repair.priority === 'Urgent');
+  const vehicleTitle = [repair.brand, repair.model_name].filter(Boolean).join(' ') || repair.vehicle_type || 'Vehicle';
+
   return (
-    <View style={styles.wrapper}>
-      <View style={[styles.statusTab, { backgroundColor: statusColor }]}>
-        <ThemedText style={styles.statusTabText}>{repair.status}</ThemedText>
-      </View>
-      <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-        onPress={handlePress}
-        onLongPress={onDelete ? () => setShowDelete((prev) => !prev) : undefined}
-        delayLongPress={400}
-      >
-        <View style={styles.info}>
-          <View style={styles.topRow}>
-            <ThemedText style={styles.vehicleNumber} numberOfLines={1}>
+    <Pressable
+      style={({ pressed }) => [styles.wrapper, pressed && styles.pressed]}
+      onPress={handlePress}
+      onLongPress={onDelete ? () => setShowDelete((prev) => !prev) : undefined}
+      delayLongPress={400}
+    >
+      {/* Top row: vehicle image + license plate + status */}
+      <View style={styles.topRow}>
+        {imageUrl ? (
+          <Image source={imageUrl} style={styles.vehicleImage} contentFit="cover" />
+        ) : (
+          <View style={[styles.vehicleImage, styles.vehicleImagePlaceholder, { backgroundColor: theme.primary + '15' }]}>
+            <Ionicons name="car-outline" size={32} color={theme.primary} />
+          </View>
+        )}
+
+        <View style={styles.topRight}>
+          {/* Number plate */}
+          <View style={styles.plate}>
+            <View style={styles.plateBadge}>
+              <ThemedText style={styles.plateBadgeText}>{countryCode}</ThemedText>
+            </View>
+            <ThemedText style={styles.plateNumber} numberOfLines={1}>
               {repair.vehicle_number}
             </ThemedText>
-            {(repair.status !== 'Completed' && (repair.priority === 'High' || repair.priority === 'Urgent')) && (
-              <Animated.View style={[
-                styles.priorityBadge,
-                {
-                  opacity: blinkAnim,
-                  backgroundColor: repair.priority === 'Urgent' ? '#E53E3E' : '#DD6B20'
-                }
-              ]}>
-                <ThemedText style={styles.priorityText}>
-                  {repair.priority.toUpperCase()}
-                </ThemedText>
-              </Animated.View>
-            )}
           </View>
 
-          <View style={styles.metaRow}>
-            {repair.service_type && (
-              <View style={[styles.chip, { backgroundColor: statusColor + '22' }]}>
-                <ThemedText style={[styles.chipText, { color: statusColor }]}>
-                  {repair.service_type}
-                </ThemedText>
-              </View>
-            )}
-            {repair.model_name && (
-              <View style={[styles.chip, { backgroundColor: Colors.borderDark }]}>
-                <ThemedText style={styles.chipText}>{repair.model_name}</ThemedText>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.ownerRow}>
-            {repair.owner_name && (
-              <ThemedText style={styles.ownerName} numberOfLines={1}>
-                {repair.owner_name}
-              </ThemedText>
-            )}
-            {repair.phone_number && (
-              <Pressable onPress={() => handleCall(repair.phone_number)} style={styles.callBtn}>
-                <Ionicons name="call" size={14} color={Colors.textInverse} />
-              </Pressable>
-            )}
-          </View>
-
-          {repair.repair_date && (
-            <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={11} color={Colors.mutedDark} />
-              <ThemedText style={styles.dateText}>{formatRepairDate(repair.repair_date)}</ThemedText>
-            </View>
-          )}
+          {/* Vehicle name under plate */}
+          <ThemedText style={styles.vehicleTitle} numberOfLines={1}>
+            {vehicleTitle}
+          </ThemedText>
         </View>
+      </View>
 
-        <View style={styles.mediaColumn}>
-          {imageUrl ? (
-            <Image source={imageUrl} style={styles.image} contentFit="cover" />
-          ) : (
-            <View style={[styles.iconBox, { backgroundColor: iconTint + '22' }]}>
-              <Ionicons name={icon} size={36} color={iconTint} />
-            </View>
-          )}
-          {showDelete ? (
-            <Pressable onPress={handleDeletePress} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={16} color={Colors.textInverse} />
+      {/* Owner + service type */}
+      <View style={styles.infoRow}>
+        <View style={styles.infoItem}>
+          <Ionicons name="person-outline" size={13} color={theme.textSecondary} />
+          <ThemedText style={styles.infoText} numberOfLines={1}>
+            {repair.owner_name || '-'}
+          </ThemedText>
+          {repair.phone_number && (
+            <Pressable onPress={() => handleCall(repair.phone_number)} style={styles.callBtn}>
+              <Ionicons name="call" size={11} color={theme.textInverse} />
             </Pressable>
-          ) : (
-            <Ionicons name="chevron-forward" size={16} color={Colors.mutedDark} />
           )}
         </View>
-      </Pressable>
-    </View>
+
+        {repair.service_type && (
+          <View style={styles.infoItem}>
+            <Ionicons name="build-outline" size={13} color={theme.textSecondary} />
+            <ThemedText style={styles.infoText} numberOfLines={1}>
+              {repair.service_type}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
+      {/* Date + time (and km, if present) */}
+      <View style={styles.infoRow}>
+        {repairDate ? (
+          <View style={styles.infoItem}>
+            <Ionicons name="calendar-outline" size={13} color={theme.textSecondary} />
+            <ThemedText style={styles.infoText}>{repairDate}</ThemedText>
+          </View>
+        ) : null}
+
+        {repairTime ? (
+          <View style={styles.infoItem}>
+            <Ionicons name="time-outline" size={13} color={theme.textSecondary} />
+            <ThemedText style={styles.infoText}>{repairTime}</ThemedText>
+          </View>
+        ) : null}
+
+        {repair.km_reading ? (
+          <View style={styles.infoItem}>
+            <Ionicons name="speedometer-outline" size={13} color={theme.textSecondary} />
+            <ThemedText style={styles.infoText}>{formatKm(repair.km_reading)}</ThemedText>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Status badges at the bottom */}
+      <View style={styles.statusRow}>
+        {isHighPriority && (
+          <Animated.View style={[styles.priorityBadge, { opacity: blinkAnim }]}>
+            <ThemedText style={styles.priorityText}>
+              {repair.priority === 'Urgent' ? 'URGENT' : 'HIGH'}
+            </ThemedText>
+          </Animated.View>
+        )}
+
+        <View style={[styles.statusBadge, { backgroundColor: statusColor + '25' }]}>
+          <ThemedText style={[styles.statusText, { color: statusColor }]}>{statusLabel}</ThemedText>
+        </View>
+
+        {showDelete ? (
+          <Pressable onPress={handleDeletePress} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={15} color={theme.textInverse} />
+          </Pressable>
+        ) : (
+          <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+        )}
+      </View>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { position: 'relative', marginHorizontal: Spacing.two, marginBottom: Spacing.two },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: Colors.nearBlack, borderRadius: 16,
-    padding: Spacing.three, minHeight: 116,
-  },
-  pressed: { opacity: 0.85 },
-  statusTab: {
-    position: 'absolute', top: -12, right: 0, zIndex: 10,
-    borderTopRightRadius: 12, borderBottomLeftRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 5,
-    shadowColor: Colors.text, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
-  },
-  statusTabText: { fontSize: 11, fontWeight: '800', color: Colors.textInverse, letterSpacing: 0.5 },
-  info: { flex: 1, gap: 3, marginRight: Spacing.three },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  vehicleNumber: { fontSize: 15, fontWeight: '800', color: Colors.textInverse },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
-  chip: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, backgroundColor: Colors.borderDark },
-  chipText: { fontSize: 10, fontWeight: '700', color: Colors.mutedDark },
-  ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  ownerName: { fontSize: 13, color: Colors.textInverse, fontWeight: '600' },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  dateText: { fontSize: 11, fontWeight: '600', color: Colors.mutedDark },
-  mediaColumn: { alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', marginVertical: Spacing.half },
-  image: {
-    width: 100, height: 100, borderRadius: 16,
-    backgroundColor: Colors.borderDark,
-  },
-  iconBox: {
-    width: 100, height: 100, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  callBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center',
-  },
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.error, alignItems: 'center', justifyContent: 'center',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginLeft: 8,
-    alignSelf: 'center',
-  },
-  priorityText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(() => StyleSheet.create({
+    wrapper: {
+      marginHorizontal: Spacing.two,
+      marginBottom: Spacing.two,
+      backgroundColor: theme.backgroundElement,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: Spacing.three,
+    },
+    pressed: { opacity: 0.92 },
+
+    // ── Top row: image + plate + status ──
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.three,
+    },
+    vehicleImage: {
+      width: 92,
+      height: 92,
+      borderRadius: 14,
+    },
+    vehicleImagePlaceholder: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    topRight: {
+      flex: 1,
+      gap: 4,
+    },
+
+    // ── License plate ──
+    plate: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 6,
+      overflow: 'hidden',
+      backgroundColor: theme.backgroundSelected,
+      marginBottom: 2,
+    },
+    plateBadge: {
+      backgroundColor: theme.text,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    plateBadgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: theme.background,
+      letterSpacing: 0.5,
+    },
+    plateNumber: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: theme.text,
+      letterSpacing: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+
+    // ── Status row ──
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 6,
+    },
+    priorityBadge: {
+      backgroundColor: theme.error,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    priorityText: {
+      fontSize: 9,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: 0.5,
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+    },
+    deleteBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: theme.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // ── Vehicle title ──
+    vehicleTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: theme.text,
+    },
+
+    // ── Info rows ──
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 16,
+      marginTop: 6,
+    },
+    infoItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    infoText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    callBtn: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: theme.success,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 2,
+    },
+  }), [theme]);
+};

@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 type BadgeSize = 'sm' | 'md';
 
@@ -12,21 +12,31 @@ interface StatusBadgeProps {
   colorMap?: Record<string, string>;
 }
 
-const DEFAULT_COLOR_MAP: Record<string, string> = {
-  Pending: Colors.warning,
-  Started: Colors.info,
-  Completed: Colors.success,
-  Paid: Colors.success,
-  Unpaid: Colors.warning,
-  'No Bill': Colors.textSecondary,
-};
-
 function getColor(status: string, colorMap?: Record<string, string>): string {
-  const map = { ...DEFAULT_COLOR_MAP, ...colorMap };
-  return map[status] || Colors.textSecondary;
+  const map = { ...defaultColorMap, ...colorMap };
+  return map[status] || defaultColorMap['No Bill'];
 }
 
+let defaultColorMap: Record<string, string> = {
+  Pending: '#D97706',
+  Started: '#0D9488',
+  Completed: '#0D9488',
+  Paid: '#0D9488',
+  Unpaid: '#D97706',
+  'No Bill': '#8A8A80',
+};
+
 export default function StatusBadge({ status, size = 'sm', dot, colorMap }: StatusBadgeProps) {
+  const theme = useTheme();
+  defaultColorMap = {
+    Pending: theme.warning,
+    Started: theme.primary,
+    Completed: theme.success,
+    Paid: theme.success,
+    Unpaid: theme.warning,
+    'No Bill': theme.textSecondary,
+  };
+
   const color = getColor(status, colorMap);
   const isSm = size === 'sm';
 

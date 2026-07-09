@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 
 const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -58,7 +59,7 @@ const VEHICLE_TINTS: Record<string, string> = {
 };
 
 const DEFAULT_ICON: keyof typeof Ionicons.glyphMap = 'car-outline';
-const DEFAULT_TINT = Colors.primary;
+let DEFAULT_TINT = '#0D9488';
 
 function getVehicleIcon(type?: string): keyof typeof Ionicons.glyphMap {
   return (type && VEHICLE_ICONS[type]) || DEFAULT_ICON;
@@ -95,6 +96,8 @@ interface VehicleCardProps {
 
 export default function VehicleCard({ vehicle, onPress, onDelete }: VehicleCardProps) {
   const [showDelete, setShowDelete] = useState(false);
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const icon = getVehicleIcon(vehicle.vehicle_type);
   const tint = getVehicleTint(vehicle.vehicle_type);
   const imageUrl = getImageUrl(vehicle.vehicle_image);
@@ -142,12 +145,12 @@ export default function VehicleCard({ vehicle, onPress, onDelete }: VehicleCardP
               </View>
             )}
             {vehicle.model_name && (
-              <View style={[styles.chip, { backgroundColor: Colors.borderDark }]}>
+              <View style={[styles.chip, { backgroundColor: theme.borderDark }]}>
                 <ThemedText style={styles.chipText}>{vehicle.model_name}</ThemedText>
               </View>
             )}
             {vehicle.brand && (
-              <View style={[styles.chip, { backgroundColor: Colors.borderDark }]}>
+              <View style={[styles.chip, { backgroundColor: theme.borderDark }]}>
                 <ThemedText style={styles.chipText}>{vehicle.brand}</ThemedText>
               </View>
             )}
@@ -161,14 +164,14 @@ export default function VehicleCard({ vehicle, onPress, onDelete }: VehicleCardP
             )}
             {vehicle.owner_phone && (
               <Pressable onPress={() => handleCall(vehicle.owner_phone)} style={styles.callBtn}>
-                <Ionicons name="call" size={14} color={Colors.textInverse} />
+                <Ionicons name="call" size={14} color={theme.textInverse} />
               </Pressable>
             )}
           </View>
 
           {vehicle.created_at && (
             <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={11} color={Colors.mutedDark} />
+              <Ionicons name="calendar-outline" size={11} color={theme.mutedDark} />
               <ThemedText style={styles.dateText}>Added {formatDate(vehicle.created_at)}</ThemedText>
             </View>
           )}
@@ -184,10 +187,10 @@ export default function VehicleCard({ vehicle, onPress, onDelete }: VehicleCardP
           )}
           {showDelete ? (
             <Pressable onPress={handleDeletePress} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={16} color={Colors.textInverse} />
+              <Ionicons name="trash-outline" size={16} color={theme.textInverse} />
             </Pressable>
           ) : (
-            <Ionicons name="chevron-forward" size={16} color={Colors.mutedDark} />
+            <Ionicons name="chevron-forward" size={16} color={theme.mutedDark} />
           )}
         </View>
       </Pressable>
@@ -195,48 +198,50 @@ export default function VehicleCard({ vehicle, onPress, onDelete }: VehicleCardP
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { position: 'relative', marginHorizontal: Spacing.two, marginBottom: Spacing.two },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: Colors.nearBlack, borderRadius: 16,
-    padding: Spacing.three, minHeight: 116,
-  },
-  pressed: { opacity: 0.85 },
-  info: { flex: 1, gap: 3, marginRight: Spacing.three },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  vehicleNumber: { fontSize: 15, fontWeight: '800', color: Colors.textInverse, flex: 1 },
-  inactiveBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, backgroundColor: Colors.error + '33',
-  },
-  inactiveBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.error },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
-  },
-  chipText: { fontSize: 10, fontWeight: '700', color: Colors.mutedDark },
-  ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  ownerName: { fontSize: 13, color: Colors.textInverse, fontWeight: '600' },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  dateText: { fontSize: 11, fontWeight: '600', color: Colors.mutedDark },
-  mediaColumn: { alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', marginVertical: Spacing.half },
-  image: {
-    width: 100, height: 100, borderRadius: 16,
-    backgroundColor: Colors.borderDark,
-  },
-  iconBox: {
-    width: 100, height: 100, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  callBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center',
-  },
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.error, alignItems: 'center', justifyContent: 'center',
-  },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  return useMemo(() => StyleSheet.create({
+    wrapper: { position: 'relative', marginHorizontal: Spacing.two, marginBottom: Spacing.two },
+    card: {
+      flexDirection: 'row',
+      backgroundColor: theme.nearBlack, borderRadius: 16,
+      padding: Spacing.three, minHeight: 116,
+    },
+    pressed: { opacity: 0.85 },
+    info: { flex: 1, gap: 3, marginRight: Spacing.three },
+    topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    vehicleNumber: { fontSize: 15, fontWeight: '800', color: theme.textInverse, flex: 1 },
+    inactiveBadge: {
+      marginLeft: 8,
+      paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 6, backgroundColor: theme.error + '33',
+    },
+    inactiveBadgeText: { fontSize: 10, fontWeight: '800', color: theme.error },
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
+    chip: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
+    },
+    chipText: { fontSize: 10, fontWeight: '700', color: theme.mutedDark },
+    ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+    ownerName: { fontSize: 13, color: theme.textInverse, fontWeight: '600' },
+    dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+    dateText: { fontSize: 11, fontWeight: '600', color: theme.mutedDark },
+    mediaColumn: { alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch', marginVertical: Spacing.half },
+    image: {
+      width: 100, height: 100, borderRadius: 16,
+      backgroundColor: theme.borderDark,
+    },
+    iconBox: {
+      width: 100, height: 100, borderRadius: 16,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    callBtn: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: theme.success, alignItems: 'center', justifyContent: 'center',
+    },
+    deleteBtn: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: theme.error, alignItems: 'center', justifyContent: 'center',
+    },
+  }), [theme]);
+};

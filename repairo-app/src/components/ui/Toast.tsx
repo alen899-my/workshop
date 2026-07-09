@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 interface ToastProps {
   visible: boolean;
@@ -26,6 +26,8 @@ const ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
 };
 
 export default function Toast({ visible, message, type = 'success', duration = 2500, onHide }: ToastProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
   const active = useRef(false);
@@ -52,43 +54,46 @@ export default function Toast({ visible, message, type = 'success', duration = 2
 
   if (!visible) return null;
 
-  const bgColor = type === 'success' ? Colors.success : type === 'error' ? Colors.error : Colors.dark;
+  const bgColor = type === 'success' ? theme.success : type === 'error' ? theme.error : theme.dark;
 
   return (
     <Animated.View style={[styles.container, animStyle]}>
       <View style={[styles.toast, { backgroundColor: bgColor }]}>
-        <MaterialCommunityIcons name={ICONS[type]} size={20} color={Colors.textInverse} />
+        <MaterialCommunityIcons name={ICONS[type]} size={20} color={theme.textInverse} />
         <Text style={styles.text}>{message}</Text>
       </View>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    zIndex: 9999,
-    alignItems: 'center',
-  },
-  toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowColor: Colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  text: {
-    color: Colors.textInverse,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: 60,
+      left: 20,
+      right: 20,
+      zIndex: 9999,
+      alignItems: 'center',
+    },
+    toast: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: 14,
+      shadowColor: theme.text,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    text: {
+      color: theme.textInverse,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+  }), [theme]);
+  return styles;
+};

@@ -1,28 +1,50 @@
 import { useEffect } from 'react';
+import { StatusBar, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 
-import { Colors } from '@/constants/theme';
+import { ThemeProvider, useThemePreference } from '@/hooks/use-theme';
 import { RBACProvider } from '@/hooks/use-rbac';
-import '@/utils/preload-countries'; // kickstart country data fetch early
+import { Colors, DarkColors } from '@/constants/theme';
+import '@/utils/preload-countries';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutInner() {
+  const { isDark } = useThemePreference();
+  const bg = isDark ? DarkColors.background : Colors.background;
+
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);
 
   return (
-    <RBACProvider>
-      <StatusBar hidden />
-      <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: Colors.background } }}>
+    <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={bg}
+        translucent={Platform.OS === 'android'}
+      />
+      <Stack screenOptions={{
+        headerShown: false,
+        animation: 'none',
+        contentStyle: { backgroundColor: bg },
+      }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/signup" />
         <Stack.Screen name="(tabs)" />
       </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <RBACProvider>
+      <ThemeProvider>
+        <RootLayoutInner />
+      </ThemeProvider>
     </RBACProvider>
   );
 }

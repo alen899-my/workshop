@@ -31,7 +31,7 @@ export default function ImagePickerSheet({ visible, onClose, onCamera, onGallery
               style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
               onPress={() => { onCamera(); onClose(); }}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#3D7A78' }]}>
+              <View style={[styles.iconWrap, { backgroundColor: '#0D9488' }]}>
                 <Ionicons name="camera" size={26} color="#FFFFFF" />
               </View>
               <ThemedText style={styles.optionLabel}>Camera</ThemedText>

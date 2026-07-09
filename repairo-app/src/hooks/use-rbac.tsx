@@ -16,6 +16,7 @@ interface RBACContextType {
   permissions: string[];
   loading: boolean;
   can: (slug: string) => boolean;
+  refresh: () => Promise<void>;
 }
 
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
@@ -25,28 +26,30 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(getCurrentUser());
 
-  useEffect(() => {
-    const init = async () => {
-      // Load persisted user from SecureStore
-      const stored = await loadStoredUser();
-      if (stored) {
-        setUser(stored);
-      }
+  const init = async () => {
+    setLoading(true);
+    // Load persisted user from SecureStore
+    const stored = await loadStoredUser();
+    if (stored) {
+      setUser(stored);
+    }
 
-      const u = stored || getCurrentUser();
-      if (!u?.role) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch permissions for this role
-      const res = await permissionService.getRolePermissions(u.role);
-      if (res.success && res.data) {
-        setPermissions(res.data);
-      }
+    const u = stored || getCurrentUser();
+    if (!u?.role) {
+      setPermissions([]);
       setLoading(false);
-    };
+      return;
+    }
 
+    // Fetch permissions for this role
+    const res = await permissionService.getRolePermissions(u.role);
+    if (res.success && res.data) {
+      setPermissions(res.data);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     init();
   }, []);
 
@@ -55,7 +58,7 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <RBACContext.Provider value={{ user, permissions, loading, can }}>
+    <RBACContext.Provider value={{ user, permissions, loading, can, refresh: init }}>
       {children}
     </RBACContext.Provider>
   );

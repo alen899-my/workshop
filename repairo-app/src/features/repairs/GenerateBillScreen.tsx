@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -18,7 +18,7 @@ import ENV from '@/config/env';
 import { getStoredToken } from '@/services/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Repair } from '@/features/repairs/services/repair.service';
 import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill.service';
 import { billService } from '@/features/repairs/services/bill.service';
@@ -41,6 +41,8 @@ export default function GenerateBillScreen({
   onSuccess,
 }: GenerateBillScreenProps) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const styles = useStyles(theme);
 
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [serviceCharge, setServiceCharge] = useState(0);
@@ -168,7 +170,29 @@ export default function GenerateBillScreen({
         return;
       }
 
-      const message = encodeURIComponent(`Your invoice is ready: ${data.url}`);
+      const subtotal = billItems.reduce((s, it) => s + (Number(it.cost) || 0) * (Number(it.qty) || 0), 0);
+      const exclusiveTaxTotal = taxSnapshot
+        .filter(t => !t.is_inclusive)
+        .reduce((s, t) => s + Number(t.amount || 0), 0);
+      const grandTotal = subtotal + Number(serviceCharge || 0) + exclusiveTaxTotal;
+      const currency = getCurrencySymbol(getCurrentUser()?.shopCurrency);
+
+      const itemLines = billItems
+        .filter(it => it.name?.trim())
+        .map(it => {
+          const amt = (Number(it.cost) || 0) * (Number(it.qty) || 0);
+          return `  ${it.name} x${it.qty} = ${currency}${amt.toFixed(2)}`;
+        }).join('\n');
+
+      const message = encodeURIComponent(
+        `*Invoice from ${getCurrentUser()?.shopName || 'Garage'}*` +
+        `\n\n*Vehicle:* ${repair.vehicle_number}${repair.model_name ? ` (${repair.model_name})` : ''}` +
+        `\n*Customer:* ${repair.owner_name || 'Walk-in'}` +
+        `\n*Status:* ${paymentStatus}` +
+        (itemLines ? `\n\n*Items:*\n${itemLines}` : '') +
+        `\n\n*Grand Total:* ${currency}${grandTotal.toFixed(2)}` +
+        `\n\nFor detailed invoice, view here: ${data.url}`
+      );
       await Linking.openURL(`https://wa.me/${phone}?text=${message}`);
     } catch (err) {
       console.error('Failed to share invoice:', err);
@@ -284,18 +308,24 @@ export default function GenerateBillScreen({
 
   return (
     <ThemedView style={styles.container}>
-      {/* Custom Header Bar */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
-        <Pressable style={styles.backBtn} onPress={onClose}>
-          <Ionicons name="close" size={24} color="#1A1A1A" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <Pressable style={styles.headerBack} onPress={onClose}>
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
         </Pressable>
-        <ThemedText style={styles.headerTitle}>Generate Invoice</ThemedText>
-        <View style={{ width: 38 }} />
+        <ThemedText style={styles.headerTitle}>Billing</ThemedText>
+        {hasExistingBill && !isEditing ? (
+          <Pressable style={styles.headerEdit} onPress={() => setIsEditing(true)}>
+            <Ionicons name="create-outline" size={16} color={theme.primaryForeground} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       {loading ? (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#3D7A78" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <ThemedText style={styles.loadingText}>Loading details...</ThemedText>
         </View>
       ) : (
@@ -304,19 +334,22 @@ export default function GenerateBillScreen({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Header Vehicle Overview */}
+            {/* Number Plate */}
             <View style={styles.vehicleCard}>
-              <View>
-                <ThemedText style={styles.vehicleNo}>{repair.vehicle_number}</ThemedText>
-                <ThemedText style={styles.ownerText}>
-                  {repair.owner_name} • {repair.model_name || 'Generic'}
-                </ThemedText>
+              <View style={styles.plate}>
+                <View style={styles.plateBadge}>
+                  <ThemedText style={styles.plateBadgeText}>{getCurrentUser()?.shopCountry || 'IND'}</ThemedText>
+                </View>
+                <ThemedText style={styles.plateNumber} numberOfLines={1}>{repair.vehicle_number}</ThemedText>
               </View>
+              <ThemedText style={styles.vehicleOwner}>
+                {repair.owner_name} • {repair.model_name || 'Generic'}
+              </ThemedText>
             </View>
 
-            {/* Services Done Checklist for billing context */}
+            {/* Services Checklist */}
             <View style={styles.card}>
-              <ThemedText style={styles.cardTitle}>Completed Services Checklist</ThemedText>
+              <ThemedText style={styles.cardTitle}>Services</ThemedText>
               {serviceBlocks.length > 0 ? (
                 serviceBlocks.map((block: any, bi: number) => (
                   <View key={bi} style={[styles.serviceBlock, bi > 0 && styles.serviceDivider]}>
@@ -331,14 +364,14 @@ export default function GenerateBillScreen({
                           return (
                             <View key={ti} style={styles.taskItem}>
                               {isCompleted ? (
-                                <Ionicons name="checkmark-circle" size={16} color="#3D7A78" />
+                                <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
                               ) : isFailed ? (
-                                <Ionicons name="close-circle" size={16} color="#E53E3E" />
+                                <Ionicons name="close-circle" size={16} color={theme.destructive} />
                               ) : (
                                 <Ionicons
                                   name="checkmark-circle-outline"
                                   size={16}
-                                  color="#8A8A80"
+                                  color={theme.textSecondary}
                                 />
                               )}
                               <View style={styles.taskTextWrapper}>
@@ -371,7 +404,7 @@ export default function GenerateBillScreen({
               )}
             </View>
 
-            {/* Main Billing Editor */}
+            {/* Billing Editor */}
             <BillItemEditor
               items={billItems}
               onChange={setBillItems}
@@ -391,7 +424,7 @@ export default function GenerateBillScreen({
             />
           </ScrollView>
 
-          {/* Footer Actions (Share, Download, Save) — hidden while keyboard is open */}
+          {/* Footer Actions */}
           {!keyboardVisible && (
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             {hasExistingBill && (
@@ -409,8 +442,8 @@ export default function GenerateBillScreen({
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <View style={styles.btnInner}>
-                    <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" />
-                    <ThemedText style={styles.btnTextWhite}>Share Invoice</ThemedText>
+                    <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
+                    <ThemedText style={styles.shareBtnText}>Share</ThemedText>
                   </View>
                 )}
               </Pressable>
@@ -425,18 +458,17 @@ export default function GenerateBillScreen({
                 disabled={sharing || downloading || submitting}
               >
                 {downloading ? (
-                  <ActivityIndicator color="#3D7A78" size="small" />
+                  <ActivityIndicator color={theme.primary} size="small" />
                 ) : (
                   <View style={styles.btnInner}>
-                    <Ionicons name="download-outline" size={18} color="#3D7A78" />
-                    <ThemedText style={styles.btnTextTeal}>Download PDF</ThemedText>
+                    <Ionicons name="download-outline" size={16} color={theme.primary} />
+                    <ThemedText style={styles.downloadBtnText}>PDF</ThemedText>
                   </View>
                 )}
               </Pressable>
             </View>
             )}
 
-            {/* Save / Edit Bill */}
             <Pressable
               style={({ pressed }) => [
                 styles.saveBtn,
@@ -447,10 +479,10 @@ export default function GenerateBillScreen({
               disabled={sharing || downloading || submitting}
             >
               {submitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={theme.primaryForeground} size="small" />
               ) : (
                 <View style={styles.btnInner}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle-outline" size={16} color={theme.primaryForeground} />
                   <ThemedText style={styles.saveBtnText}>{formActionLabel}</ThemedText>
                 </View>
               )}
@@ -464,34 +496,47 @@ export default function GenerateBillScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = (theme: ReturnType<typeof useTheme>) => {
+  const styles = useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F7F4', // Premium app cream background
+    backgroundColor: theme.backgroundElement,
   },
+
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#E8E0CC',
-    backgroundColor: '#FFFFFF',
+    paddingBottom: 8,
+    backgroundColor: theme.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
   },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  headerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8F7F4',
+    backgroundColor: theme.backgroundElement,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
   },
+  headerEdit: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.primary,
+  },
+
+  // ── Loading ──
   loading: {
     flex: 1,
     alignItems: 'center',
@@ -500,104 +545,135 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#8A8A80',
+    color: theme.textSecondary,
     fontWeight: '600',
   },
+
+  // ── Scroll ──
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    padding: 16,
     paddingBottom: 200,
     gap: 12,
   },
+
+  // ── Number Plate ──
   vehicleCard: {
-    backgroundColor: '#3D7A78', // Teal background
-    borderRadius: 20,
-    padding: 18,
-    shadowColor: '#3D7A78',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    backgroundColor: theme.card,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  vehicleNo: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
+  plate: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: theme.backgroundSelected,
+  },
+  plateBadge: {
+    backgroundColor: theme.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  plateBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: theme.background,
     letterSpacing: 0.5,
   },
-  ownerText: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '700',
-    marginTop: 4,
+  plateNumber: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: theme.text,
+    letterSpacing: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
+  vehicleOwner: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+
+  // ── Card ──
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.card,
+    borderRadius: 14,
     padding: 16,
-    gap: 10,
+    gap: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
+    color: theme.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
+
+  // ── Services ──
   serviceBlock: {
-    gap: 6,
+    gap: 4,
   },
   serviceDivider: {
     borderTopWidth: 1,
-    borderTopColor: '#F0ECE3',
-    paddingTop: 12,
+    borderTopColor: theme.divider,
+    paddingTop: 10,
     marginTop: 6,
   },
   serviceBlockType: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#3D7A78',
+    color: theme.text,
     marginBottom: 2,
   },
   taskItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    paddingVertical: 3,
+    gap: 6,
+    paddingVertical: 2,
   },
   taskTextWrapper: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
   taskText: {
     fontSize: 13,
-    color: '#4A4A4A',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   taskTextCompleted: {
     textDecorationLine: 'line-through',
-    color: '#8A8A80',
+    color: theme.textSecondary,
   },
   taskTextFailed: {
     textDecorationLine: 'line-through',
-    color: '#E53E3E',
+    color: theme.destructive,
     fontStyle: 'italic',
   },
   taskReasonText: {
     fontSize: 11,
-    color: '#E53E3E',
+    color: theme.destructive,
     fontStyle: 'italic',
   },
   noTasks: {
     fontSize: 13,
-    color: '#8A8A80',
+    color: theme.textSecondary,
     fontStyle: 'italic',
-    paddingLeft: 4,
   },
+
+  // ── Footer ──
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -605,21 +681,9 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: '#F8F7F4',
+    backgroundColor: theme.background,
     borderTopWidth: 1,
-    borderTopColor: '#E8E0CC',
-  },
-  saveBtn: {
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#3D7A78', // Teal background
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    borderTopColor: theme.border,
   },
   actionRow: {
     flexDirection: 'row',
@@ -628,42 +692,49 @@ const styles = StyleSheet.create({
   },
   shareBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#25D366', // WhatsApp Green
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#25D366',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 2,
+  },
+  shareBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   downloadBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#3D7A78',
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: theme.backgroundElement,
+    borderWidth: 1,
+    borderColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  downloadBtnText: {
+    color: theme.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  saveBtn: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: theme.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnText: {
+    color: theme.primaryForeground,
+    fontSize: 14,
+    fontWeight: '700',
   },
   btnInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-  },
-  btnTextWhite: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  btnTextTeal: {
-    color: '#3D7A78',
-    fontSize: 14,
-    fontWeight: '700',
+    gap: 6,
   },
   pressed: {
     opacity: 0.82,
@@ -671,4 +742,6 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
-});
+}), [theme]);
+  return styles;
+};

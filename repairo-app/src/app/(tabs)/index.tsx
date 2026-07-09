@@ -6,10 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing, Colors } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { authService, getCurrentUser } from '@/services/auth.service';
 
 export default function DashboardHome() {
+  const theme = useTheme();
   const { bottom } = useSafeAreaInsets();
   const user = useMemo(() => getCurrentUser(), []);
   const displayName = user?.shopName || user?.ownerName || 'User';
@@ -29,9 +31,9 @@ export default function DashboardHome() {
               Welcome, {displayName}
             </ThemedText>
           </View>
-          <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={18} color={Colors.textInverse} />
-            <Text style={styles.logoutText}>Logout</Text>
+          <Pressable style={[styles.logoutBtn, { backgroundColor: theme.dark }]} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={18} color={theme.textInverse} />
+            <Text style={[styles.logoutText, { color: theme.textInverse }]}>Logout</Text>
           </Pressable>
         </View>
       </View>
@@ -59,13 +61,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.dark,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
   },
   logoutText: {
-    color: Colors.textInverse,
     fontSize: 14,
     fontWeight: '600',
   },
