@@ -56,7 +56,7 @@ exports.getRepairs = async (req, res) => {
       LEFT JOIN repair_bills rb ON rb.repair_id = r.id AND rb.deleted_at IS NULL
     `;
 
-    const { status, serviceType, vehicleType, worker, workerId, search, dateFrom, dateTo } = req.query;
+    const { status, serviceType, vehicleType, worker, workerId, search, dateFrom, dateTo, customerId } = req.query;
 
     const whereClauses = ['r.deleted_at IS NULL'];
     const queryParams   = [];
@@ -108,6 +108,11 @@ exports.getRepairs = async (req, res) => {
     if (dateTo) {
       whereClauses.push(`r.repair_date <= $${paramIndex++}`);
       queryParams.push(dateTo);
+    }
+
+    if (customerId) {
+      whereClauses.push(`v.customer_id = $${paramIndex++}`);
+      queryParams.push(Number(customerId));
     }
 
     const sql = `${select} ${from} WHERE ${whereClauses.join(' AND ')} ORDER BY r.created_at DESC`;

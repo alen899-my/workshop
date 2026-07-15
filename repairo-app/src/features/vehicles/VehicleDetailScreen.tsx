@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Dimensions, Linking, Modal, Pressable,
+  ActivityIndicator, Dimensions, Modal, Pressable,
   ScrollView, StyleSheet, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -11,12 +11,22 @@ import { getCurrentUser } from '@/services/auth.service';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
+import { useRBAC } from '@/hooks/use-rbac';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 import { vehicleService } from '@/features/vehicles/services/vehicle.service';
 import RepairCard from '@/features/repairs/components/RepairCard';
 import ViewRepairScreen from '@/features/repairs/ViewRepairScreen';
 import type { Repair } from '@/features/repairs/services/repair.service';
 import { repairService } from '@/features/repairs/services/repair.service';
+import CustomerCard from '@/features/customers/components/CustomerCard';
+import CustomerActionsModal from '@/features/customers/components/CustomerActionsModal';
+import CustomerDetailScreen from '@/features/customers/CustomerDetailScreen';
+import PastVisitsScreen from '@/features/customers/PastVisitsScreen';
+import CustomerVehiclesScreen from '@/features/customers/CustomerVehiclesScreen';
+import type { Customer } from '@/features/customers/services/customer.service';
+import { customerService } from '@/features/customers/services/customer.service';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import Toast from '@/components/ui/Toast';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -60,6 +70,7 @@ export default function VehicleDetailScreen({
   onEdit,
   onDelete,
 }: VehicleDetailScreenProps) {
+  const { can } = useRBAC();
   const theme = useTheme();
   const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
@@ -67,6 +78,20 @@ export default function VehicleDetailScreen({
   const [loading, setLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState(false);
   const [viewRepair, setViewRepair] = useState<Repair | null>(null);
+
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerActionsModal, setCustomerActionsModal] = useState(false);
+  const [customerDetailModal, setCustomerDetailModal] = useState<Customer | null>(null);
+  const [customerPastVisitsModal, setCustomerPastVisitsModal] = useState<Customer | null>(null);
+  const [customerVehiclesModal, setCustomerVehiclesModal] = useState<Customer | null>(null);
+  const [deleteCustomerConfirm, setDeleteCustomerConfirm] = useState<Customer | null>(null);
+  const [toast, setToast] = useState({
+    visible: false, message: '', type: 'success' as 'success' | 'error' | 'info',
+  });
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ visible: true, message, type });
+  }, []);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -96,9 +121,68 @@ export default function VehicleDetailScreen({
     fetchDetails();
   }, [fetchDetails]);
 
+  const constructCustomer = useCallback((): Customer | null => {
+    if (!vehicle.customer_id) return null;
+    return {
+      id: vehicle.customer_id,
+      shop_id: vehicle.shop_id,
+      name: vehicle.owner_name || 'Unknown',
+      phone: vehicle.owner_phone || '',
+    };
+  }, [vehicle.customer_id, vehicle.shop_id, vehicle.owner_name, vehicle.owner_phone]);
+
+  const handleCustomerCardPress = useCallback(async () => {
+    const c = constructCustomer();
+    if (!c) return;
+    setCustomer(c);
+    setCustomerActionsModal(true);
+  }, [constructCustomer]);
+
+  const handleCustomerViewDetails = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerDetailModal(c), 300);
+  }, []);
+
+  const handleCustomerPastVisits = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerPastVisitsModal(c), 300);
+  }, []);
+
+  const handleCustomerVehicles = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerVehiclesModal(c), 300);
+  }, []);
+
+  const handleCustomerEdit = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    showToast('Edit customer from vehicle screen', 'info');
+  }, [showToast]);
+
+  const handleCustomerDelete = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    if (!can('delete:customers')) {
+      showToast('Access Denied', 'error');
+      return;
+    }
+    setDeleteCustomerConfirm(c);
+  }, [can, showToast]);
+
+  const handleConfirmDeleteCustomer = useCallback(async () => {
+    if (!deleteCustomerConfirm) return;
+    const c = deleteCustomerConfirm;
+    setDeleteCustomerConfirm(null);
+    const res = await customerService.delete(c.id);
+    if (res.success) {
+      showToast('Customer deleted successfully');
+    } else {
+      showToast(res.error || 'Failed to delete customer', 'error');
+    }
+  }, [deleteCustomerConfirm, showToast]);
+
+  const customerToShow = constructCustomer();
+
   return (
     <ThemedView style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <Pressable style={styles.headerBack} onPress={onClose}>
           <Ionicons name="arrow-back" size={20} color={theme.text} />
@@ -158,26 +242,11 @@ export default function VehicleDetailScreen({
           </View>
 
           {/* Owner Card */}
-          {(vehicle.owner_name || vehicle.owner_phone) && (
-            <View style={styles.card}>
-              <ThemedText style={styles.cardTitle}>Owner</ThemedText>
-              <View style={styles.ownerRow}>
-                <View style={styles.ownerLeft}>
-                  <Ionicons name="person-outline" size={16} color={theme.textSecondary} />
-                  <View>
-                    <ThemedText style={styles.ownerName}>{vehicle.owner_name || 'Unknown'}</ThemedText>
-                    {vehicle.owner_phone && (
-                      <ThemedText style={styles.ownerPhone}>{vehicle.owner_phone}</ThemedText>
-                    )}
-                  </View>
-                </View>
-                {vehicle.owner_phone && (
-                  <Pressable style={styles.ownerCallBtn} onPress={() => Linking.openURL(`tel:${vehicle.owner_phone!.replace(/\s/g, '')}`)}>
-                    <Ionicons name="call" size={16} color={theme.primary} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
+          {customerToShow && (
+            <CustomerCard
+              customer={customerToShow}
+              onPress={handleCustomerCardPress}
+            />
           )}
 
           {/* Past Repairs */}
@@ -237,6 +306,59 @@ export default function VehicleDetailScreen({
         </ScrollView>
       )}
 
+      <CustomerActionsModal
+        visible={customerActionsModal}
+        customer={customer}
+        onClose={() => setCustomerActionsModal(false)}
+        onViewDetails={handleCustomerViewDetails}
+        onPastVisits={handleCustomerPastVisits}
+        onVehicles={handleCustomerVehicles}
+        onEdit={handleCustomerEdit}
+        onDelete={handleCustomerDelete}
+        canEdit={can('edit:customers')}
+        canDelete={can('delete:customers')}
+      />
+
+      <Modal visible={!!customerDetailModal} animationType="slide" onRequestClose={() => setCustomerDetailModal(null)}>
+        {customerDetailModal && (
+          <CustomerDetailScreen
+            customer={customerDetailModal}
+            onClose={() => setCustomerDetailModal(null)}
+            onEdit={(c) => { setCustomerDetailModal(null); showToast('Edit from vehicle screen', 'info'); }}
+            onDelete={(c) => { setCustomerDetailModal(null); setDeleteCustomerConfirm(c); }}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={!!customerPastVisitsModal} animationType="slide" onRequestClose={() => setCustomerPastVisitsModal(null)}>
+        {customerPastVisitsModal && (
+          <PastVisitsScreen
+            customer={customerPastVisitsModal}
+            onClose={() => setCustomerPastVisitsModal(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={!!customerVehiclesModal} animationType="slide" onRequestClose={() => setCustomerVehiclesModal(null)}>
+        {customerVehiclesModal && (
+          <CustomerVehiclesScreen
+            customer={customerVehiclesModal}
+            onClose={() => setCustomerVehiclesModal(null)}
+          />
+        )}
+      </Modal>
+
+      <ConfirmModal
+        visible={!!deleteCustomerConfirm}
+        title="Delete Customer"
+        message={deleteCustomerConfirm ? `Delete customer "${deleteCustomerConfirm.name}"?` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDeleteCustomer}
+        onCancel={() => setDeleteCustomerConfirm(null)}
+        type="destructive"
+      />
+
       {/* Image preview lightbox */}
       <Modal visible={imagePreview} transparent animationType="fade" onRequestClose={() => setImagePreview(false)}>
         <Pressable style={styles.lightbox} onPress={() => setImagePreview(false)}>
@@ -257,6 +379,8 @@ export default function VehicleDetailScreen({
           />
         )}
       </Modal>
+
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast((p) => ({ ...p, visible: false }))} />
     </ThemedView>
   );
 }
@@ -274,7 +398,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.backgroundElement },
 
-    // ── Header ──
     header: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingHorizontal: 16, paddingBottom: 8,
@@ -293,13 +416,10 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       backgroundColor: theme.primary,
     },
 
-    // ── Loading ──
     loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-    // ── Scroll ──
     scrollContent: { padding: 16, gap: 12, paddingBottom: 40 },
 
-    // ── Vehicle Card ──
     vehicleCard: {
       flexDirection: 'row',
       backgroundColor: theme.card,
@@ -320,7 +440,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     vehicleImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
     vehicleInfo: { flex: 1, justifyContent: 'center', gap: 4 },
 
-    // ── Number Plate ──
     plate: {
       flexDirection: 'row', alignItems: 'stretch',
       borderRadius: 5, overflow: 'hidden',
@@ -347,7 +466,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     inactiveBadgeText: { fontSize: 9, fontWeight: '700', color: theme.destructive },
 
-    // ── Card ──
     card: {
       backgroundColor: theme.card,
       borderRadius: 14,
@@ -364,7 +482,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       marginBottom: 12,
     },
 
-    // ── Detail rows ──
     detailRow: {
       flexDirection: 'row', justifyContent: 'space-between',
       alignItems: 'center', paddingVertical: 6,
@@ -372,22 +489,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     detailLabel: { fontSize: 13, fontWeight: '500', color: theme.textSecondary },
     detailValue: { fontSize: 13, fontWeight: '700', color: theme.text },
 
-    // ── Owner ──
-    ownerRow: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    },
-    ownerLeft: {
-      flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1,
-    },
-    ownerName: { fontSize: 15, fontWeight: '700', color: theme.text },
-    ownerPhone: { fontSize: 12, color: theme.textSecondary, fontWeight: '500', marginTop: 1 },
-    ownerCallBtn: {
-      width: 34, height: 34, borderRadius: 17,
-      backgroundColor: theme.primary + '12',
-      alignItems: 'center', justifyContent: 'center',
-    },
-
-    // ── Repair list ──
     noRepairsText: { fontSize: 13, color: theme.textSecondary, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 },
     repairSection: {
       marginHorizontal: -16,
@@ -398,7 +499,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       paddingHorizontal: 16,
     },
 
-    // ── Actions ──
     actionsRow: {
       flexDirection: 'row', gap: 10, paddingTop: 4,
     },
@@ -415,7 +515,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     actionText: { fontSize: 13, fontWeight: '700', color: theme.primaryForeground },
 
-    // ── Lightbox ──
     lightbox: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
       alignItems: 'center', justifyContent: 'center',

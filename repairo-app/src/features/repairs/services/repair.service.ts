@@ -38,6 +38,7 @@ export interface RepairFilters {
   worker?: string;
   dateFrom?: string;
   dateTo?: string;
+  customerId?: number;
 }
 
 const API_URL = `${ENV.API_URL}/repairs`;

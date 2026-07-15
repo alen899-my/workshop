@@ -1,46 +1,5 @@
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import CustomersListScreen from '@/features/customers/CustomersListScreen';
 
 export default function CustomersScreen() {
-  const theme = useTheme();
-  const { bottom } = useSafeAreaInsets();
-
-  return (
-    <ThemedView style={styles.container}>
-      <View style={[styles.content, { paddingBottom: Math.max(bottom, 16) + 80 }]}>
-        <ThemedText type="title" style={styles.title}>Customers</ThemedText>
-        <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={48} color={theme.textSecondary} />
-          <ThemedText themeColor="textSecondary" style={styles.emptyText}>
-            No customers yet
-          </ThemedText>
-        </View>
-      </View>
-    </ThemedView>
-  );
+  return <CustomersListScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: {
-    flex: 1,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: Spacing.four,
-  },
-  title: { paddingTop: Spacing.two, marginBottom: Spacing.four },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  emptyText: { fontSize: 15 },
-});
