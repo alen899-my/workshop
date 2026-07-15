@@ -1,18 +1,20 @@
 import ENV from '@/config/env';
 import { getStoredToken } from '@/services/api';
+import type { Permission } from '@/features/permissions/services/permission.service';
 
-export interface Permission {
+export interface Role {
   id: number;
-  module_name: string;
-  permission_name: string;
+  name: string;
   slug: string;
   description: string;
   status: string;
+  permissions?: string[];
+  permission_count?: number;
   created_at?: string;
   updated_at?: string;
 }
 
-const API_URL = `${ENV.API_URL}/permissions`;
+const API_URL = `${ENV.API_URL}/roles`;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const token = await getStoredToken();
@@ -21,19 +23,18 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export const permissionService = {
-  async getAll(status?: string): Promise<{ success: boolean; data: Permission[]; error?: string }> {
+export const roleService = {
+  async getAll(): Promise<{ success: boolean; data: Role[]; error?: string }> {
     try {
       const headers = await getAuthHeaders();
-      const params = status ? `?status=${status}` : '';
-      const res = await fetch(`${API_URL}${params}`, { headers });
+      const res = await fetch(API_URL, { headers });
       return await res.json();
     } catch {
       return { success: false, data: [], error: 'Connection failed' };
     }
   },
 
-  async getById(id: number): Promise<{ success: boolean; data?: Permission; error?: string }> {
+  async getById(id: number): Promise<{ success: boolean; data?: Role; error?: string }> {
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_URL}/${id}`, { headers });
@@ -44,11 +45,11 @@ export const permissionService = {
   },
 
   async create(data: {
-    module_name: string;
-    permission_name: string;
+    name: string;
     slug: string;
     description?: string;
-  }): Promise<{ success: boolean; data?: Permission; error?: string }> {
+    permissions?: string[];
+  }): Promise<{ success: boolean; data?: Role; error?: string }> {
     try {
       const headers = await getAuthHeaders();
       headers['Content-Type'] = 'application/json';
@@ -56,32 +57,26 @@ export const permissionService = {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          module_name: data.module_name,
-          items: [{
-            permission_name: data.permission_name,
-            slug: data.slug,
-            description: data.description || '',
-            status: 'active',
-          }],
+          name: data.name,
+          slug: data.slug,
+          description: data.description || '',
+          status: 'active',
+          permissions: data.permissions || [],
         }),
       });
-      const result = await res.json();
-      if (result.success && result.data?.length > 0) {
-        return { success: true, data: result.data[0] };
-      }
-      return result;
+      return await res.json();
     } catch {
       return { success: false, error: 'Connection failed' };
     }
   },
 
   async update(id: number, data: {
-    module_name: string;
-    permission_name: string;
+    name: string;
     slug: string;
     description?: string;
     status?: string;
-  }): Promise<{ success: boolean; data?: Permission; error?: string }> {
+    permissions?: string[];
+  }): Promise<{ success: boolean; data?: Role; error?: string }> {
     try {
       const headers = await getAuthHeaders();
       headers['Content-Type'] = 'application/json';
@@ -89,26 +84,16 @@ export const permissionService = {
         method: 'PUT',
         headers,
         body: JSON.stringify({
-          module_name: data.module_name,
-          permission_name: data.permission_name,
+          name: data.name,
           slug: data.slug,
           description: data.description || '',
           status: data.status || 'active',
+          permissions: data.permissions || [],
         }),
       });
       return await res.json();
     } catch {
       return { success: false, error: 'Connection failed' };
-    }
-  },
-
-  async getRolePermissions(roleSlug: string): Promise<{ success: boolean; data: string[]; error?: string }> {
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${API_URL}/role/${roleSlug}`, { headers });
-      return await res.json();
-    } catch {
-      return { success: false, data: [], error: 'Connection failed' };
     }
   },
 
@@ -125,3 +110,5 @@ export const permissionService = {
     }
   },
 };
+
+export type { Permission };

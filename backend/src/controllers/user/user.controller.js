@@ -2,10 +2,60 @@ const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
 const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
-// Allowed roles a shop_owner can assign to members of their shop
 const OWNER_ASSIGNABLE_ROLES = ['worker', 'shop_owner'];
 
-// @desc    Get users — SUPERADMIN sees all, shop_owner sees own shop only
+/**
+ * Get the requester's effective permissions (role ∪ additional ∖ excluded)
+ * Used to validate that they can assign/exclude permissions to other users.
+ */
+async function getRequesterPermissions(userId) {
+  const rolePerms = await db.query(`
+    SELECT p.slug
+    FROM role_permissions rp
+    JOIN permissions p ON rp.permission_id = p.id
+    JOIN users u ON u.role_id = rp.role_id
+    WHERE u.id = $1 AND p.deleted_at IS NULL
+  `, [userId]);
+
+  const userData = await db.query(
+    'SELECT additional_permissions, excluded_permissions FROM users WHERE id = $1',
+    [userId]
+  );
+
+  const roleSlugs = rolePerms.rows.map(r => r.slug);
+  const additional = userData.rows[0]?.additional_permissions || [];
+  const excluded = userData.rows[0]?.excluded_permissions || [];
+
+  const effective = new Set([...roleSlugs, ...additional]);
+  for (const slug of excluded) effective.delete(slug);
+
+  return Array.from(effective);
+}
+
+/**
+ * Validate that the requester has each permission in the given arrays.
+ * Returns an error message or null.
+ */
+async function validatePermissionOverrides(requesterId, additionalPerms, excludedPerms, isSuperAdmin) {
+  if (isSuperAdmin) return null; // super-admin can assign anything
+
+  const requesterPerms = await getRequesterPermissions(requesterId);
+
+  for (const slug of additionalPerms || []) {
+    if (!requesterPerms.includes(slug)) {
+      return `You cannot assign permission "${slug}" — you do not have it`;
+    }
+  }
+
+  for (const slug of excludedPerms || []) {
+    if (!requesterPerms.includes(slug)) {
+      return `You cannot exclude permission "${slug}" — you do not have it`;
+    }
+  }
+
+  return null;
+}
+
 exports.getUsers = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
@@ -16,6 +66,7 @@ exports.getUsers = async (req, res) => {
         u.id, u.name, u.phone, u.email, u.role, u.profile_image,
         r.name AS role_name, 
         u.status, u.created_at,
+        u.additional_permissions, u.excluded_permissions,
         s.name AS shop_name,
         s.location AS shop_location,
         s.owner_name AS shop_owner_name
@@ -30,11 +81,9 @@ exports.getUsers = async (req, res) => {
     const statusFilter = status === 'Inactive' ? 'u.deleted_at IS NOT NULL' : 'u.deleted_at IS NULL';
 
     if (isSuperAdmin && !queryShopId) {
-      // SUPERADMIN: see everyone across all shops (unfiltered by shop unless explicit)
       const result = await db.query(select + from + ` WHERE ${statusFilter} ORDER BY u.created_at DESC`);
       return res.status(200).json({ success: true, data: result.rows });
     } else {
-      // shop_owner / worker: scoped to their shop only
       const targetShopId = isSuperAdmin ? queryShopId : shopId;
       if (!targetShopId) return res.status(403).json({ success: false, error: 'No shop context' });
       const result = await db.query(
@@ -49,13 +98,14 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// @desc    Get single user (scoped)
 exports.getUserById = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
   try {
     const result = await db.query(
-      `SELECT u.id, u.name, u.phone, u.email, u.role, u.profile_image, r.name AS role_name, u.status, u.created_at, u.shop_id,
+      `SELECT u.id, u.name, u.phone, u.email, u.role, u.profile_image,
+              r.name AS role_name, u.status, u.created_at, u.shop_id,
+              u.additional_permissions, u.excluded_permissions,
               s.name AS shop_name, s.location AS shop_location
         FROM users u 
         LEFT JOIN roles r ON u.role = r.slug 
@@ -67,12 +117,10 @@ exports.getUserById = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Scope check: bypass for super-admins OR referencing self
     if (!isSuperAdmin && user.id !== req.user.id && user.shop_id !== shopId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    // Fetch past repairs for this user (if technician)
     const repairs = await db.query(`
       SELECT r.*, v.model_name as vehicle_model 
       FROM repairs r 
@@ -91,18 +139,14 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// @desc    Create user — shop_owner can add worker/shop_owner to their own shop only
 exports.createUser = async (req, res) => {
-  const { role: requesterRole, shopId: requesterShopId } = req.user;
+  const { role: requesterRole, shopId: requesterShopId, id: requesterId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
 
-  let { name, phone, email, password, role, status, shop_id } = req.body;
+  let { name, phone, email, password, role, status, shop_id, additional_permissions, excluded_permissions } = req.body;
 
-  // Scope enforcement: shop_owner can only create users in their own shop
   if (!isSuperAdmin) {
-    shop_id = requesterShopId; // Override whatever was sent — lock to their shop
-
-    // shop_owner can only assign worker or shop_owner roles
+    shop_id = requesterShopId;
     if (!OWNER_ASSIGNABLE_ROLES.includes(role)) {
       return res.status(403).json({ 
         success: false, 
@@ -111,26 +155,29 @@ exports.createUser = async (req, res) => {
     }
   }
 
+  // Validate permission overrides
+  const permError = await validatePermissionOverrides(requesterId, additional_permissions, excluded_permissions, isSuperAdmin);
+  if (permError) return res.status(403).json({ success: false, error: permError });
+
   try {
-    // Validation
     const userCheck = await db.query('SELECT id FROM users WHERE phone = $1', [phone]);
     if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone already registered' });
 
     if (!password) return res.status(400).json({ success: false, error: 'Password is required' });
     if (!shop_id) return res.status(400).json({ success: false, error: 'Shop assignment required' });
 
-    // Resolve Role ID from slug
     const assignedRole = role || 'worker';
     const roleR = await db.query('SELECT id FROM roles WHERE slug = $1', [assignedRole]);
     const roleId = roleR.rows.length > 0 ? roleR.rows[0].id : null;
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
     const result = await db.query(
-      'INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, phone, email, role, status',
-      [shop_id, name, phone, email, passwordHash, assignedRole, roleId, status || 'active']
+      `INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id, status, additional_permissions, excluded_permissions) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+       RETURNING id, name, phone, email, role, status, additional_permissions, excluded_permissions`,
+      [shop_id, name, phone, email, passwordHash, assignedRole, roleId, status || 'active', additional_permissions || [], excluded_permissions || []]
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -140,14 +187,12 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// @desc    Update user — scoped by shop
 exports.updateUser = async (req, res) => {
-  const { role: requesterRole, shopId: requesterShopId } = req.user;
+  const { role: requesterRole, shopId: requesterShopId, id: requesterId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
 
-  const { name, phone, email, role, status, password, shop_id, profile_image } = req.body;
+  const { name, phone, email, role, status, password, shop_id, profile_image, additional_permissions, excluded_permissions } = req.body;
   try {
-    // Fetch user first to check shop scope
     const existing = await db.query('SELECT id, shop_id, profile_image FROM users WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
 
@@ -155,19 +200,27 @@ exports.updateUser = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied — outside your shop scope' });
     }
 
-    // shop_owner cannot escalate roles beyond their allowed set
     if (!isSuperAdmin && role && !OWNER_ASSIGNABLE_ROLES.includes(role)) {
       return res.status(403).json({ success: false, error: `Cannot assign role: ${role}` });
     }
 
-    // Resolve new role_id if role is being changed
+    // Validate permission overrides
+    if (additional_permissions !== undefined || excluded_permissions !== undefined) {
+      const permError = await validatePermissionOverrides(
+        requesterId, 
+        additional_permissions || [], 
+        excluded_permissions || [], 
+        isSuperAdmin
+      );
+      if (permError) return res.status(403).json({ success: false, error: permError });
+    }
+
     let roleId = null;
     if (role) {
       const roleR = await db.query('SELECT id FROM roles WHERE slug = $1', [role]);
       roleId = roleR.rows.length > 0 ? roleR.rows[0].id : null;
     }
 
-    // Password Update Logic (Optional)
     let passwordFragment = '';
     const params = [
       name ?? null, 
@@ -185,11 +238,22 @@ exports.updateUser = async (req, res) => {
       params.push(passwordHash);
     }
     
-    // Shop Override Logic (SuperAdmin only)
     let shopFragment = '';
     if (isSuperAdmin && shop_id) {
        shopFragment = ', shop_id = $' + (params.length + 1);
        params.push(shop_id);
+    }
+
+    // Permission override arrays
+    let additionalFragment = '';
+    let excludedFragment = '';
+    if (additional_permissions !== undefined) {
+      additionalFragment = ', additional_permissions = $' + (params.length + 1);
+      params.push(additional_permissions);
+    }
+    if (excluded_permissions !== undefined) {
+      excludedFragment = ', excluded_permissions = $' + (params.length + 1);
+      params.push(excluded_permissions);
     }
 
     let finalProfileImage = existing.rows[0].profile_image;
@@ -217,9 +281,9 @@ exports.updateUser = async (req, res) => {
           email = COALESCE($3, email), 
           role = COALESCE($4, role), 
           role_id = COALESCE($5, role_id), 
-          status = COALESCE($6, status) ${passwordFragment} ${shopFragment} ${imageFragment}
+          status = COALESCE($6, status) ${passwordFragment} ${shopFragment} ${additionalFragment} ${excludedFragment} ${imageFragment}
       WHERE id = ${userIdPlaceholder} 
-      RETURNING id, name, phone, email, role, status, shop_id, profile_image
+      RETURNING id, name, phone, email, role, status, shop_id, profile_image, additional_permissions, excluded_permissions
     `;
 
     const result = await db.query(query, params);
@@ -231,7 +295,24 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// @desc    Soft Delete user — scoped by shop
+// @desc    Check if phone is already registered (used for form validation)
+exports.checkPhone = async (req, res) => {
+  const { phone } = req.params;
+  const excludeId = req.query.excludeId;
+  try {
+    let query = 'SELECT id FROM users WHERE phone = $1 AND deleted_at IS NULL';
+    const params = [phone];
+    if (excludeId) {
+      query += ' AND id != $2';
+      params.push(excludeId);
+    }
+    const result = await db.query(query, params);
+    res.status(200).json({ success: true, exists: result.rows.length > 0 });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
 exports.deleteUser = async (req, res) => {
   const { role: requesterRole, shopId: requesterShopId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';

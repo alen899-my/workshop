@@ -3,7 +3,13 @@ const db = require('../../config/db');
 // @desc    Get all roles
 exports.getRoles = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM roles WHERE deleted_at IS NULL ORDER BY name ASC');
+    const result = await db.query(`
+      SELECT r.*,
+        (SELECT COUNT(*)::int FROM role_permissions rp WHERE rp.role_id = r.id) AS permission_count
+      FROM roles r
+      WHERE r.deleted_at IS NULL
+      ORDER BY r.name ASC
+    `);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
@@ -13,7 +19,7 @@ exports.getRoles = async (req, res) => {
 // @desc    Get role options (minimal data for forms)
 exports.getRoleOptions = async (req, res) => {
   try {
-    const result = await db.query('SELECT id, name, slug FROM roles WHERE status = $1 AND deleted_at IS NULL ORDER BY name ASC', ['active']);
+    const result = await db.query("SELECT id, name, slug FROM roles WHERE status = $1 AND slug != 'super-admin' AND deleted_at IS NULL ORDER BY name ASC", ['active']);
     res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

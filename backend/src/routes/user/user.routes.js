@@ -7,6 +7,9 @@ const { authorize, authorizeOrSelf } = require('../../middleware/rbac.middleware
 // @route   GET /api/users
 router.get('/', authenticate, userController.getUsers);
 
+// @route   GET /api/users/check-phone/:phone
+router.get('/check-phone/:phone', authenticate, userController.checkPhone);
+
 // @route   GET /api/users/:id
 router.get('/:id', authenticate, authorizeOrSelf('view:users'), userController.getUserById);
 

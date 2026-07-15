@@ -13,6 +13,8 @@ import { getCurrentUser } from '@/services/auth.service';
 import { authService } from '@/services/auth.service';
 import SettingsScreen from '@/features/settings/SettingsScreen';
 import PermissionsScreen from '@/features/permissions/PermissionsScreen';
+import RolesListScreen from '@/features/roles/RolesListScreen';
+import UsersListScreen from '@/features/users/UsersListScreen';
 
 interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -31,6 +33,8 @@ export default function ProfileScreen() {
   const currentUser = getCurrentUser();
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [permissionsModalVisible, setPermissionsModalVisible] = useState(false);
+  const [rolesModalVisible, setRolesModalVisible] = useState(false);
+  const [usersModalVisible, setUsersModalVisible] = useState(false);
 
   const menuItems: MenuItem[] = useMemo(() => [
     {
@@ -45,14 +49,14 @@ export default function ProfileScreen() {
       label: 'Users',
       description: 'Manage workshop users and staff',
       permission: 'view:users',
-      action: 'coming-soon',
+      action: 'modal',
     },
     {
       icon: 'shield-half-outline',
       label: 'Roles',
-      description: 'Define access roles',
+      description: 'Define access roles & assign permissions',
       permission: 'view:role',
-      action: 'coming-soon',
+      action: 'modal',
     },
     {
       icon: 'shield-checkmark-outline',
@@ -88,6 +92,8 @@ export default function ProfileScreen() {
     if (item.action === 'modal') {
       if (item.label === 'Settings') setSettingsModalVisible(true);
       else if (item.label === 'Permissions') setPermissionsModalVisible(true);
+      else if (item.label === 'Roles') setRolesModalVisible(true);
+      else if (item.label === 'Users') setUsersModalVisible(true);
     } else if (item.action === 'coming-soon') {
       Alert.alert('Coming Soon', `${item.label} management will be available in an upcoming update.`);
     }
@@ -201,6 +207,16 @@ export default function ProfileScreen() {
       {/* Permissions Modal */}
       <Modal visible={permissionsModalVisible} animationType="slide" onRequestClose={() => setPermissionsModalVisible(false)}>
         <PermissionsScreen onClose={() => setPermissionsModalVisible(false)} />
+      </Modal>
+
+      {/* Roles Modal */}
+      <Modal visible={rolesModalVisible} animationType="slide" onRequestClose={() => setRolesModalVisible(false)}>
+        <RolesListScreen onClose={() => setRolesModalVisible(false)} />
+      </Modal>
+
+      {/* Users Modal */}
+      <Modal visible={usersModalVisible} animationType="slide" onRequestClose={() => setUsersModalVisible(false)}>
+        <UsersListScreen onClose={() => setUsersModalVisible(false)} />
       </Modal>
     </ThemedView>
   );

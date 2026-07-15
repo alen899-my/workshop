@@ -5,7 +5,10 @@ const { authenticate } = require('../../middleware/auth.middleware');
 const { authorize } = require('../../middleware/rbac.middleware');
 
 // @route   GET /api/permissions
-router.get('/', authenticate, authorize('view:permission'), permissionController.getPermissions);
+router.get('/', authenticate, permissionController.getPermissions);
+
+// @route   GET /api/permissions/user/:userId
+router.get('/user/:userId', authenticate, permissionController.getUserPermissions);
 
 // @route   GET /api/permissions/:id
 router.get('/:id', authenticate, authorize('view:permission'), permissionController.getPermissionById);

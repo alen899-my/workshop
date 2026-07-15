@@ -28,7 +28,6 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
 
   const init = async () => {
     setLoading(true);
-    // Load persisted user from SecureStore
     const stored = await loadStoredUser();
     if (stored) {
       setUser(stored);
@@ -41,7 +40,18 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Fetch permissions for this role
+    // Fetch user-specific effective permissions which include role-based
+    // plus any user-level overrides (additional ∖ excluded)
+    if (u.userId) {
+      const res = await permissionService.getUserPermissions(u.userId);
+      if (res.success && res.data) {
+        setPermissions(res.data.effective_permissions);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Fallback: fetch role-based permissions only
     const res = await permissionService.getRolePermissions(u.role);
     if (res.success && res.data) {
       setPermissions(res.data);

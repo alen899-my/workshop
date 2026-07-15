@@ -96,3 +96,51 @@ exports.getRolePermissions = async (req, res) => {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
+
+// @desc    Get effective permissions for a specific user (role ∪ additional ∖ excluded)
+exports.getUserPermissions = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    // Get role-based permissions
+    const rolePerms = await db.query(`
+      SELECT p.slug
+      FROM role_permissions rp
+      JOIN permissions p ON rp.permission_id = p.id
+      JOIN users u ON u.role_id = rp.role_id
+      WHERE u.id = $1 AND p.deleted_at IS NULL
+    `, [userId]);
+
+    // Get user-specific overrides
+    const userData = await db.query(`
+      SELECT additional_permissions, excluded_permissions
+      FROM users WHERE id = $1
+    `, [userId]);
+
+    if (userData.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const roleSlugs = rolePerms.rows.map(r => r.slug);
+    const additional = userData.rows[0].additional_permissions || [];
+    const excluded = userData.rows[0].excluded_permissions || [];
+
+    // Compute effective: (role ∪ additional) ∖ excluded
+    const effectiveSet = new Set([...roleSlugs, ...additional]);
+    for (const slug of excluded) {
+      effectiveSet.delete(slug);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        role_permissions: roleSlugs,
+        additional_permissions: additional,
+        excluded_permissions: excluded,
+        effective_permissions: Array.from(effectiveSet),
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user permissions:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
