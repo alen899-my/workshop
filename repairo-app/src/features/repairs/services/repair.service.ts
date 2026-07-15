@@ -4,6 +4,7 @@ import { getStoredToken } from '@/services/api';
 export interface Repair {
   id: number;
   shop_id: number;
+  vehicle_id?: number;
   vehicle_image?: string;
   images?: string[];
   vehicle_number: string;

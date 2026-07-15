@@ -31,6 +31,16 @@ import { repairService } from '@/features/repairs/services/repair.service';
 import { formatUTCToLocal } from '@/utils/date';
 import type { Worker } from '@/features/repairs/services/worker.service';
 import { workerService } from '@/features/repairs/services/worker.service';
+import { vehicleService } from '@/features/vehicles/services/vehicle.service';
+import { useRBAC } from '@/hooks/use-rbac';
+import type { Customer } from '@/features/customers/services/customer.service';
+import { customerService } from '@/features/customers/services/customer.service';
+import CustomerActionsModal from '@/features/customers/components/CustomerActionsModal';
+import CustomerDetailScreen from '@/features/customers/CustomerDetailScreen';
+import PastVisitsScreen from '@/features/customers/PastVisitsScreen';
+import CustomerVehiclesScreen from '@/features/customers/CustomerVehiclesScreen';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import Toast from '@/components/ui/Toast';
 
 interface ViewRepairScreenProps {
   repair: Repair;
@@ -109,6 +119,13 @@ export default function ViewRepairScreen({
   const [imageViewerIndex, setImageViewerIndex] = useState(0);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [billModalVisible, setBillModalVisible] = useState(false);
+  const [customerActionsModal, setCustomerActionsModal] = useState(false);
+  const [customerDetailModal, setCustomerDetailModal] = useState<Customer | null>(null);
+  const [customerPastVisitsModal, setCustomerPastVisitsModal] = useState<Customer | null>(null);
+  const [customerVehiclesModal, setCustomerVehiclesModal] = useState<Customer | null>(null);
+  const [deleteCustomerConfirm, setDeleteCustomerConfirm] = useState<Customer | null>(null);
+  const [customerToast, setCustomerToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
+  const { can } = useRBAC();
   const allImages = useMemo(() => {
     const imgs: string[] = [];
     if (repair.vehicle_image) imgs.push(repair.vehicle_image);
@@ -267,6 +284,80 @@ export default function ViewRepairScreen({
   const vehicleImg = repair.vehicle_image || (repair.images && repair.images[0]);
   const vehicleIcon = VEHICLE_ICONS[repair.vehicle_type || 'Car'] || 'car-outline';
 
+  const showCustomerToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setCustomerToast({ visible: true, message, type });
+  }, []);
+
+  const handleCustomerPress = useCallback(async () => {
+    let found: Customer = {
+      id: 0,
+      shop_id: repair.shop_id,
+      name: repair.owner_name || 'Unknown',
+      phone: repair.phone_number || '',
+    };
+    try {
+      if (repair.vehicle_id) {
+        const vRes = await vehicleService.getById(repair.vehicle_id);
+        if (vRes.success && vRes.data?.customer_id) {
+          const cRes = await customerService.getById(vRes.data.customer_id);
+          if (cRes.success && cRes.data) found = cRes.data;
+        }
+      }
+      if (!found.id && repair.phone_number) {
+        const allRes = await customerService.getAll();
+        if (allRes.success) {
+          const match = allRes.data.find((c) => c.phone === repair.phone_number);
+          if (match) found = match;
+        }
+      }
+    } catch {}
+    setSelectedCustomer(found);
+    setCustomerActionsModal(true);
+  }, [repair.shop_id, repair.owner_name, repair.phone_number, repair.vehicle_id]);
+
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  const handleCustomerViewDetails = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerDetailModal(c), 300);
+  }, []);
+
+  const handleCustomerPastVisits = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerPastVisitsModal(c), 300);
+  }, []);
+
+  const handleCustomerVehicles = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    setTimeout(() => setCustomerVehiclesModal(c), 300);
+  }, []);
+
+  const handleCustomerEdit = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    showCustomerToast('Edit from job card', 'info');
+  }, [showCustomerToast]);
+
+  const handleCustomerDelete = useCallback((c: Customer) => {
+    setCustomerActionsModal(false);
+    if (!can('delete:customers')) {
+      showCustomerToast('Access Denied', 'error');
+      return;
+    }
+    setDeleteCustomerConfirm(c);
+  }, [can, showCustomerToast]);
+
+  const handleConfirmDeleteCustomer = useCallback(async () => {
+    if (!deleteCustomerConfirm) return;
+    const c = deleteCustomerConfirm;
+    setDeleteCustomerConfirm(null);
+    const res = await customerService.delete(c.id);
+    if (res.success) {
+      showCustomerToast('Customer deleted successfully');
+    } else {
+      showCustomerToast(res.error || 'Failed to delete customer', 'error');
+    }
+  }, [deleteCustomerConfirm, showCustomerToast]);
+
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
@@ -327,13 +418,13 @@ export default function ViewRepairScreen({
         <View style={styles.card}>
           <ThemedText style={styles.cardTitle}>Customer</ThemedText>
           <View style={styles.customerRow}>
-            <View style={styles.customerLeft}>
-              <Ionicons name="person-outline" size={16} color={theme.textSecondary} />
-              <View>
+            <Pressable style={styles.customerLeft} onPress={handleCustomerPress}>
+              <Ionicons name="person-outline" size={16} color={theme.primary} />
+              <View style={{ flex: 1 }}>
                 <ThemedText style={styles.customerName}>{repair.owner_name || 'Walk-in Customer'}</ThemedText>
                 <ThemedText style={styles.customerPhone}>{repair.phone_number || 'No phone'}</ThemedText>
               </View>
-            </View>
+            </Pressable>
             <View style={styles.customerActions}>
               {repair.phone_number && (
                 <Pressable style={styles.circleBtn} onPress={handleCall}>
@@ -719,6 +810,62 @@ export default function ViewRepairScreen({
           onSuccess={handleBillSuccess}
         />
       </Modal>
+
+      {/* Customer modals */}
+      <CustomerActionsModal
+        visible={customerActionsModal}
+        customer={selectedCustomer}
+        onClose={() => setCustomerActionsModal(false)}
+        onViewDetails={handleCustomerViewDetails}
+        onPastVisits={handleCustomerPastVisits}
+        onVehicles={handleCustomerVehicles}
+        onEdit={handleCustomerEdit}
+        onDelete={handleCustomerDelete}
+        canEdit={can('edit:customers')}
+        canDelete={can('delete:customers')}
+      />
+
+      <Modal visible={!!customerDetailModal} animationType="slide" onRequestClose={() => setCustomerDetailModal(null)}>
+        {customerDetailModal && (
+          <CustomerDetailScreen
+            customer={customerDetailModal}
+            onClose={() => setCustomerDetailModal(null)}
+            onEdit={(c) => { setCustomerDetailModal(null); showCustomerToast('Edit from job card', 'info'); }}
+            onDelete={(c) => { setCustomerDetailModal(null); setDeleteCustomerConfirm(c); }}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={!!customerPastVisitsModal} animationType="slide" onRequestClose={() => setCustomerPastVisitsModal(null)}>
+        {customerPastVisitsModal && (
+          <PastVisitsScreen
+            customer={customerPastVisitsModal}
+            onClose={() => setCustomerPastVisitsModal(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={!!customerVehiclesModal} animationType="slide" onRequestClose={() => setCustomerVehiclesModal(null)}>
+        {customerVehiclesModal && (
+          <CustomerVehiclesScreen
+            customer={customerVehiclesModal}
+            onClose={() => setCustomerVehiclesModal(null)}
+          />
+        )}
+      </Modal>
+
+      <ConfirmModal
+        visible={!!deleteCustomerConfirm}
+        title="Delete Customer"
+        message={deleteCustomerConfirm ? `Delete customer "${deleteCustomerConfirm.name}"?` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDeleteCustomer}
+        onCancel={() => setDeleteCustomerConfirm(null)}
+        type="destructive"
+      />
+
+      <Toast visible={customerToast.visible} message={customerToast.message} type={customerToast.type} onHide={() => setCustomerToast((p) => ({ ...p, visible: false }))} />
     </ThemedView>
   );
 }
