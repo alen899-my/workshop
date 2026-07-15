@@ -7,40 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { formatUTCToLocal } from '@/utils/date';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
 function getImageUrl(image?: string): string | null {
   if (!image) return null;
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   return image;
-}
-
-function formatRepairDate(dateStr?: string): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const pad = (num: number) => String(num).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-
-  let hours = d.getHours();
-  const minutes = pad(d.getMinutes());
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hh = pad(hours);
-
-  return `${dd}-${mm}-${yyyy} ${hh}:${minutes} ${ampm}`;
-}
-
-// Splits the combined "dd-mm-yyyy hh:mm AM" string into separate date / time
-// parts so they can be shown on their own rows, like the reference design.
-function splitRepairDate(dateStr?: string): { date: string; time: string } {
-  const combined = formatRepairDate(dateStr);
-  if (!combined) return { date: '', time: '' };
-  const [datePart, ...rest] = combined.split(' ');
-  return { date: datePart, time: rest.join(' ') };
 }
 
 function handleCall(phone?: string) {
@@ -81,7 +54,7 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
   const statusColor = STATUS_COLORS[repair.status] || theme.textSecondary;
   const statusLabel = STATUS_LABELS[repair.status] || repair.status;
   const imageUrl = getImageUrl(repair.vehicle_image);
-  const { date: repairDate, time: repairTime } = splitRepairDate(repair.repair_date);
+  const regTime = repair.created_at ? formatUTCToLocal(repair.created_at) : '';
 
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
@@ -186,19 +159,12 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
         )}
       </View>
 
-      {/* Date + time (and km, if present) */}
+      {/* Reg time + km */}
       <View style={styles.infoRow}>
-        {repairDate ? (
+        {regTime ? (
           <View style={styles.infoItem}>
             <Ionicons name="calendar-outline" size={13} color={theme.textSecondary} />
-            <ThemedText style={styles.infoText}>{repairDate}</ThemedText>
-          </View>
-        ) : null}
-
-        {repairTime ? (
-          <View style={styles.infoItem}>
-            <Ionicons name="time-outline" size={13} color={theme.textSecondary} />
-            <ThemedText style={styles.infoText}>{repairTime}</ThemedText>
+            <ThemedText style={styles.infoText} numberOfLines={1}>{regTime}</ThemedText>
           </View>
         ) : null}
 
@@ -209,6 +175,16 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
           </View>
         ) : null}
       </View>
+
+      {/* Assigned worker */}
+      {repair.attending_worker_name && (
+        <View style={styles.infoRow}>
+          <View style={styles.infoItem}>
+            <Ionicons name="person-circle-outline" size={13} color={theme.textSecondary} />
+            <ThemedText style={styles.infoText} numberOfLines={1}>Worker: {repair.attending_worker_name}</ThemedText>
+          </View>
+        </View>
+      )}
 
       {/* Status badges at the bottom */}
       <View style={styles.statusRow}>

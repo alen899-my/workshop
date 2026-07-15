@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Modal, Pressable,
-  StyleSheet, View,
+  StyleSheet, TextInput, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,6 +18,7 @@ import { useRBAC } from '@/hooks/use-rbac';
 
 import CreateVehicleScreen from '@/features/vehicles/CreateVehicleScreen';
 import VehicleDetailScreen from '@/features/vehicles/VehicleDetailScreen';
+import PastRepairsScreen from '@/features/vehicles/PastRepairsScreen';
 import VehicleCard from './components/VehicleCard';
 import VehicleActionsModal from './components/VehicleActionsModal';
 
@@ -34,6 +35,7 @@ export default function VehiclesListScreen() {
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [search, setSearch] = useState('');
 
   const [formModal, setFormModal] = useState<{
     visible: boolean; mode: 'create' | 'edit'; vehicle?: Vehicle;
@@ -42,6 +44,9 @@ export default function VehiclesListScreen() {
     visible: boolean; vehicle: Vehicle | null;
   }>({ visible: false, vehicle: null });
   const [detailModal, setDetailModal] = useState<{
+    visible: boolean; vehicle: Vehicle | null;
+  }>({ visible: false, vehicle: null });
+  const [pastRepairsModal, setPastRepairsModal] = useState<{
     visible: boolean; vehicle: Vehicle | null;
   }>({ visible: false, vehicle: null });
   const [toast, setToast] = useState({
@@ -64,7 +69,14 @@ export default function VehiclesListScreen() {
     else setLoading(true);
     const res = await vehicleService.getAll(filterStatus);
     if (res.success) {
-      setVehicles(res.data);
+      const seen = new Set<string>();
+      const deduped = res.data.filter((v) => {
+        const key = `${v.shop_id}:${v.vehicle_number.toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setVehicles(deduped);
       setDisplayCount(PAGE_SIZE);
     } else {
       showToast(res.error || 'Failed to load vehicles', 'error');
@@ -75,18 +87,27 @@ export default function VehiclesListScreen() {
 
   useEffect(() => { fetchVehicles(); }, [fetchVehicles]);
 
+  const searchFiltered = useMemo(() => {
+    if (!search.trim()) return vehicles;
+    const q = search.trim().toLowerCase();
+    return vehicles.filter((v) =>
+      v.vehicle_number.toLowerCase().includes(q) ||
+      v.owner_name?.toLowerCase().includes(q)
+    );
+  }, [vehicles, search]);
+
   const displayedItems = useMemo(
-    () => vehicles.slice(0, displayCount),
-    [vehicles, displayCount],
+    () => searchFiltered.slice(0, displayCount),
+    [searchFiltered, displayCount],
   );
 
-  const hasMore = displayCount < vehicles.length;
+  const hasMore = displayCount < searchFiltered.length;
 
   const filterCount = filterStatus ? 1 : 0;
 
   const handleEndReached = useCallback(() => {
-    setDisplayCount((prev) => Math.min(prev + PAGE_SIZE, vehicles.length));
-  }, [vehicles.length]);
+    setDisplayCount((prev) => Math.min(prev + PAGE_SIZE, searchFiltered.length));
+  }, [searchFiltered.length]);
 
   const handleNewVehicle = useCallback(() => {
     if (!can('create:vehicle')) { showToast('Access Denied', 'error'); return; }
@@ -100,6 +121,11 @@ export default function VehiclesListScreen() {
   const handleViewDetails = useCallback((vehicle: Vehicle) => {
     setActionsModal({ visible: false, vehicle: null });
     setDetailModal({ visible: true, vehicle });
+  }, []);
+
+  const handlePastRepairs = useCallback((vehicle: Vehicle) => {
+    setActionsModal({ visible: false, vehicle: null });
+    setPastRepairsModal({ visible: true, vehicle });
   }, []);
 
   const handleEditFromModal = useCallback((vehicle: Vehicle) => {
@@ -175,15 +201,31 @@ export default function VehiclesListScreen() {
 
   const ListHeader = useMemo(() => (
     <View>
+      {/* Search bar */}
+      <View style={[styles.searchBar, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        <Ionicons name="search-outline" size={16} color={theme.textSecondary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by number or owner..."
+          placeholderTextColor={theme.textSecondary}
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+          </Pressable>
+        )}
+      </View>
       {!loading && vehicles.length > 0 && (
         <View style={styles.listHeader}>
           <ThemedText style={styles.listHeaderText}>
-            {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''}
+            {searchFiltered.length} vehicle{searchFiltered.length !== 1 ? 's' : ''}
           </ThemedText>
         </View>
       )}
     </View>
-  ), [loading, vehicles.length]);
+  ), [loading, vehicles.length, search, searchFiltered.length, theme]);
 
   const ListFooter = useMemo(() => {
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={theme.primary} /></View>;
@@ -195,8 +237,8 @@ export default function VehiclesListScreen() {
     if (loading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <View style={[styles.emptyIconWrap, { backgroundColor: theme.primaryLight }]}>
-          <Ionicons name="car-outline" size={32} color={theme.primary} />
+        <View style={[styles.emptyIconWrap, { backgroundColor: theme.primary + '15' }]}>
+          <Ionicons name="car-outline" size={28} color={theme.primary} />
         </View>
         <ThemedText style={styles.emptyTitle}>No Vehicles</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.emptySubtitle}>
@@ -206,21 +248,22 @@ export default function VehiclesListScreen() {
     );
   }, [loading, filterStatus, theme]);
 
-  function FilterFAB({ onPress, count }: { onPress: () => void; count: number }) {
-    return (
-      <Pressable onPress={onPress} style={styles.filterFab}>
-        <Ionicons name="funnel-outline" size={20} color={theme.textInverse} />
-        {count > 0 && (
-          <View style={styles.filterFabBadge}>
-            <ThemedText style={styles.filterFabBadgeText}>{count}</ThemedText>
-          </View>
-        )}
-      </Pressable>
-    );
-  }
-
   return (
-    <ScreenLayout title="Vehicles">
+    <ScreenLayout
+      title="Vehicles"
+      description="Manage registered vehicles"
+      rightAction={
+        <Pressable onPress={() => setFilterModalVisible(true)} style={styles.headerFilterBtn}>
+          <Ionicons name="funnel-outline" size={16} color={theme.primaryForeground} />
+          <ThemedText style={styles.headerFilterText}>Filter</ThemedText>
+          {filterCount > 0 && (
+            <View style={styles.headerFilterBadge}>
+              <ThemedText style={styles.headerFilterBadgeText}>{filterCount}</ThemedText>
+            </View>
+          )}
+        </Pressable>
+      }
+    >
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
 
       <FlatList
@@ -238,8 +281,7 @@ export default function VehiclesListScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.floatingColumn}>
-        <FilterFAB onPress={() => setFilterModalVisible(true)} count={filterCount} />
+      <View style={styles.fabWrap}>
         <FAB onPress={handleNewVehicle} label="New" />
       </View>
 
@@ -248,6 +290,7 @@ export default function VehiclesListScreen() {
         vehicle={actionsModal.vehicle}
         onClose={() => setActionsModal({ visible: false, vehicle: null })}
         onViewDetails={handleViewDetails}
+        onPastRepairs={handlePastRepairs}
         onEdit={handleEditFromModal}
         onDelete={handleDeleteFromModal}
         canEdit={can('edit:vehicle')}
@@ -296,6 +339,15 @@ export default function VehiclesListScreen() {
         )}
       </Modal>
 
+      <Modal visible={pastRepairsModal.visible} animationType="slide" onRequestClose={() => setPastRepairsModal({ visible: false, vehicle: null })}>
+        {pastRepairsModal.vehicle && (
+          <PastRepairsScreen
+            vehicle={pastRepairsModal.vehicle}
+            onClose={() => setPastRepairsModal({ visible: false, vehicle: null })}
+          />
+        )}
+      </Modal>
+
       <ConfirmModal
         visible={deleteConfirm.visible}
         title="Delete Vehicle"
@@ -312,9 +364,15 @@ export default function VehiclesListScreen() {
 
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
-    listContent: { paddingBottom: 200, flexGrow: 1 },
-    listHeader: { paddingHorizontal: 16, paddingVertical: 8 },
-    listHeaderText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
+    listContent: { paddingBottom: 200, paddingHorizontal: 16, flexGrow: 1 },
+    listHeader: { paddingBottom: 8 },
+    listHeaderText: { fontSize: 12, fontWeight: '600', color: theme.textSecondary },
+    searchBar: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      borderRadius: 10, borderWidth: 1,
+      paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10,
+    },
+    searchInput: { flex: 1, fontSize: 14, padding: 0 },
     footer: { paddingVertical: 16, alignItems: 'center' },
     loadingContainer: { flex: 1, paddingTop: 80, alignItems: 'center' },
 
@@ -323,41 +381,40 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       gap: 8, paddingHorizontal: 16, paddingTop: 60,
     },
     emptyIconWrap: {
-      width: 64, height: 64, borderRadius: 32,
+      width: 56, height: 56, borderRadius: 28,
       alignItems: 'center', justifyContent: 'center',
       marginBottom: 8,
     },
-    emptyTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
-    emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+    emptyTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center', color: theme.text },
+    emptySubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 19 },
 
-    floatingColumn: {
-      position: 'absolute', bottom: 130, right: 24,
-      alignItems: 'center', gap: 14,
+    fabWrap: {
+      position: 'absolute', bottom: 120, right: 20,
     },
-    filterFab: {
-      width: 46, height: 46, borderRadius: 23,
-      backgroundColor: theme.dark, alignItems: 'center', justifyContent: 'center',
-      shadowColor: theme.text, shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
+    headerFilterBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 7,
+      borderRadius: 8,
     },
-    filterFabBadge: {
-      position: 'absolute', top: -4, right: -4,
-      backgroundColor: theme.primary, borderRadius: 10,
-      width: 20, height: 20, alignItems: 'center', justifyContent: 'center',
+    headerFilterText: { fontSize: 13, fontWeight: '700', color: theme.primaryForeground },
+    headerFilterBadge: {
+      position: 'absolute', top: -5, right: -5,
+      backgroundColor: '#000', borderRadius: 10,
+      width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
     },
-    filterFabBadgeText: { color: theme.primaryForeground, fontSize: 11, fontWeight: '800' },
+    headerFilterBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
 
     filterSection: { padding: 16, gap: 10 },
-    filterLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
+    filterLabel: { fontSize: 12, fontWeight: '700', color: theme.textSecondary, textTransform: 'uppercase' },
     filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     filterChip: {
       paddingHorizontal: 14, paddingVertical: 8,
-      borderRadius: 10, borderWidth: 1, borderColor: '#E8E0CC',
-      backgroundColor: '#F8F7F4',
+      borderRadius: 8, borderWidth: 1, borderColor: theme.border,
+      backgroundColor: theme.card,
     },
     filterChipActive: { backgroundColor: theme.primary, borderColor: theme.primary },
-    filterChipText: { fontSize: 13, fontWeight: '600', color: '#8A8A80' },
-    filterChipTextActive: { color: '#FFFFFF' },
+    filterChipText: { fontSize: 13, fontWeight: '600', color: theme.textSecondary },
+    filterChipTextActive: { color: theme.primaryForeground },
   }), [theme]);
   return styles;
 };

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StatusBar, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { NavigationBar } from 'expo-navigation-bar';
 
 import { ThemeProvider, useThemePreference } from '@/hooks/use-theme';
 import { RBACProvider } from '@/hooks/use-rbac';
@@ -17,6 +18,12 @@ function RootLayoutInner() {
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setStyle(isDark ? 'light' : 'dark');
+    }
+  }, [isDark]);
 
   return (
     <>

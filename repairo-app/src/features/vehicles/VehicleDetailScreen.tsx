@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Linking, Pressable, ScrollView,
-  StyleSheet, View,
+  ActivityIndicator, Dimensions, Linking, Modal, Pressable,
+  ScrollView, StyleSheet, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getCurrentUser } from '@/services/auth.service';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 import { vehicleService } from '@/features/vehicles/services/vehicle.service';
+import RepairCard from '@/features/repairs/components/RepairCard';
+import ViewRepairScreen from '@/features/repairs/ViewRepairScreen';
+import type { Repair } from '@/features/repairs/services/repair.service';
+import { repairService } from '@/features/repairs/services/repair.service';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Car: 'car-outline', Hatchback: 'car-outline', SUV: 'car-outline',
@@ -40,8 +47,6 @@ function formatDate(dateStr?: string): string {
   return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 }
 
-
-
 interface VehicleDetailScreenProps {
   vehicle: Vehicle;
   onClose: () => void;
@@ -60,6 +65,8 @@ export default function VehicleDetailScreen({
   const insets = useSafeAreaInsets();
   const [vehicle, setVehicle] = useState<Vehicle>(initialVehicle);
   const [loading, setLoading] = useState(true);
+  const [imagePreview, setImagePreview] = useState(false);
+  const [viewRepair, setViewRepair] = useState<Repair | null>(null);
 
   const fetchDetails = useCallback(async () => {
     setLoading(true);
@@ -76,18 +83,30 @@ export default function VehicleDetailScreen({
   const tint = getVehicleTint(vehicle.vehicle_type, theme.primary);
   const imageUrl = vehicle.vehicle_image?.startsWith('http') ? vehicle.vehicle_image : null;
   const repairs = vehicle.repairs || [];
-  const STATUS_COLORS = useMemo(() => ({
-    Pending: theme.warning, Started: theme.info, Completed: theme.success,
-  }), [theme]);
+
+  const handleRepairPress = useCallback(async (r: { id: number }) => {
+    const res = await repairService.getById(r.id);
+    if (res.success && res.data) {
+      setViewRepair(res.data);
+    }
+  }, []);
+
+  const handleViewRepairClose = useCallback(() => {
+    setViewRepair(null);
+    fetchDetails();
+  }, [fetchDetails]);
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
-        <Pressable style={styles.backBtn} onPress={onClose}>
-          <Ionicons name="close" size={24} color="#1A1A1A" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <Pressable style={styles.headerBack} onPress={onClose}>
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
         </Pressable>
         <ThemedText style={styles.headerTitle}>Vehicle Details</ThemedText>
-        <View style={{ width: 38 }} />
+        <Pressable style={styles.headerEdit} onPress={() => onEdit(vehicle)}>
+          <Ionicons name="create-outline" size={16} color={theme.primaryForeground} />
+        </Pressable>
       </View>
 
       {loading ? (
@@ -99,73 +118,62 @@ export default function VehicleDetailScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section */}
-          <View style={styles.heroCard}>
-            {imageUrl ? (
-              <Image source={imageUrl} style={styles.heroImage} contentFit="cover" />
-            ) : (
-              <View style={[styles.heroIconWrap, { backgroundColor: tint + '22' }]}>
-                <Ionicons name={icon} size={56} color={tint} />
+          {/* Vehicle info card */}
+          <View style={styles.vehicleCard}>
+            <Pressable onPress={() => imageUrl && setImagePreview(true)}>
+              <View style={styles.vehicleImageWrap}>
+                {imageUrl ? (
+                  <Image source={imageUrl} style={styles.vehicleImage} contentFit="cover" />
+                ) : (
+                  <View style={[styles.vehicleImage, styles.vehicleImagePlaceholder, { backgroundColor: tint + '18' }]}>
+                    <Ionicons name={icon} size={32} color={tint} />
+                  </View>
+                )}
               </View>
-            )}
-            <ThemedText style={styles.heroVehicleNo}>{vehicle.vehicle_number}</ThemedText>
-            {vehicle.vehicle_type && (
-              <View style={[styles.typeBadge, { backgroundColor: tint + '22' }]}>
-                <Ionicons name={icon} size={14} color={tint} />
-                <ThemedText style={[styles.typeBadgeText, { color: tint }]}>
-                  {vehicle.vehicle_type}
-                </ThemedText>
+            </Pressable>
+            <View style={styles.vehicleInfo}>
+              <View style={styles.plate}>
+                <View style={styles.plateBadge}>
+                  <ThemedText style={styles.plateBadgeText}>{getCurrentUser()?.shopCountry || 'IND'}</ThemedText>
+                </View>
+                <ThemedText style={styles.plateNumber} numberOfLines={1}>{vehicle.vehicle_number}</ThemedText>
               </View>
-            )}
+              {vehicle.status === 'Inactive' && (
+                <View style={styles.inactiveBadge}>
+                  <ThemedText style={styles.inactiveBadgeText}>Inactive</ThemedText>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Vehicle Specs */}
+          {/* Vehicle Information */}
           <View style={styles.card}>
-            <ThemedText style={styles.cardTitle}>Vehicle Information</ThemedText>
-            <View style={styles.specRow}>
-              <ThemedText style={styles.specLabel}>Model</ThemedText>
-              <ThemedText style={styles.specValue}>{vehicle.model_name || '—'}</ThemedText>
-            </View>
-            {vehicle.brand && (
-              <View style={styles.specRow}>
-                <ThemedText style={styles.specLabel}>Brand / Make</ThemedText>
-                <ThemedText style={styles.specValue}>{vehicle.brand}</ThemedText>
-              </View>
-            )}
-            <View style={styles.specRow}>
-              <ThemedText style={styles.specLabel}>Status</ThemedText>
-              <View style={[styles.statusBadge, { backgroundColor: vehicle.status === 'Active' ? theme.success + '22' : theme.error + '22' }]}>
-                <ThemedText style={[styles.statusBadgeText, { color: vehicle.status === 'Active' ? theme.success : theme.error }]}>
-                  {vehicle.status || 'Active'}
-                </ThemedText>
-              </View>
-            </View>
-            <View style={styles.specRow}>
-              <ThemedText style={styles.specLabel}>Added</ThemedText>
-              <ThemedText style={styles.specValue}>{formatDate(vehicle.created_at)}</ThemedText>
-            </View>
-            <View style={styles.specRow}>
-              <ThemedText style={styles.specLabel}>Total Repairs</ThemedText>
-              <ThemedText style={styles.specValue}>{repairs.length}</ThemedText>
-            </View>
+            <ThemedText style={styles.cardTitle}>Details</ThemedText>
+            <DetailRow styles={styles} label="Model" value={vehicle.model_name || '\u2014'} />
+            {vehicle.brand && <DetailRow styles={styles} label="Brand" value={vehicle.brand} />}
+            <DetailRow styles={styles} label="Type" value={vehicle.vehicle_type || '\u2014'} />
+            <DetailRow styles={styles} label="Status" value={vehicle.status || 'Active'} />
+            <DetailRow styles={styles} label="Added" value={formatDate(vehicle.created_at)} />
+            <DetailRow styles={styles} label="Total Repairs" value={String(repairs.length)} />
           </View>
 
           {/* Owner Card */}
           {(vehicle.owner_name || vehicle.owner_phone) && (
-            <View style={styles.ownerCard}>
-              <View style={styles.ownerHeader}>
-                <View style={styles.ownerAvatar}>
-                  <Ionicons name="person-outline" size={22} color={theme.primary} />
-                </View>
-                <View style={styles.ownerInfo}>
-                  <ThemedText style={styles.ownerName}>{vehicle.owner_name || 'Unknown'}</ThemedText>
-                  {vehicle.owner_phone && (
-                    <ThemedText style={styles.ownerPhone}>{vehicle.owner_phone}</ThemedText>
-                  )}
+            <View style={styles.card}>
+              <ThemedText style={styles.cardTitle}>Owner</ThemedText>
+              <View style={styles.ownerRow}>
+                <View style={styles.ownerLeft}>
+                  <Ionicons name="person-outline" size={16} color={theme.textSecondary} />
+                  <View>
+                    <ThemedText style={styles.ownerName}>{vehicle.owner_name || 'Unknown'}</ThemedText>
+                    {vehicle.owner_phone && (
+                      <ThemedText style={styles.ownerPhone}>{vehicle.owner_phone}</ThemedText>
+                    )}
+                  </View>
                 </View>
                 {vehicle.owner_phone && (
                   <Pressable style={styles.ownerCallBtn} onPress={() => Linking.openURL(`tel:${vehicle.owner_phone!.replace(/\s/g, '')}`)}>
-                    <Ionicons name="call" size={20} color="#FFFFFF" />
+                    <Ionicons name="call" size={16} color={theme.primary} />
                   </Pressable>
                 )}
               </View>
@@ -173,167 +181,249 @@ export default function VehicleDetailScreen({
           )}
 
           {/* Past Repairs */}
-          <View style={styles.card}>
-            <View style={styles.cardTitleRow}>
-              <Ionicons name="construct-outline" size={18} color={theme.primary} />
-              <ThemedText style={styles.cardTitle}>Past Repairs</ThemedText>
-              <ThemedText style={styles.cardCount}>({repairs.length})</ThemedText>
+          {repairs.length > 0 && (
+            <View style={styles.repairSection}>
+              <ThemedText style={styles.sectionLabel}>Past Repairs ({repairs.length})</ThemedText>
+              {repairs.map((r) => {
+                const enriched: Repair = {
+                  id: r.id,
+                  shop_id: vehicle.shop_id,
+                  vehicle_number: vehicle.vehicle_number,
+                  vehicle_image: vehicle.vehicle_image,
+                  vehicle_type: vehicle.vehicle_type,
+                  owner_name: vehicle.owner_name,
+                  phone_number: vehicle.owner_phone,
+                  brand: vehicle.brand,
+                  model_name: vehicle.model_name,
+                  status: r.status,
+                  repair_date: r.repair_date,
+                  created_at: r.repair_date || '',
+                  service_type: 'Repair',
+                  km_reading: '',
+                  priority: '',
+                  attending_worker_name: '',
+                };
+                return (
+                  <RepairCard
+                    key={r.id}
+                    repair={enriched}
+                    onPress={() => handleRepairPress(r)}
+                  />
+                );
+              })}
             </View>
+          )}
+          {repairs.length === 0 && (
+            <ThemedText style={styles.noRepairsText}>No repair history</ThemedText>
+          )}
 
-            {repairs.length === 0 ? (
-              <ThemedText style={styles.noRepairsText}>No repair history for this vehicle</ThemedText>
-            ) : (
-              <View style={styles.repairList}>
-                {repairs.map((r, i) => {
-                  const statusColor = STATUS_COLORS[r.status] || theme.textSecondary;
-                  let complaintPreview = '';
-                  if (r.complaints) {
-                    try {
-                      const parsed = typeof r.complaints === 'string' ? JSON.parse(r.complaints) : r.complaints;
-                      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].tasks) {
-                        complaintPreview = parsed[0].tasks
-                          .filter((t: any) => t.text?.trim())
-                          .slice(0, 2)
-                          .map((t: any) => t.text)
-                          .join(', ');
-                      }
-                    } catch {}
-                  }
-                  return (
-                    <View key={r.id} style={[styles.repairCard, i < repairs.length - 1 && styles.repairCardBorder]}>
-                      <View style={styles.repairLeft}>
-                        <ThemedText style={styles.repairDate}>{formatDate(r.repair_date)}</ThemedText>
-                        {complaintPreview ? (
-                          <ThemedText style={styles.repairComplaint} numberOfLines={1}>
-                            {complaintPreview}
-                          </ThemedText>
-                        ) : null}
-                      </View>
-                      <View style={[styles.repairStatusBadge, { backgroundColor: statusColor + '22' }]}>
-                        <ThemedText style={[styles.repairStatusText, { color: statusColor }]}>
-                          {r.status}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-
-          {/* Action Buttons */}
+          {/* Actions */}
           <View style={styles.actionsRow}>
             <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.editBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.actionEdit, pressed && { opacity: 0.8 }]}
               onPress={() => onEdit(vehicle)}
             >
-              <Ionicons name="create-outline" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.actionBtnText}>Edit Vehicle</ThemedText>
+              <Ionicons name="create-outline" size={16} color={theme.primaryForeground} />
+              <ThemedText style={styles.actionText}>Edit Vehicle</ThemedText>
             </Pressable>
-
             <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.deleteActionBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.actionDelete, pressed && { opacity: 0.8 }]}
               onPress={() => onDelete(vehicle)}
             >
-              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.actionBtnText}>Delete</ThemedText>
+              <Ionicons name="trash-outline" size={16} color={theme.destructive} />
+              <ThemedText style={[styles.actionText, { color: theme.destructive }]}>Delete</ThemedText>
             </Pressable>
           </View>
         </ScrollView>
       )}
+
+      {/* Image preview lightbox */}
+      <Modal visible={imagePreview} transparent animationType="fade" onRequestClose={() => setImagePreview(false)}>
+        <Pressable style={styles.lightbox} onPress={() => setImagePreview(false)}>
+          {imageUrl && (
+            <Image source={imageUrl} style={styles.lightboxImage} contentFit="contain" />
+          )}
+        </Pressable>
+      </Modal>
+
+      {/* View Repair modal */}
+      <Modal visible={!!viewRepair} animationType="slide" onRequestClose={handleViewRepairClose}>
+        {viewRepair && (
+          <ViewRepairScreen
+            repair={viewRepair}
+            onClose={handleViewRepairClose}
+            onEdit={() => {}}
+            onUpdateRepair={handleViewRepairClose}
+          />
+        )}
+      </Modal>
     </ThemedView>
+  );
+}
+
+function DetailRow({ label, value, styles: s }: { label: string; value: string; styles: any }) {
+  return (
+    <View style={s.detailRow}>
+      <ThemedText style={s.detailLabel}>{label}</ThemedText>
+      <ThemedText style={s.detailValue}>{value}</ThemedText>
+    </View>
   );
 }
 
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F7F4' },
+    container: { flex: 1, backgroundColor: theme.backgroundElement },
+
+    // ── Header ──
     header: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 16, paddingBottom: 14,
-      borderBottomWidth: 1.5, borderBottomColor: '#E8E0CC',
-      backgroundColor: '#FFFFFF',
+      paddingHorizontal: 16, paddingBottom: 8,
+      backgroundColor: theme.background,
+      borderBottomWidth: 1, borderBottomColor: theme.border,
     },
-    backBtn: {
-      width: 38, height: 38, borderRadius: 19,
-      alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F7F4',
+    headerBack: {
+      width: 36, height: 36, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: theme.backgroundElement,
     },
-    headerTitle: { fontSize: 17, fontWeight: '800', color: '#1A1A1A' },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
+    headerEdit: {
+      width: 36, height: 36, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: theme.primary,
+    },
+
+    // ── Loading ──
     loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    scrollContent: { padding: 16, gap: 14, paddingBottom: 40 },
 
-    heroCard: {
-      backgroundColor: theme.nearBlack, borderRadius: 24, padding: 24,
-      alignItems: 'center', gap: 10,
-    },
-    heroImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: theme.borderDark },
-    heroIconWrap: { width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center' },
-    heroVehicleNo: { fontSize: 22, fontWeight: '900', color: theme.textInverse, marginTop: 4 },
-    typeBadge: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-    },
-    typeBadgeText: { fontSize: 13, fontWeight: '700' },
+    // ── Scroll ──
+    scrollContent: { padding: 16, gap: 12, paddingBottom: 40 },
 
+    // ── Vehicle Card ──
+    vehicleCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 12,
+      gap: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    vehicleImageWrap: {
+      width: 80, height: 80, borderRadius: 10, overflow: 'hidden',
+      backgroundColor: theme.backgroundSelected,
+    },
+    vehicleImage: { width: '100%', height: '100%' },
+    vehicleImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
+    vehicleInfo: { flex: 1, justifyContent: 'center', gap: 4 },
+
+    // ── Number Plate ──
+    plate: {
+      flexDirection: 'row', alignItems: 'stretch',
+      borderRadius: 5, overflow: 'hidden',
+      backgroundColor: theme.backgroundSelected,
+      alignSelf: 'flex-start',
+    },
+    plateBadge: {
+      backgroundColor: theme.text,
+      alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    plateBadgeText: {
+      fontSize: 9, fontWeight: '800',
+      color: theme.background, letterSpacing: 0.5,
+    },
+    plateNumber: {
+      fontSize: 17, fontWeight: '900', color: theme.text,
+      letterSpacing: 1, paddingHorizontal: 8, paddingVertical: 4,
+    },
+    inactiveBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
+      backgroundColor: theme.destructive + '18',
+    },
+    inactiveBadgeText: { fontSize: 9, fontWeight: '700', color: theme.destructive },
+
+    // ── Card ──
     card: {
-      backgroundColor: '#FFFFFF', borderRadius: 18, padding: 18, gap: 12,
-      shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+      backgroundColor: theme.card,
+      borderRadius: 14,
+      padding: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
     },
-    cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
-    cardCount: { fontSize: 13, fontWeight: '500', color: '#8A8A80' },
-    specRow: {
+    cardTitle: {
+      fontSize: 11, fontWeight: '700', color: theme.textSecondary,
+      textTransform: 'uppercase', letterSpacing: 0.5,
+      marginBottom: 12,
+    },
+
+    // ── Detail rows ──
+    detailRow: {
+      flexDirection: 'row', justifyContent: 'space-between',
+      alignItems: 'center', paddingVertical: 6,
+    },
+    detailLabel: { fontSize: 13, fontWeight: '500', color: theme.textSecondary },
+    detailValue: { fontSize: 13, fontWeight: '700', color: theme.text },
+
+    // ── Owner ──
+    ownerRow: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-      paddingVertical: 4,
     },
-    specLabel: { fontSize: 14, color: '#8A8A80', fontWeight: '500' },
-    specValue: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-    statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    statusBadgeText: { fontSize: 12, fontWeight: '700' },
-
-    ownerCard: {
-      backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16,
-      shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    ownerLeft: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1,
     },
-    ownerHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    ownerAvatar: {
-      width: 48, height: 48, borderRadius: 24,
-      backgroundColor: theme.primaryLight, alignItems: 'center', justifyContent: 'center',
-    },
-    ownerInfo: { flex: 1 },
-    ownerName: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-    ownerPhone: { fontSize: 14, fontWeight: '500', color: '#8A8A80', marginTop: 2 },
+    ownerName: { fontSize: 15, fontWeight: '700', color: theme.text },
+    ownerPhone: { fontSize: 12, color: theme.textSecondary, fontWeight: '500', marginTop: 1 },
     ownerCallBtn: {
-      width: 44, height: 44, borderRadius: 22,
-      backgroundColor: theme.success, alignItems: 'center', justifyContent: 'center',
+      width: 34, height: 34, borderRadius: 17,
+      backgroundColor: theme.primary + '12',
+      alignItems: 'center', justifyContent: 'center',
     },
 
-    noRepairsText: { fontSize: 13, color: '#8A8A80', fontStyle: 'italic', textAlign: 'center', paddingVertical: 16 },
-    repairList: {},
-    repairCard: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingVertical: 12, gap: 12,
+    // ── Repair list ──
+    noRepairsText: { fontSize: 13, color: theme.textSecondary, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 },
+    repairSection: {
+      marginHorizontal: -16,
     },
-    repairCardBorder: { borderBottomWidth: 1, borderBottomColor: '#F0ECE3' },
-    repairLeft: { flex: 1, gap: 2 },
-    repairDate: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
-    repairComplaint: { fontSize: 12, color: '#8A8A80', fontWeight: '500' },
-    repairStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    repairStatusText: { fontSize: 11, fontWeight: '800' },
+    sectionLabel: {
+      fontSize: 11, fontWeight: '700', color: theme.textSecondary,
+      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+      paddingHorizontal: 16,
+    },
 
+    // ── Actions ──
     actionsRow: {
-      flexDirection: 'row', gap: 12, paddingTop: 4,
+      flexDirection: 'row', gap: 10, paddingTop: 4,
     },
-    actionBtn: {
+    actionEdit: {
       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 8, paddingVertical: 14, borderRadius: 14,
+      gap: 6, paddingVertical: 12, borderRadius: 10,
+      backgroundColor: theme.primary,
     },
-    editBtn: { backgroundColor: theme.primary },
-    deleteActionBtn: { backgroundColor: theme.error },
-    actionBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
-    pressed: { opacity: 0.82 },
+    actionDelete: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, paddingVertical: 12, borderRadius: 10,
+      backgroundColor: theme.destructive + '12',
+      borderWidth: 1, borderColor: theme.destructive + '30',
+    },
+    actionText: { fontSize: 13, fontWeight: '700', color: theme.primaryForeground },
+
+    // ── Lightbox ──
+    lightbox: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    lightboxImage: {
+      width: SCREEN_WIDTH,
+      height: SCREEN_WIDTH,
+    },
   }), [theme]);
   return styles;
 };

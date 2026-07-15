@@ -11,8 +11,12 @@ const createVehicleTable = async () => {
       model_name VARCHAR(255),
       vehicle_type VARCHAR(100),
       vehicle_image TEXT,
+      brand VARCHAR(100),
+      status VARCHAR(20) DEFAULT 'Active',
+      deleted_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(vehicle_number, shop_id)
     );
   `;
   await db.query(query);

@@ -1,33 +1,44 @@
 const db = require('../../config/db');
 const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
-// @desc    Get all vehicles (scoped by shop)
+// @desc    Get all vehicles (scoped by shop, deduped per shop)
 exports.getVehicles = async (req, res) => {
   const { role, shopId } = req.user;
   const isSuperAdmin = role === 'super-admin';
 
   try {
+    if (!isSuperAdmin && !shopId) {
+      return res.status(403).json({ success: false, error: 'No shop assigned' });
+    }
+
+    const { status } = req.query;
+    const statusFilter = status === 'Inactive' ? 'v.deleted_at IS NOT NULL' : 'v.deleted_at IS NULL';
+
+    // Shop users: dedup by number within their shop (latest entry wins)
+    // Super admin: show all across shops (same number may exist in diff shops)
     const select = `
       SELECT v.*, c.name as owner_name, c.phone as owner_phone, s.name as shop_name
       FROM vehicles v
       LEFT JOIN customers c ON v.customer_id = c.id
       LEFT JOIN shops s ON v.shop_id = s.id
+      WHERE ${statusFilter}
     `;
 
-    const { status } = req.query;
-    const statusFilter = status === 'Inactive' ? 'v.deleted_at IS NOT NULL' : 'v.deleted_at IS NULL';
-
     if (isSuperAdmin) {
-      const result = await db.query(select + ` WHERE ${statusFilter} ORDER BY v.created_at DESC`);
-      return res.status(200).json({ success: true, data: result.rows });
-    } else {
-      if (!shopId) return res.status(403).json({ success: false, error: 'No shop assigned' });
-      const result = await db.query(
-        select + ` WHERE v.shop_id = $1 AND ${statusFilter} ORDER BY v.created_at DESC`,
-        [shopId]
-      );
+      const result = await db.query(select + ` ORDER BY v.created_at DESC`);
       return res.status(200).json({ success: true, data: result.rows });
     }
+
+    const result = await db.query(
+      `SELECT DISTINCT ON (v.vehicle_number) v.*, c.name as owner_name, c.phone as owner_phone, s.name as shop_name
+       FROM vehicles v
+       LEFT JOIN customers c ON v.customer_id = c.id
+       LEFT JOIN shops s ON v.shop_id = s.id
+       WHERE ${statusFilter} AND v.shop_id = $1
+       ORDER BY v.vehicle_number, v.created_at DESC`,
+      [shopId]
+    );
+    return res.status(200).json({ success: true, data: result.rows });
   } catch (error) {
     console.error('getVehicles Error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
@@ -75,6 +86,22 @@ exports.createVehicle = async (req, res) => {
   let vehicle_image = null;
 
   try {
+    if (!vehicle_number || !vehicle_number.trim()) {
+      return res.status(400).json({ success: false, error: 'Vehicle number is required' });
+    }
+
+    // Prevent duplicate vehicle number in the same shop
+    const dupCheck = await db.query(
+      'SELECT id FROM vehicles WHERE vehicle_number = $1 AND shop_id = $2 AND deleted_at IS NULL',
+      [vehicle_number.trim(), targetShopId]
+    );
+    if (dupCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `Vehicle "${vehicle_number}" already exists in this shop`
+      });
+    }
+
     if (req.file) {
       vehicle_image = getFileUrl(req.file);
     }
@@ -83,7 +110,7 @@ exports.createVehicle = async (req, res) => {
       `INSERT INTO vehicles (customer_id, shop_id, vehicle_number, model_name, vehicle_type, vehicle_image, status) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
-      [customer_id, targetShopId, vehicle_number, model_name, vehicle_type, vehicle_image, req.body.status || 'Active']
+      [customer_id || null, targetShopId, vehicle_number.trim(), model_name || null, vehicle_type || null, vehicle_image, req.body.status || 'Active']
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -94,10 +121,27 @@ exports.createVehicle = async (req, res) => {
 
 // @desc    Update vehicle
 exports.updateVehicle = async (req, res) => {
-  const { customer_id, model_name, vehicle_type } = req.body;
+  const { shopId } = req.user;
+  const { customer_id, model_name, vehicle_type, vehicle_number } = req.body;
   try {
-    const existing = await db.query('SELECT vehicle_image FROM vehicles WHERE id = $1', [req.params.id]);
+    const existing = await db.query('SELECT vehicle_image, shop_id, vehicle_number FROM vehicles WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'Vehicle not found' });
+
+    const targetShopId = existing.rows[0].shop_id;
+
+    // If changing the vehicle number, check for duplicates in the same shop
+    if (vehicle_number && vehicle_number.trim() !== existing.rows[0].vehicle_number) {
+      const dupCheck = await db.query(
+        'SELECT id FROM vehicles WHERE vehicle_number = $1 AND shop_id = $2 AND id != $3 AND deleted_at IS NULL',
+        [vehicle_number.trim(), targetShopId, req.params.id]
+      );
+      if (dupCheck.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: `Vehicle "${vehicle_number}" already exists in this shop`
+        });
+      }
+    }
 
     let vehicle_image = existing.rows[0].vehicle_image;
 
@@ -113,10 +157,11 @@ exports.updateVehicle = async (req, res) => {
         vehicle_type = COALESCE($3, vehicle_type),
         vehicle_image = COALESCE($4, vehicle_image),
         status = COALESCE($5, status),
+        vehicle_number = COALESCE($6, vehicle_number),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6 
+      WHERE id = $7 
       RETURNING *`,
-      [customer_id, model_name, vehicle_type, vehicle_image, req.body.status, req.params.id]
+      [customer_id, model_name, vehicle_type, vehicle_image, req.body.status, vehicle_number?.trim(), req.params.id]
     );
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -132,7 +177,7 @@ exports.getVehicleByNumber = async (req, res) => {
   const { vNumber } = req.params;
 
   try {
-    const select = `
+    const baseQuery = `
       SELECT v.*, c.name as owner_name, c.phone as owner_phone, s.name as shop_name
       FROM vehicles v
       LEFT JOIN customers c ON v.customer_id = c.id
@@ -140,18 +185,18 @@ exports.getVehicleByNumber = async (req, res) => {
       WHERE REPLACE(v.vehicle_number, ' ', '') = REPLACE($1, ' ', '')
       AND v.deleted_at IS NULL
     `;
-    
-    let query = select;
-    let params = [vNumber];
 
-    if (!isSuperAdmin) {
-       query += ' AND v.shop_id = $2';
-       params.push(shopId);
+    let query, params;
+    if (isSuperAdmin) {
+      query = baseQuery + ` ORDER BY v.created_at DESC LIMIT 1`;
+      params = [vNumber];
+    } else {
+      query = baseQuery + ` AND v.shop_id = $2 ORDER BY v.created_at DESC LIMIT 1`;
+      params = [vNumber, shopId];
     }
 
     const result = await db.query(query, params);
 
-    // Always 200 for a successful lookup request, even if no data found
     if (result.rows.length === 0) {
       return res.status(200).json({ success: true, data: null, message: 'No history for this vehicle' });
     }
