@@ -16,7 +16,7 @@ const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap;
   { name: 'repairs', label: 'Repairs', icon: 'build-outline', permission: 'view:repairs' },
   { name: 'vehicles', label: 'Vehicles', icon: 'car-outline', permission: 'view:vehicles' },
   { name: 'customers', label: 'Customers', icon: 'people-outline', permission: 'view:customers' },
-  { name: 'settings', label: 'Settings', icon: 'settings-outline', permission: 'manage:settings' },
+  { name: 'settings', label: 'Profile', icon: 'person-outline' },
 ];
 
 function AnimatedTab({
