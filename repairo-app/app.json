@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.repairo.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,9 +51,12 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "http://localhost:5000/api",
+      "apiUrl": "https://workshop-backend-seven.vercel.app/api",
       "cfR2PublicUrl": "",
-      "posthogToken": ""
+      "posthogToken": "",
+      "eas": {
+        "projectId": "c5d17653-fde2-4e36-ad74-4340f8085e28"
+      }
     }
   }
 }
