@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "repairo-app",
-    "slug": "repairo-app",
+    "slug": "repairo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
