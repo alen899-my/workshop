@@ -93,7 +93,7 @@ export default function RegistrationSuccess({ onLogin }: Props) {
         </Animated.View>
       </View>
 
-      <Text style={[styles.title, { color: theme.dark }]}>Account Created!</Text>
+      <Text style={[styles.title, { color: theme.text }]}>Account Created!</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         Your workshop is ready. Log in to get started.
       </Text>

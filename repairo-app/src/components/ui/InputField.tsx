@@ -62,7 +62,7 @@ export default function InputField({
         style={[
           styles.inputContainer,
           {
-            borderColor: error ? theme.error : focused ? theme.dark : theme.border,
+            borderColor: error ? theme.error : focused ? theme.text : theme.border,
             backgroundColor: theme.card,
           },
           focused && !error && { shadowColor: theme.text },

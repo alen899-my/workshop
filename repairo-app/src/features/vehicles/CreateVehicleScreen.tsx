@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Keyboard, KeyboardAvoidingView,
-  Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
+  Platform, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import InputField from '@/components/ui/InputField';
 import VehicleTypePicker from '@/features/repairs/components/VehicleTypePicker';
 import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import Toast from '@/components/ui/Toast';
@@ -161,75 +162,63 @@ export default function CreateVehicleScreen({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Vehicle Number *</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.vehicleNumber}
-              onChangeText={(v) => update('vehicleNumber', v.toUpperCase())}
-              placeholder="e.g. KA-01-AB-1234"
-              placeholderTextColor="#B0AA97"
-              autoCapitalize="characters"
-              returnKeyType="next"
-            />
-          </View>
+          <InputField
+            label="Vehicle Number"
+            value={form.vehicleNumber}
+            onChangeText={(v) => update('vehicleNumber', v.toUpperCase())}
+            placeholder="e.g. KA-01-AB-1234"
+            type="text"
+            icon="car-outline"
+            required
+            autoCapitalize="characters"
+          />
 
           <VehicleTypePicker
             value={form.vehicleType}
             onChange={(v) => update('vehicleType', v)}
           />
 
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Model Name</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.modelName}
-              onChangeText={(v) => update('modelName', v)}
-              placeholder="e.g. Swift, Activa, etc."
-              placeholderTextColor="#B0AA97"
-              returnKeyType="next"
-            />
+          <InputField
+            label="Model Name"
+            value={form.modelName}
+            onChangeText={(v) => update('modelName', v)}
+            placeholder="e.g. Swift, Activa, etc."
+            type="text"
+            icon="card-bulleted-outline"
+            autoCapitalize="words"
+          />
 
-            <View style={styles.divider} />
+          <InputField
+            label="Brand / Make"
+            value={form.brand}
+            onChangeText={(v) => update('brand', v)}
+            placeholder="e.g. Maruti, Honda, etc."
+            type="text"
+            icon="domain"
+            autoCapitalize="words"
+          />
 
-            <ThemedText style={styles.label}>Brand / Make</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.brand}
-              onChangeText={(v) => update('brand', v)}
-              placeholder="e.g. Maruti, Honda, etc."
-              placeholderTextColor="#B0AA97"
-              returnKeyType="next"
-            />
-          </View>
+          <InputField
+            label="Owner Name"
+            value={form.ownerName}
+            onChangeText={(v) => update('ownerName', v)}
+            placeholder="Owner name"
+            type="text"
+            icon="account-outline"
+            autoCapitalize="words"
+          />
 
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Owner Name</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.ownerName}
-              onChangeText={(v) => update('ownerName', v)}
-              placeholder="Owner name"
-              placeholderTextColor="#B0AA97"
-              returnKeyType="next"
-            />
+          <InputField
+            label="Owner Phone"
+            value={form.ownerPhone}
+            onChangeText={(v) => update('ownerPhone', v)}
+            placeholder="Phone number"
+            type="phone"
+            icon="phone-outline"
+          />
 
-            <View style={styles.divider} />
-
-            <ThemedText style={styles.label}>Owner Phone</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.ownerPhone}
-              onChangeText={(v) => update('ownerPhone', v)}
-              placeholder="Phone number"
-              placeholderTextColor="#B0AA97"
-              keyboardType="phone-pad"
-              returnKeyType="done"
-            />
-          </View>
-
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Photo</ThemedText>
+          <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, gap: 10 }}>
+            <ThemedText style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 }}>Photo</ThemedText>
             {vehicleImage ? (
               <View style={styles.imagePreviewWrap}>
                 <Image source={{ uri: vehicleImage }} style={styles.imagePreview} contentFit="cover" />
@@ -299,38 +288,14 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     backBtn: {
       width: 38, height: 38, borderRadius: 19,
       alignItems: 'center', justifyContent: 'center',
-      backgroundColor: theme.muted,
+      backgroundColor: theme.border,
     },
     headerTitle: { fontSize: 17, fontWeight: '800', color: theme.text },
     scrollContent: { padding: 16, gap: 14, paddingBottom: 120 },
-    card: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      padding: 16,
-      gap: 10,
-      shadowColor: theme.text,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 6,
-      elevation: 2,
-    },
-    label: { fontSize: 13, fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
-    input: {
-      backgroundColor: theme.muted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: theme.text,
-      fontWeight: '500',
-    },
-    divider: { height: 1, backgroundColor: theme.border, marginVertical: 4 },
     imagePreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
     imagePreview: {
       width: 120, height: 120, borderRadius: 16,
-      backgroundColor: theme.muted,
+      backgroundColor: theme.card,
     },
     removeImageBtn: { position: 'absolute', top: -8, right: -8 },
     addPhotoBtn: {

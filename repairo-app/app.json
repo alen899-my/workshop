@@ -42,7 +42,8 @@
       [
         "expo-navigation-bar",
         {
-          "enforceContrast": false
+          "enforceContrast": false,
+          "backgroundColor": "#000000"
         }
       ]
     ],

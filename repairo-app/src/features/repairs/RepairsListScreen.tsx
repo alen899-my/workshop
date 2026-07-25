@@ -19,11 +19,16 @@ import { repairService } from '@/features/repairs/services/repair.service';
 import { useRBAC } from '@/hooks/use-rbac';
 
 import CreateRepairScreen from '@/features/repairs/CreateRepairScreen';
+import QuickRepairScreen from '@/features/repairs/QuickRepairScreen';
 import ViewRepairScreen from '@/features/repairs/ViewRepairScreen';
 import GenerateBillScreen from '@/features/repairs/GenerateBillScreen';
 import RepairCard from './components/RepairCard';
+import QuickRepairCard from './components/QuickRepairCard';
 import RepairFilterModal from './components/RepairFilterModal';
 import RepairActionsModal from './components/RepairActionsModal';
+import QuickRepairActionsModal from './components/QuickRepairActionsModal';
+import QuickRepairViewModal from './components/QuickRepairViewModal';
+import EditBillModal from './components/EditBillModal';
 import DateStrip from '@/components/ui/DateStrip';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -201,6 +206,18 @@ export default function RepairsListScreen() {
     visible: boolean; repair: Repair | null;
   }>({ visible: false, repair: null });
 
+  const [quickRepairVisible, setQuickRepairVisible] = useState(false);
+  const [quickActionsModal, setQuickActionsModal] = useState<{
+    visible: boolean; repair: Repair | null;
+  }>({ visible: false, repair: null });
+  const [quickViewModal, setQuickViewModal] = useState<{
+    visible: boolean; repair: Repair | null;
+  }>({ visible: false, repair: null });
+  const [editBillModal, setEditBillModal] = useState<{
+    visible: boolean; repair: Repair | null;
+  }>({ visible: false, repair: null });
+  const [quickEditRepair, setQuickEditRepair] = useState<Repair | null>(null);
+
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ visible: true, message, type });
   }, []);
@@ -292,8 +309,44 @@ export default function RepairsListScreen() {
     setFormModal({ visible: true, mode: 'create' });
   }, [can, showToast]);
 
+  const handleQuickRepair = useCallback(() => {
+    if (!can('create:repair')) { showToast('Access Denied', 'error'); return; }
+    setQuickRepairVisible(true);
+  }, [can, showToast]);
+
+  const handleQuickRepairClose = useCallback(() => {
+    setQuickRepairVisible(false);
+    setQuickEditRepair(null);
+    fetchRepairs(true);
+  }, [fetchRepairs]);
+
+  const handleQuickViewJobCard = useCallback((repair: Repair) => {
+    setQuickActionsModal({ visible: false, repair: null });
+    setQuickViewModal({ visible: true, repair });
+  }, []);
+
+  const handleQuickEditJobCard = useCallback((repair: Repair) => {
+    setQuickActionsModal({ visible: false, repair: null });
+    setQuickEditRepair(repair);
+  }, []);
+
+  const handleQuickEditBill = useCallback((repair: Repair) => {
+    setQuickActionsModal({ visible: false, repair: null });
+    setEditBillModal({ visible: true, repair });
+  }, []);
+
+  const handleEditBillClose = useCallback(() => {
+    setEditBillModal({ visible: false, repair: null });
+    fetchRepairs(true);
+  }, [fetchRepairs]);
+
   const handleCardPress = useCallback((repair: Repair) => {
-    setActionsModal({ visible: true, repair });
+    const isQuick = repair.service_type === 'Quick Repair';
+    if (isQuick) {
+      setQuickActionsModal({ visible: true, repair });
+    } else {
+      setActionsModal({ visible: true, repair });
+    }
   }, []);
 
   const handleViewDetails = useCallback((repair: Repair) => {
@@ -339,6 +392,11 @@ export default function RepairsListScreen() {
 
   const handleTriggerDelete = useCallback((repair: Repair) => {
     setActionsModal({ visible: false, repair: null });
+    handleDeleteRepair(repair);
+  }, [handleDeleteRepair]);
+
+  const handleQuickTriggerDelete = useCallback((repair: Repair) => {
+    setQuickActionsModal({ visible: false, repair: null });
     handleDeleteRepair(repair);
   }, [handleDeleteRepair]);
 
@@ -396,13 +454,25 @@ export default function RepairsListScreen() {
   // ── Render helpers ─────────────────────────────────────────────────────────
 
   const renderItem = useCallback(
-    ({ item }: { item: Repair }) => (
-      <RepairCard
-        repair={item}
-        onPress={handleCardPress}
-        onDelete={can('delete:repair') ? handleDeleteRepair : undefined}
-      />
-    ),
+    ({ item }: { item: Repair }) => {
+      const isQuick = item.service_type === 'Quick Repair';
+      if (isQuick) {
+        return (
+          <QuickRepairCard
+            repair={item}
+            onPress={handleCardPress}
+            onDelete={can('delete:repair') ? handleDeleteRepair : undefined}
+          />
+        );
+      }
+      return (
+        <RepairCard
+          repair={item}
+          onPress={handleCardPress}
+          onDelete={can('delete:repair') ? handleDeleteRepair : undefined}
+        />
+      );
+    },
     [handleCardPress, handleDeleteRepair, can],
   );
 
@@ -481,7 +551,17 @@ export default function RepairsListScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.fabWrap}>
+      <View style={styles.fabCol}>
+        <Pressable
+          onPress={handleQuickRepair}
+          style={({ pressed }) => [
+            styles.quickFab,
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <Ionicons name="flash-outline" size={18} color={theme.primaryForeground} />
+          <ThemedText style={styles.quickFabLabel}>Quick</ThemedText>
+        </Pressable>
         <FAB onPress={handleNewRepair} label="New" />
       </View>
 
@@ -547,6 +627,39 @@ export default function RepairsListScreen() {
           />
         )}
       </Modal>
+
+      <Modal visible={quickRepairVisible || !!quickEditRepair} animationType="slide" onRequestClose={handleQuickRepairClose}>
+        <QuickRepairScreen
+          mode={quickEditRepair ? 'edit' : 'create'}
+          initialRepair={quickEditRepair || undefined}
+          onClose={handleQuickRepairClose}
+          onSuccess={handleQuickRepairClose}
+        />
+      </Modal>
+
+      <QuickRepairActionsModal
+        visible={quickActionsModal.visible}
+        repair={quickActionsModal.repair}
+        onClose={() => setQuickActionsModal({ visible: false, repair: null })}
+        onViewJobCard={handleQuickViewJobCard}
+        onEditJobCard={handleQuickEditJobCard}
+        onEditBill={handleQuickEditBill}
+        onDelete={handleQuickTriggerDelete}
+        canDelete={can('delete:repair')}
+      />
+
+      <QuickRepairViewModal
+        visible={quickViewModal.visible}
+        repair={quickViewModal.repair}
+        onClose={() => setQuickViewModal({ visible: false, repair: null })}
+      />
+
+      <EditBillModal
+        visible={editBillModal.visible}
+        repair={editBillModal.repair}
+        onClose={() => setEditBillModal({ visible: false, repair: null })}
+        onSuccess={handleEditBillClose}
+      />
     </ScreenLayout>
   );
 }
@@ -592,8 +705,19 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       color: theme.textSecondary,
     },
 
-    fabWrap: {
-      position: 'absolute', bottom: 120, right: 20,
+    fabCol: {
+      position: 'absolute', bottom: 140, right: 20,
+      flexDirection: 'column', alignItems: 'flex-end', gap: 10,
+    },
+    quickFab: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 16, paddingVertical: 12, borderRadius: 28,
+      backgroundColor: '#F59E0B',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+    },
+    quickFabLabel: {
+      fontSize: 14, fontWeight: '700', color: theme.primaryForeground,
     },
     headerFilterBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 5,

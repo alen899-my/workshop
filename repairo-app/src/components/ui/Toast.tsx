@@ -54,7 +54,7 @@ export default function Toast({ visible, message, type = 'success', duration = 2
 
   if (!visible) return null;
 
-  const bgColor = type === 'success' ? theme.success : type === 'error' ? theme.error : theme.dark;
+  const bgColor = type === 'success' ? theme.success : type === 'error' ? theme.error : theme.text;
 
   return (
     <Animated.View style={[styles.container, animStyle]}>

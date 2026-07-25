@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -24,13 +24,17 @@ interface BillItemEditorProps {
   editable?: boolean;
 }
 
-export default function BillItemEditor({
+export interface BillItemEditorHandle {
+  getSnapshot: () => { items: BillItem[]; serviceCharge: number };
+}
+
+export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function BillItemEditor({
   items, onChange, serviceCharge, onServiceChargeChange,
   paymentStatus, onPaymentStatusChange,
   paymentMethod, onPaymentMethodChange,
   taxes, taxSnapshot, onTaxChange,
   editable = true,
-}: BillItemEditorProps) {
+}: BillItemEditorProps, ref) {
   const theme = useTheme();
   const styles = useMemo(() => StyleSheet.create({
     wrapper: { gap: 14, paddingBottom: 16 },
@@ -301,12 +305,26 @@ export default function BillItemEditor({
     segmentTextActive: { color: theme.primaryForeground },
   }), [theme]);
 
-  const currency = useCurrency();
+  const { symbol, format } = useCurrency();
   const [localCharge, setLocalCharge] = useState(String(serviceCharge || ''));
+  const [liveValues, setLiveValues] = useState<Record<string, { qty: number; cost: number }>>({});
+  const itemsKeyRef = useRef('');
 
   useEffect(() => {
     setLocalCharge(String(serviceCharge || ''));
   }, [serviceCharge]);
+
+  useEffect(() => {
+    const key = items.map(i => `${i.id}|${i.name}|${i.qty}|${i.cost}`).join('::');
+    if (key !== itemsKeyRef.current) {
+      itemsKeyRef.current = key;
+      const ids = new Set(items.map(i => i.id));
+      setLiveValues(prev => {
+        const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)));
+        return next;
+      });
+    }
+  }, [items]);
 
   const addItem = useCallback(() => {
     const newItem: BillItem = { id: Date.now().toString(), name: '', qty: 1, cost: 0 };
@@ -323,42 +341,109 @@ export default function BillItemEditor({
     onChange(items.filter((_, i) => i !== index));
   }, [items, onChange]);
 
+  const handleLiveUpdate = useCallback((id: string | undefined, qty: number, cost: number) => {
+    if (!id) return;
+    setLiveValues(prev => ({ ...prev, [id]: { qty, cost } }));
+  }, []);
+
   const subtotal = items.reduce((s, it) => s + (Number(it.cost) || 0) * (Number(it.qty) || 0), 0);
+
+  const liveSubtotal = useMemo(() =>
+    items.reduce((s, it) => {
+      const live = it.id ? liveValues[it.id] : undefined;
+      const qty = (live?.qty ?? Number(it.qty)) || 0;
+      const cost = (live?.cost ?? Number(it.cost)) || 0;
+      return s + qty * cost;
+    }, 0),
+  [items, liveValues]);
+
+  const liveServiceCharge = Number(localCharge) || 0;
+
+  const liveTaxes = useMemo(() =>
+    taxSnapshot.map((t) => {
+      const base = t.applies_to === 'service' ? liveServiceCharge
+                 : t.applies_to === 'all' ? liveSubtotal + liveServiceCharge
+                 : liveSubtotal;
+      const amount = t.is_inclusive
+        ? base - base / (1 + t.rate / 100)
+        : base * (t.rate / 100);
+      return { ...t, amount: Math.round(amount * 100) / 100 };
+    }),
+  [taxSnapshot, liveSubtotal, liveServiceCharge]);
+
+  const liveExclusiveTaxTotal = useMemo(
+    () => liveTaxes.filter(t => !t.is_inclusive).reduce((s, t) => s + Number(t.amount || 0), 0),
+    [liveTaxes],
+  );
+
+  const liveGrandTotal = liveSubtotal + liveServiceCharge + liveExclusiveTaxTotal;
+
+  useImperativeHandle(ref, () => ({
+    getSnapshot: () => ({
+      items: items.map(it => {
+        const live = liveValues[it.id || ''];
+        if (!live) return it;
+        return { ...it, qty: live.qty, cost: live.cost };
+      }),
+      serviceCharge: liveServiceCharge,
+    }),
+  }), [items, liveValues, liveServiceCharge]);
+
   const exclusiveTaxTotal = taxSnapshot
     .filter(t => !t.is_inclusive)
     .reduce((s, t) => s + Number(t.amount || 0), 0);
   const grandTotal = subtotal + Number(serviceCharge || 0) + exclusiveTaxTotal;
 
-  const BillItemRow = memo(({ item, index, onUpdate, onRemove, editable }: {
+  useEffect(() => {
+    if (taxSnapshot.length === 0) return;
+    const updated = taxSnapshot.map((t) => {
+      const base = t.applies_to === 'service' ? Number(serviceCharge || 0)
+                 : t.applies_to === 'all' ? subtotal + Number(serviceCharge || 0)
+                 : subtotal;
+      const amount = t.is_inclusive
+        ? base - base / (1 + t.rate / 100)
+        : base * (t.rate / 100);
+      return { ...t, amount: Math.round(amount * 100) / 100 };
+    });
+    const changed = updated.some((u, i) => u.amount !== taxSnapshot[i]?.amount);
+    if (changed) onTaxChange(updated);
+  }, [subtotal, serviceCharge]);
+
+  const BillItemRow = useCallback(memo(function BillItemRowInner({ item, index, onUpdate, onRemove, onLiveUpdate, editable }: {
     item: BillItem;
     index: number;
     onUpdate: (item: BillItem) => void;
     onRemove: () => void;
+    onLiveUpdate: (id: string | undefined, qty: number, cost: number) => void;
     editable: boolean;
-  }) => {
-    const [name, setName] = useState(item.name);
-    const [qty, setQty] = useState(String(item.qty ?? 1));
-    const [cost, setCost] = useState(String(item.cost ?? 0));
+  }) {
+    const normalizedCost = (v: unknown) => String(Number(v) || 0);
+    const normalizedQty = (v: unknown) => String(Math.max(Number(v) || 1, 1));
 
+    const [name, setName] = useState(item.name);
+    const [qty, setQty] = useState(normalizedQty(item.qty));
+    const [cost, setCost] = useState(normalizedCost(item.cost));
+
+    const itemKey = `${item.id}-${item.name}-${item.qty}-${item.cost}`;
     useEffect(() => {
       setName(item.name);
-      setQty(String(item.qty ?? 1));
-      setCost(String(item.cost ?? 0));
-    }, [item]);
+      setQty(normalizedQty(item.qty));
+      setCost(normalizedCost(item.cost));
+    }, [itemKey]);
 
-    const commit = () => {
+    const commit = useCallback(() => {
       onUpdate({ ...item, name, qty: Number(qty) || 0, cost: Number(cost) || 0 });
-    };
+    }, [item, name, qty, cost, onUpdate]);
 
-    const handleQtyChange = (val: string) => {
+    const handleQtyChange = useCallback((val: string) => {
       setQty(val);
-      onUpdate({ ...item, name, qty: Number(val) || 0, cost: Number(cost) || 0 });
-    };
+      onLiveUpdate(item.id, Number(val) || 0, Number(cost) || 0);
+    }, [item.id, cost, onLiveUpdate]);
 
-    const handleCostChange = (val: string) => {
+    const handleCostChange = useCallback((val: string) => {
       setCost(val);
-      onUpdate({ ...item, name, qty: Number(qty) || 0, cost: Number(val) || 0 });
-    };
+      onLiveUpdate(item.id, Number(qty) || 0, Number(val) || 0);
+    }, [item.id, qty, onLiveUpdate]);
 
     const lineTotal = (Number(qty) || 0) * (Number(cost) || 0);
 
@@ -370,7 +455,7 @@ export default function BillItemEditor({
           </View>
           <View style={styles.itemCardHeaderRight}>
             <ThemedText style={styles.lineTotalLabel}>
-              {currency}{lineTotal.toFixed(2)}
+              {format(lineTotal)}
             </ThemedText>
             {editable && (
               <Pressable style={styles.deleteBtn} onPress={onRemove} hitSlop={8}>
@@ -386,7 +471,7 @@ export default function BillItemEditor({
           onChangeText={setName}
           onBlur={commit}
           onEndEditing={commit}
-          placeholder={editable ? "Part / service name..." : ""}
+          placeholder={editable ? 'Part / service name...' : ''}
           placeholderTextColor={theme.tabIconDefault}
           returnKeyType="next"
           editable={editable}
@@ -399,21 +484,25 @@ export default function BillItemEditor({
               style={[styles.field, styles.centerField]}
               value={qty}
               onChangeText={handleQtyChange}
+              onBlur={commit}
+              onEndEditing={commit}
               keyboardType="numeric"
-              placeholder={editable ? "1" : ""}
+              placeholder={editable ? '1' : ''}
               placeholderTextColor={theme.tabIconDefault}
               returnKeyType="next"
               editable={editable}
             />
           </View>
           <View style={styles.halfCol}>
-            <ThemedText style={styles.fieldLabel}>Unit Price ({currency})</ThemedText>
+            <ThemedText style={styles.fieldLabel}>Unit Price ({symbol})</ThemedText>
             <TextInput
               style={[styles.field, styles.rightField]}
               value={cost}
               onChangeText={handleCostChange}
+              onBlur={commit}
+              onEndEditing={commit}
               keyboardType="numeric"
-              placeholder={editable ? "0.00" : ""}
+              placeholder={editable ? '0.00' : ''}
               placeholderTextColor={theme.tabIconDefault}
               returnKeyType="done"
               editable={editable}
@@ -422,7 +511,7 @@ export default function BillItemEditor({
         </View>
       </View>
     );
-  });
+  }), []);
 
   return (
     <View style={styles.wrapper}>
@@ -450,6 +539,7 @@ export default function BillItemEditor({
                 editable={editable}
                 onUpdate={(updated) => handleRowUpdate(i, updated)}
                 onRemove={() => handleRowRemove(i)}
+                onLiveUpdate={handleLiveUpdate}
               />
             ))}
             {editable && (
@@ -465,10 +555,10 @@ export default function BillItemEditor({
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Ionicons name="pricetag-outline" size={18} color={theme.primary} />
-          <ThemedText style={styles.sectionTitle}>Service Charge</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Labour Charge</ThemedText>
         </View>
         <View style={styles.chargeRow}>
-          <ThemedText style={styles.currencySymbol}>{currency}</ThemedText>
+          <ThemedText style={styles.currencySymbol}>{symbol}</ThemedText>
           <TextInput
             style={styles.chargeField}
             value={localCharge}
@@ -476,7 +566,7 @@ export default function BillItemEditor({
             onBlur={() => onServiceChargeChange(Number(localCharge) || 0)}
             onEndEditing={() => onServiceChargeChange(Number(localCharge) || 0)}
             keyboardType="numeric"
-            placeholder={editable ? "0.00" : ""}
+            placeholder={editable ? '0.00' : ''}
             placeholderTextColor={theme.tabIconDefault}
             editable={editable}
           />
@@ -498,32 +588,40 @@ export default function BillItemEditor({
           <ThemedText style={styles.summaryTitle}>Bill Summary</ThemedText>
         </View>
 
-        {items.filter(it => it.name?.trim() || (it.qty && it.cost)).map((it, i) => {
-          const lineAmt = (Number(it.cost) || 0) * (Number(it.qty) || 0);
+        {items.filter(it => {
+          const live = it.id ? liveValues[it.id] : undefined;
+          const hasLive = live && (live.qty > 0 || live.cost > 0);
+          const hasCommitted = it.name?.trim() || (it.qty && it.cost);
+          return hasLive || hasCommitted;
+        }).map((it, i) => {
+          const live = it.id ? liveValues[it.id] : undefined;
+          const qty = (live?.qty ?? Number(it.qty)) || 0;
+          const cost = (live?.cost ?? Number(it.cost)) || 0;
+          const lineAmt = qty * cost;
           const label = it.name?.trim() || `Item ${i + 1}`;
           return (
             <View key={i} style={styles.summaryItemRow}>
               <View style={styles.summaryItemLeft}>
                 <ThemedText style={styles.summaryItemName} numberOfLines={1}>{label}</ThemedText>
                 <ThemedText style={styles.summaryItemQty}>
-                  {it.qty} × {currency}{Number(it.cost || 0).toFixed(2)}
+                  {qty} x {symbol}{cost.toFixed(2)}
                 </ThemedText>
               </View>
-              <ThemedText style={styles.summaryItemAmt}>{currency}{lineAmt.toFixed(2)}</ThemedText>
+              <ThemedText style={styles.summaryItemAmt}>{format(lineAmt)}</ThemedText>
             </View>
           );
         })}
 
-        {items.length > 0 && <View style={styles.thinDivider} />}
+        {items.length > 0 && liveSubtotal > 0 && <View style={styles.thinDivider} />}
 
-        {Number(serviceCharge) > 0 && (
+        {liveServiceCharge > 0 && (
           <View style={styles.summaryRow}>
-            <ThemedText style={styles.summaryLabel}>Service Charge</ThemedText>
-            <ThemedText style={styles.summaryValue}>{currency}{Number(serviceCharge).toFixed(2)}</ThemedText>
+            <ThemedText style={styles.summaryLabel}>Labour Charge</ThemedText>
+            <ThemedText style={styles.summaryValue}>{format(liveServiceCharge)}</ThemedText>
           </View>
         )}
 
-        {taxSnapshot.map((t) => (
+        {liveTaxes.map((t) => (
           <View key={t.id} style={styles.summaryRow}>
             <View style={styles.summaryTaxLabelWrap}>
               <ThemedText style={styles.summaryLabel}>{t.name} ({t.rate}%)</ThemedText>
@@ -534,7 +632,7 @@ export default function BillItemEditor({
               </View>
             </View>
             <ThemedText style={[styles.summaryValue, t.is_inclusive && styles.summaryValueMuted]}>
-              {t.is_inclusive ? '' : '+'}{currency}{Number(t.amount || 0).toFixed(2)}
+              {t.is_inclusive ? '' : '+'}{format(Number(t.amount || 0))}
             </ThemedText>
           </View>
         ))}
@@ -543,7 +641,7 @@ export default function BillItemEditor({
 
         <View style={styles.summaryRow}>
           <ThemedText style={styles.grandLabel}>Grand Total</ThemedText>
-          <ThemedText style={styles.grandValue}>{currency}{Number(grandTotal).toFixed(2)}</ThemedText>
+          <ThemedText style={styles.grandValue}>{format(liveGrandTotal)}</ThemedText>
         </View>
       </View>
 
@@ -614,4 +712,4 @@ export default function BillItemEditor({
 
     </View>
   );
-}
+});

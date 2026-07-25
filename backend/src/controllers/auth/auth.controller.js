@@ -13,6 +13,9 @@ exports.registerShop = async (req, res) => {
   } = req.body;
 
   try {
+    console.log('[REGISTER] Phone received:', JSON.stringify(phone), '| Length:', phone?.length);
+    console.log('[REGISTER] Calling code extracted, phone sent to DB:', JSON.stringify(phone));
+
     // 1. Validate if user phone or email already exists
     const userCheck = await db.query('SELECT * FROM users WHERE phone = $1 OR email = $2', [phone, email || '']);
     if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone or Email already registered' });
@@ -85,7 +88,21 @@ exports.registerShop = async (req, res) => {
 exports.login = async (req, res) => {
   const { phone, password } = req.body;
 
+  console.log('[LOGIN] Attempt for phone:', JSON.stringify(phone));
+
   try {
+    // Log similar phones for debugging
+    const similarPhones = await db.query(
+      `SELECT phone FROM users WHERE replace(phone, '+', '') = replace($1, '+', '') LIMIT 5`,
+      [phone]
+    );
+    if (similarPhones.rows.length > 0) {
+      console.log('[LOGIN] Found phones with matching digits:', similarPhones.rows.map(r => r.phone));
+    } else {
+      console.log('[LOGIN] No phone found matching digits. Sample phones in DB:',
+        (await db.query('SELECT phone FROM users LIMIT 5')).rows.map(r => r.phone));
+    }
+
     // We use LEFT JOIN to allow global admins (who might have no shop_id) to log in
     const userResult = await db.query(
       'SELECT u.*, s.name as shop_name, s.owner_name, s.currency as shop_currency, s.country as shop_country FROM users u LEFT JOIN shops s ON u.shop_id = s.id WHERE u.phone = $1',
@@ -93,6 +110,7 @@ exports.login = async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
+      console.log('[LOGIN] FAIL - No account found for phone:', JSON.stringify(phone));
       return res.status(400).json({ success: false, error: 'No account found with this phone number' });
     }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -24,9 +24,9 @@ import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill
 import { billService } from '@/features/repairs/services/bill.service';
 import type { Tax } from '@/features/repairs/services/tax.service';
 import { taxService } from '@/features/repairs/services/tax.service';
-import BillItemEditor from './components/BillItemEditor';
+import BillItemEditor, { BillItemEditorHandle } from './components/BillItemEditor';
 import { getCurrentUser } from '@/services/auth.service';
-import { getCurrencySymbol } from '@/hooks/use-currency';
+import { formatCurrency, getCurrencySymbol, useCurrency } from '@/hooks/use-currency';
 import { buildInvoiceHtml } from './utils/invoice-html';
 
 interface GenerateBillScreenProps {
@@ -59,12 +59,16 @@ export default function GenerateBillScreen({
 
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const editorRef = useRef<BillItemEditorHandle>(null);
 
   const handleSaveSilent = async (): Promise<boolean> => {
     try {
+      const snapshot = editorRef.current?.getSnapshot();
+      const items = snapshot?.items || billItems;
+      const sc = snapshot?.serviceCharge ?? serviceCharge;
       const res = await billService.saveBill(repair.id, {
-        items: billItems,
-        service_charge: serviceCharge,
+        items,
+        service_charge: sc,
         tax_snapshot: taxSnapshot,
         // tax_total stores all taxes for record; backend calculates total_amount using exclusive only
         tax_total: taxSnapshot.reduce((s, t) => s + Number(t.amount || 0), 0),
@@ -81,7 +85,8 @@ export default function GenerateBillScreen({
   const generatePDFBase64 = async () => {
     const user = getCurrentUser();
     const shopName = user?.shopName || repair.shop_name || 'Garage';
-    const currency = getCurrencySymbol(user?.shopCurrency);
+    const currencyCode = user?.shopCurrency || 'INR';
+    const currency = getCurrencySymbol(currencyCode);
 
     const serviceBlocks = (() => {
       if (!repair.complaints) return undefined;
@@ -139,6 +144,7 @@ export default function GenerateBillScreen({
       paymentStatus,
       paymentMethod,
       currency,
+      currencyCode,
     });
 
     const { base64 } = await Print.printToFileAsync({ html, base64: true });
@@ -175,13 +181,13 @@ export default function GenerateBillScreen({
         .filter(t => !t.is_inclusive)
         .reduce((s, t) => s + Number(t.amount || 0), 0);
       const grandTotal = subtotal + Number(serviceCharge || 0) + exclusiveTaxTotal;
-      const currency = getCurrencySymbol(getCurrentUser()?.shopCurrency);
+      const user = getCurrentUser();
 
       const itemLines = billItems
         .filter(it => it.name?.trim())
         .map(it => {
           const amt = (Number(it.cost) || 0) * (Number(it.qty) || 0);
-          return `  ${it.name} x${it.qty} = ${currency}${amt.toFixed(2)}`;
+          return `  ${it.name} x${it.qty} = ${formatCurrency(amt, user?.shopCurrency)}`;
         }).join('\n');
 
       const message = encodeURIComponent(
@@ -190,7 +196,7 @@ export default function GenerateBillScreen({
         `\n*Customer:* ${repair.owner_name || 'Walk-in'}` +
         `\n*Status:* ${paymentStatus}` +
         (itemLines ? `\n\n*Items:*\n${itemLines}` : '') +
-        `\n\n*Grand Total:* ${currency}${grandTotal.toFixed(2)}` +
+        `\n\n*Grand Total:* ${formatCurrency(grandTotal, user?.shopCurrency)}` +
         `\n\nFor detailed invoice, view here: ${data.url}`
       );
       await Linking.openURL(`https://wa.me/${phone}?text=${message}`);
@@ -260,7 +266,19 @@ export default function GenerateBillScreen({
         ]);
 
         if (taxRes.success && taxRes.data) {
-          setTaxes(taxRes.data.filter((t) => t.is_active));
+          const active = taxRes.data.filter((t) => t.is_active);
+          setTaxes(active);
+
+          if (!(billRes.success && billRes.data)) {
+            setTaxSnapshot(active.map((t) => ({
+              id: t.id,
+              name: t.name,
+              rate: t.rate,
+              amount: 0,
+              is_inclusive: t.is_inclusive,
+              applies_to: t.applies_to,
+            })));
+          }
         }
 
         if (billRes.success && billRes.data) {
@@ -283,9 +301,12 @@ export default function GenerateBillScreen({
   const handleSave = async () => {
     setSubmitting(true);
     try {
+      const snapshot = editorRef.current?.getSnapshot();
+      const items = snapshot?.items || billItems;
+      const sc = snapshot?.serviceCharge ?? serviceCharge;
       const res = await billService.saveBill(repair.id, {
-        items: billItems,
-        service_charge: serviceCharge,
+        items,
+        service_charge: sc,
         tax_snapshot: taxSnapshot,
         tax_total: taxSnapshot.reduce((s, t) => s + Number(t.amount || 0), 0),
         payment_status: paymentStatus,
@@ -406,6 +427,7 @@ export default function GenerateBillScreen({
 
             {/* Billing Editor */}
             <BillItemEditor
+              ref={editorRef}
               items={billItems}
               onChange={setBillItems}
               serviceCharge={serviceCharge}

@@ -100,6 +100,7 @@ export const userService = {
     password?: string;
     role?: string;
     status?: string;
+    profile_image?: string;
     additional_permissions?: string[];
     excluded_permissions?: string[];
   }): Promise<{ success: boolean; data?: User; error?: string }> {
@@ -113,6 +114,7 @@ export const userService = {
       if (data.password !== undefined && data.password.length > 0) body.password = data.password;
       if (data.role !== undefined) body.role = data.role;
       if (data.status !== undefined) body.status = data.status;
+      if (data.profile_image !== undefined) body.profile_image = data.profile_image;
       if (data.additional_permissions !== undefined) body.additional_permissions = data.additional_permissions;
       if (data.excluded_permissions !== undefined) body.excluded_permissions = data.excluded_permissions;
       const res = await fetch(`${API_URL}/${id}`, {
@@ -137,6 +139,26 @@ export const userService = {
     } catch {
       return { success: false, error: 'Connection failed' };
     }
+  },
+
+  async updateProfile(id: number, formData: FormData): Promise<{ success: boolean; data?: User; error?: string }> {
+    return new Promise((resolve) => {
+      getAuthHeaders().then((headers) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', `${API_URL}/${id}`);
+        if (headers.Authorization) xhr.setRequestHeader('Authorization', headers.Authorization);
+        xhr.onload = () => {
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            resolve(parsed);
+          } catch {
+            resolve({ success: false, error: xhr.responseText || `Server error (${xhr.status})` });
+          }
+        };
+        xhr.onerror = () => resolve({ success: false, error: 'Connection failed' });
+        xhr.send(formData);
+      });
+    });
   },
 
   async checkPhone(phone: string, excludeId?: number): Promise<{ success: boolean; exists: boolean; error?: string }> {

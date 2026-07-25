@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Keyboard, KeyboardAvoidingView,
-  Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
+  Platform, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import Toast from '@/components/ui/Toast';
+import InputField from '@/components/ui/InputField';
 import { customerService } from '@/features/customers/services/customer.service';
 import type { Customer } from '@/features/customers/services/customer.service';
 
@@ -106,30 +107,26 @@ export default function CreateCustomerScreen({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Customer Name *</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.name}
-              onChangeText={(v) => update('name', v)}
-              placeholder="Full name"
-              placeholderTextColor="#B0AA97"
-              returnKeyType="next"
-            />
-          </View>
+          <InputField
+            label="Customer Name"
+            value={form.name}
+            onChangeText={(v) => update('name', v)}
+            placeholder="Full name"
+            type="text"
+            icon="account-outline"
+            required
+            autoCapitalize="words"
+          />
 
-          <View style={styles.card}>
-            <ThemedText style={styles.label}>Phone Number *</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={form.phone}
-              onChangeText={(v) => update('phone', v)}
-              placeholder="Phone number"
-              placeholderTextColor="#B0AA97"
-              keyboardType="phone-pad"
-              returnKeyType="done"
-            />
-          </View>
+          <InputField
+            label="Phone Number"
+            value={form.phone}
+            onChangeText={(v) => update('phone', v)}
+            placeholder="Phone number"
+            type="phone"
+            icon="phone-outline"
+            required
+          />
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -178,28 +175,10 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     backBtn: {
       width: 38, height: 38, borderRadius: 19,
       alignItems: 'center', justifyContent: 'center',
-      backgroundColor: theme.muted,
+      backgroundColor: theme.border,
     },
     headerTitle: { fontSize: 17, fontWeight: '800', color: theme.text },
     scrollContent: { padding: 16, gap: 14, paddingBottom: 120 },
-    card: {
-      backgroundColor: theme.card,
-      borderRadius: 16,
-      padding: 16,
-      gap: 10,
-    },
-    label: { fontSize: 13, fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.3 },
-    input: {
-      backgroundColor: theme.muted,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: theme.text,
-      fontWeight: '500',
-    },
     footer: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
       paddingHorizontal: 16, paddingTop: 12,

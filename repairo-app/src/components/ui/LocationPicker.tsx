@@ -63,7 +63,7 @@ export default function LocationPicker({
         style={[
           styles.inputContainer,
           {
-            borderColor: error ? theme.error : focused ? theme.dark : theme.border,
+            borderColor: error ? theme.error : focused ? theme.text : theme.border,
             backgroundColor: theme.card,
           },
           focused && !error && styles.focusedShadow,
@@ -72,7 +72,7 @@ export default function LocationPicker({
         <MaterialCommunityIcons
           name="map-marker-outline"
           size={18}
-          color={error ? theme.error : focused ? theme.dark : theme.textSecondary}
+          color={error ? theme.error : focused ? theme.text : theme.textSecondary}
           style={styles.icon}
         />
         <TextInput

@@ -24,6 +24,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
 import { authService } from '@/services/auth.service';
+import { getCallingCode } from '@/utils/preload-countries';
 
 const { width } = Dimensions.get('window');
 const IMG_H = 210;
@@ -34,7 +35,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('US');
-  const [callingCode, setCallingCode] = useState('');
+  const [callingCode, setCallingCode] = useState(getCallingCode('US'));
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
@@ -97,7 +98,7 @@ export default function LoginScreen() {
             keyboardDismissMode="interactive"
           >
             <View style={styles.content}>
-              <Text style={[styles.screenTitle, { color: theme.dark }]}>Welcome Back</Text>
+              <Text style={[styles.screenTitle, { color: theme.text }]}>Welcome Back</Text>
               <Text style={[styles.screenSub, { color: theme.textSecondary }]}>
                 Log in to manage your workshop
               </Text>

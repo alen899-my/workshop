@@ -61,7 +61,7 @@ export default function CountryPicker({ value, onChange, error, selectedName: co
         cca2: country.cca2,
         name,
         currency: country.currency?.[0] ?? 'USD',
-        callingCode: country.callingCode?.[0] ?? '',
+        callingCode: country.callingCode?.[0] ? `+${country.callingCode[0]}` : '',
       });
       setOpen(false);
       setSearch('');

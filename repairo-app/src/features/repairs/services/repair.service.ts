@@ -130,4 +130,34 @@ export const repairService = {
       return { success: false, error: 'Deletion failed' };
     }
   },
+
+  async getStats(): Promise<{
+    success: boolean;
+    data?: {
+      totalRepairs: number;
+      pendingRepairs: number;
+      totalRevenue: number;
+      recentRepairs: {
+        id: number;
+        vehicle_number: string;
+        owner_name?: string;
+        status: string;
+        service_type: string;
+        repair_date?: string;
+        created_at: string;
+        shop_name?: string;
+      }[];
+      avgCompletionHours: string;
+      workers: { id: number; name: string; role: string; active_jobs: string }[];
+    };
+    error?: string;
+  }> {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${ENV.API_URL}/repairs/stats/summary`, { headers });
+      return await res.json();
+    } catch {
+      return { success: false, error: 'Connection failed' };
+    }
+  },
 };

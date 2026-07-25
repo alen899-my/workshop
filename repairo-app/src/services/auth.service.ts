@@ -15,6 +15,8 @@ interface UserData {
   shopCountry?: string;
   shopCallingCode?: string;
   phone?: string;
+  email?: string;
+  profile_image?: string | null;
 }
 
 let _currentUser: UserData | null = null;
@@ -28,6 +30,13 @@ export async function loadStoredUser(): Promise<UserData | null> {
     }
   } catch {}
   return null;
+}
+
+export async function updateCurrentUser(data: Partial<UserData>) {
+  if (_currentUser) {
+    _currentUser = { ..._currentUser, ...data };
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(_currentUser));
+  }
 }
 
 export function getCurrentUser(): UserData | null {

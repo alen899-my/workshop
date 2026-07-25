@@ -207,7 +207,7 @@ export default function SignupScreen() {
                 </View>
               </View>
 
-              <Text style={[styles.screenTitle, { color: theme.dark }]}>{STEPS[step].title}</Text>
+              <Text style={[styles.screenTitle, { color: theme.text }]}>{STEPS[step].title}</Text>
               <Text style={[styles.screenSub, { color: theme.textSecondary }]}>{STEPS[step].subtitle}</Text>
 
               {/* Step 1 – Shop Details */}
@@ -314,8 +314,8 @@ export default function SignupScreen() {
                     </View>
                     <Text style={[styles.agreeText, { color: theme.text }]}>
                       I agree to the{' '}
-                      <Text style={{ color: theme.dark, fontWeight: '700' }}>Terms of Service</Text> and{' '}
-                      <Text style={{ color: theme.dark, fontWeight: '700' }}>Privacy Policy</Text>
+                      <Text style={{ color: theme.primary, fontWeight: '700' }}>Terms of Service</Text> and{' '}
+                      <Text style={{ color: theme.primary, fontWeight: '700' }}>Privacy Policy</Text>
                     </Text>
                   </Pressable>
                 )}

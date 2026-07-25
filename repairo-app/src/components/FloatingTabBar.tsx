@@ -13,6 +13,7 @@ import { useRBAC } from '@/hooks/use-rbac';
 
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; permission?: string }[] = [
   { name: 'index', label: 'Home', icon: 'home-outline' },
+
   { name: 'repairs', label: 'Repairs', icon: 'build-outline', permission: 'view:repairs' },
   { name: 'vehicles', label: 'Vehicles', icon: 'car-outline', permission: 'view:vehicles' },
   { name: 'customers', label: 'Customers', icon: 'people-outline', permission: 'view:customers' },

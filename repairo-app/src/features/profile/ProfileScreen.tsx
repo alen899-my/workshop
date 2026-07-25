@@ -1,20 +1,27 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Modal, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
-import { getCurrentUser } from '@/services/auth.service';
+import { getCurrentUser, loadStoredUser } from '@/services/auth.service';
 import { authService } from '@/services/auth.service';
+import { router } from 'expo-router';
 import SettingsScreen from '@/features/settings/SettingsScreen';
 import PermissionsScreen from '@/features/permissions/PermissionsScreen';
 import RolesListScreen from '@/features/roles/RolesListScreen';
 import UsersListScreen from '@/features/users/UsersListScreen';
+import TaxSettingsScreen from '@/features/settings/taxes/TaxSettingsScreen';
+import CurrencySettingsScreen from '@/features/settings/currency/CurrencySettingsScreen';
+import InvoicesListScreen from '@/features/invoices/InvoicesListScreen';
+import ShopSettingsScreen from '@/features/settings/shop/ShopSettingsScreen';
+import EditProfileScreen from './EditProfileScreen';
 
 interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -30,17 +37,45 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
-  const currentUser = getCurrentUser();
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [userData, setUserData] = useState(getCurrentUser());
+
+  useEffect(() => {
+    loadStoredUser().then(setUserData);
+  }, []);
+
+  const handleEditSuccess = useCallback(() => {
+    setEditProfileVisible(false);
+    loadStoredUser().then(setUserData);
+  }, []);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [permissionsModalVisible, setPermissionsModalVisible] = useState(false);
   const [rolesModalVisible, setRolesModalVisible] = useState(false);
   const [usersModalVisible, setUsersModalVisible] = useState(false);
+  const [taxesModalVisible, setTaxesModalVisible] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const [invoicesModalVisible, setInvoicesModalVisible] = useState(false);
+  const [shopsModalVisible, setShopsModalVisible] = useState(false);
 
   const menuItems: MenuItem[] = useMemo(() => [
     {
       icon: 'settings-outline',
       label: 'Settings',
       description: 'Theme, appearance & app preferences',
+      permission: 'manage:settings',
+      action: 'modal',
+    },
+    {
+      icon: 'calculator-outline',
+      label: 'Tax Settings',
+      description: 'Manage GST, VAT, and sales tax rules',
+      permission: 'manage:settings',
+      action: 'modal',
+    },
+    {
+      icon: 'cash-outline',
+      label: 'Currency',
+      description: 'Set your workshop base currency',
       permission: 'manage:settings',
       action: 'modal',
     },
@@ -66,18 +101,17 @@ export default function ProfileScreen() {
       action: 'modal',
     },
     {
+      icon: 'receipt-outline',
+      label: 'Invoices',
+      description: 'View all generated bills & invoices',
+      action: 'modal',
+    },
+    {
       icon: 'business-outline',
       label: 'Shops',
       description: 'Manage workshop locations',
-      permission: 'view:shops',
-      action: 'coming-soon',
-    },
-    {
-      icon: 'receipt-outline',
-      label: 'Invoices',
-      description: 'View all invoices & billing',
-      permission: 'view:invoices',
-      action: 'coming-soon',
+      permission: 'manage:settings',
+      action: 'modal',
     },
     {
       icon: 'construct-outline',
@@ -91,6 +125,10 @@ export default function ProfileScreen() {
   const handleMenuPress = useCallback((item: MenuItem) => {
     if (item.action === 'modal') {
       if (item.label === 'Settings') setSettingsModalVisible(true);
+      else if (item.label === 'Tax Settings') setTaxesModalVisible(true);
+      else if (item.label === 'Currency') setCurrencyModalVisible(true);
+      else if (item.label === 'Invoices') setInvoicesModalVisible(true);
+      else if (item.label === 'Shops') setShopsModalVisible(true);
       else if (item.label === 'Permissions') setPermissionsModalVisible(true);
       else if (item.label === 'Roles') setRolesModalVisible(true);
       else if (item.label === 'Users') setUsersModalVisible(true);
@@ -99,7 +137,7 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  const roleBadgeColor = currentUser?.role === 'super-admin' ? '#F59E0B' : '#3B82F6';
+  const roleBadgeColor = userData?.role === 'super-admin' ? '#F59E0B' : '#3B82F6';
 
   return (
     <ThemedView style={styles.container}>
@@ -110,36 +148,49 @@ export default function ProfileScreen() {
         {/* User Card */}
         <View style={[styles.userCard, { backgroundColor: theme.card }]}>
           <View style={styles.avatarWrap}>
-            <View style={[styles.avatar, { backgroundColor: theme.primary + '18' }]}>
-              <Ionicons name="person" size={36} color={theme.primary} />
-            </View>
+            {userData?.profile_image ? (
+              <Image source={userData.profile_image} style={[styles.avatar, { backgroundColor: theme.primary + '18' }]} contentFit="cover" />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.primary + '18' }]}>
+                <Ionicons name="person" size={36} color={theme.primary} />
+              </View>
+            )}
             <View style={[styles.roleBadge, { backgroundColor: roleBadgeColor }]}>
               <ThemedText style={styles.roleBadgeText}>
-                {currentUser?.role === 'super-admin' ? 'SA' : 'USR'}
+                {userData?.role === 'super-admin' ? 'SA' : 'USR'}
               </ThemedText>
             </View>
           </View>
-          <ThemedText style={styles.userName}>{currentUser?.ownerName || 'User'}</ThemedText>
+          <ThemedText style={styles.userName}>{userData?.ownerName || 'User'}</ThemedText>
           <View style={[styles.roleChip, { backgroundColor: theme.primary + '12' }]}>
             <ThemedText style={[styles.roleText, { color: theme.primary }]}>
-              {currentUser?.role || 'N/A'}
+              {userData?.role || 'N/A'}
             </ThemedText>
           </View>
           <View style={styles.userMeta}>
-            {currentUser?.shopName && (
+            {userData?.shopName && (
               <View style={styles.metaRow}>
                 <Ionicons name="business-outline" size={14} color={theme.textSecondary} />
-                <ThemedText style={styles.metaText}>{currentUser.shopName}</ThemedText>
+                <ThemedText style={styles.metaText}>{userData.shopName}</ThemedText>
               </View>
             )}
-            {currentUser?.phone && (
+            {userData?.phone && (
               <View style={styles.metaRow}>
                 <Ionicons name="call-outline" size={14} color={theme.textSecondary} />
-                <ThemedText style={styles.metaText}>{currentUser.phone}</ThemedText>
+                <ThemedText style={styles.metaText}>{userData.phone}</ThemedText>
               </View>
             )}
           </View>
         </View>
+
+        {/* Edit Profile */}
+        <Pressable
+          style={({ pressed }) => [styles.editProfileBtn, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '25' }, pressed && { opacity: 0.8 }]}
+          onPress={() => setEditProfileVisible(true)}
+        >
+          <Ionicons name="create-outline" size={18} color={theme.primary} />
+          <ThemedText style={[styles.editProfileText, { color: theme.primary }]}>Edit Profile</ThemedText>
+        </Pressable>
 
         {/* Management Menu */}
         <View style={styles.menuSection}>
@@ -187,7 +238,7 @@ export default function ProfileScreen() {
           onPress={() => {
             Alert.alert('Logout', 'Are you sure you want to logout?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Logout', style: 'destructive', onPress: () => authService.logout() },
+              { text: 'Logout', style: 'destructive', onPress: async () => { await authService.logout(); router.replace('/auth/login'); } },
             ]);
           }}
         >
@@ -218,6 +269,34 @@ export default function ProfileScreen() {
       <Modal visible={usersModalVisible} animationType="slide" onRequestClose={() => setUsersModalVisible(false)}>
         <UsersListScreen onClose={() => setUsersModalVisible(false)} />
       </Modal>
+
+      {/* Tax Settings Modal */}
+      <Modal visible={taxesModalVisible} animationType="slide" onRequestClose={() => setTaxesModalVisible(false)}>
+        <TaxSettingsScreen onClose={() => setTaxesModalVisible(false)} />
+      </Modal>
+
+      {/* Currency Settings Modal */}
+      <Modal visible={currencyModalVisible} animationType="slide" onRequestClose={() => setCurrencyModalVisible(false)}>
+        <CurrencySettingsScreen onClose={() => setCurrencyModalVisible(false)} />
+      </Modal>
+
+      {/* Invoices Modal */}
+      <Modal visible={invoicesModalVisible} animationType="slide" onRequestClose={() => setInvoicesModalVisible(false)}>
+        <InvoicesListScreen />
+      </Modal>
+
+      {/* Shops Modal */}
+      <Modal visible={shopsModalVisible} animationType="slide" onRequestClose={() => setShopsModalVisible(false)}>
+        <ShopSettingsScreen onClose={() => setShopsModalVisible(false)} />
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={editProfileVisible} animationType="slide" onRequestClose={() => setEditProfileVisible(false)}>
+        <EditProfileScreen
+          onClose={() => setEditProfileVisible(false)}
+          onSuccess={handleEditSuccess}
+        />
+      </Modal>
     </ThemedView>
   );
 }
@@ -247,6 +326,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       borderRadius: 36,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
     },
     roleBadge: {
       position: 'absolute',
@@ -267,6 +347,21 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     userMeta: { gap: 4, marginTop: 4, alignItems: 'center' },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     metaText: { fontSize: 13, fontWeight: '500', color: theme.textSecondary },
+
+    // ── Edit Profile ──
+    editProfileBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    editProfileText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
 
     // ── Menu ──
     menuSection: { gap: 8 },

@@ -19,6 +19,7 @@ export interface Shop {
   services_offered?: string[];
   vehicle_types?: string[];
   is_public?: boolean;
+  population?: string;
   created_at: string;
 }
 

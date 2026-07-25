@@ -46,6 +46,23 @@ export default function PhoneInputWithCode({
   }, []);
 
   const displayedCode = controlledCallingCode || getCallingCode(countryCode);
+  const codeWithoutPlus = displayedCode ? displayedCode.replace('+', '') : '';
+
+  const stripCode = (num: string): string => {
+    if (displayedCode && num.startsWith(displayedCode)) return num.slice(displayedCode.length).trimStart();
+    if (codeWithoutPlus && num.startsWith(codeWithoutPlus)) return num.slice(codeWithoutPlus.length).trimStart();
+    return num;
+  };
+
+  const localNumber = stripCode(phone);
+
+  const handlePhoneChange = useCallback(
+    (text: string) => {
+      const cleaned = text.replace(/[^0-9\s\-()]/g, '');
+      onPhoneChange(displayedCode + cleaned);
+    },
+    [displayedCode, onPhoneChange],
+  );
 
   const filtered = useMemo(() => {
     if (!all) return [];
@@ -78,8 +95,8 @@ export default function PhoneInputWithCode({
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
         <TextInput
           style={[styles.input, { color: theme.text }]}
-          value={phone}
-          onChangeText={onPhoneChange}
+          value={localNumber}
+          onChangeText={handlePhoneChange}
           placeholder="Phone number"
           placeholderTextColor={theme.tabIconDefault}
           keyboardType="phone-pad"

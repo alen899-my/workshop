@@ -13,7 +13,7 @@ export default function AppButton({ title, fullWidth = false, onPress, variant =
   const theme = useTheme();
 
   const bg = variant === 'white' ? theme.card : variant === 'black' ? theme.cardDark : theme.primary;
-  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.textInverse : theme.dark;
+  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.textInverse : theme.text;
 
   return (
     <Pressable
