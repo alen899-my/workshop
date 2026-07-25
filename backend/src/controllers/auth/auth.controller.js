@@ -4,6 +4,44 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+/**
+ * Normalize a phone number sent from the Expo app.
+ *
+ * The PhoneInputWithCode component already stores the calling code inside
+ * the `phone` state (e.g. "+919876543210"), but both LoginScreen and
+ * SignupScreen then prepend the calling code *again* before sending, which
+ * produces strings like "+1+919876543210" or "+91+919876543210".
+ *
+ * This helper:
+ *  1. Strips any embedded duplicate calling-code prefix so the result is
+ *     a single clean E.164 number (e.g. "+919876543210").
+ *  2. If no '+' is present at all, adds one so the DB comparison is consistent.
+ */
+function normalizePhone(raw) {
+  if (!raw) return raw;
+  const str = String(raw).trim();
+
+  // Match pattern: one or more leading +<digits> groups followed by the real number
+  // e.g. "+1+919876543210"  -> "+919876543210"
+  //      "+91+919876543210" -> "+919876543210"
+  //      "+919876543210"    -> "+919876543210" (unchanged)
+  const multiPrefix = /^(\+\d{1,4})+(?=\d{6,})/;
+  const match = str.match(multiPrefix);
+  if (match) {
+    // Keep only the LAST calling-code prefix + the subscriber number
+    // Find where the final '+' (that precedes the longest suffix) starts
+    const lastPlus = str.lastIndexOf('+');
+    if (lastPlus > 0) {
+      // There are multiple '+' groups; keep from the last '+' onward
+      return str.slice(lastPlus);
+    }
+  }
+
+  // Ensure the number always starts with '+'
+  if (!str.startsWith('+')) return '+' + str;
+  return str;
+}
+
 // @desc    Register a new workshop (The "Triple-Handshake" Flow)
 exports.registerShop = async (req, res) => {
   const { 
@@ -13,11 +51,11 @@ exports.registerShop = async (req, res) => {
   } = req.body;
 
   try {
-    console.log('[REGISTER] Phone received:', JSON.stringify(phone), '| Length:', phone?.length);
-    console.log('[REGISTER] Calling code extracted, phone sent to DB:', JSON.stringify(phone));
+    const normalizedPhone = normalizePhone(phone);
+    console.log('[REGISTER] Phone received:', JSON.stringify(phone), '| Normalized:', JSON.stringify(normalizedPhone));
 
     // 1. Validate if user phone or email already exists
-    const userCheck = await db.query('SELECT * FROM users WHERE phone = $1 OR email = $2', [phone, email || '']);
+    const userCheck = await db.query('SELECT * FROM users WHERE phone = $1 OR email = $2', [normalizedPhone, email || '']);
     if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone or Email already registered' });
 
     // 2. Hash password securely
@@ -44,7 +82,7 @@ exports.registerShop = async (req, res) => {
         latitude, longitude, place_id, state, city, address
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
       [
-        shopName, location, ownerName, phone, country || 'India', currency || 'INR',
+        shopName, location, ownerName, normalizedPhone, country || 'India', currency || 'INR',
         latitude, longitude, place_id, state, city, address
       ]
     );
@@ -52,7 +90,7 @@ exports.registerShop = async (req, res) => {
 
     const userResult = await db.query(
       'INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [shopId, ownerName, phone, email, passwordHash, 'shop_owner', roleId]
+      [shopId, ownerName, normalizedPhone, email, passwordHash, 'shop_owner', roleId]
     );
     const userId = userResult.rows[0].id;
 
@@ -70,7 +108,7 @@ exports.registerShop = async (req, res) => {
         shopId,
         shopName,
         ownerName,
-        phone,
+        phone: normalizedPhone,
         role: 'shop_owner',
         shopCountry: country || 'IN',
         shopCurrency: currency || 'INR'
@@ -86,9 +124,10 @@ exports.registerShop = async (req, res) => {
 
 // @desc    Login for all identities (Owner, Admin, Tech)
 exports.login = async (req, res) => {
-  const { phone, password } = req.body;
+  const { phone: rawPhone, password } = req.body;
+  const phone = normalizePhone(rawPhone);
 
-  console.log('[LOGIN] Attempt for phone:', JSON.stringify(phone));
+  console.log('[LOGIN] Attempt for phone (raw):', JSON.stringify(rawPhone), '| normalized:', JSON.stringify(phone));
 
   try {
     // Log similar phones for debugging
