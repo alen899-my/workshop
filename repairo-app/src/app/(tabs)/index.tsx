@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ThemedView } from '@/components/themed-view';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme, useThemePreference } from '@/hooks/use-theme';
 import { useCurrency } from '@/hooks/use-currency';
 import { useRBAC } from '@/hooks/use-rbac';
 import { getCurrentUser } from '@/services/auth.service';
@@ -101,7 +101,7 @@ function Plate({
   children: ReactNode;
 }) {
   const theme = useTheme();
-  const isDark = theme.background === '#000000';
+  const { isDark } = useThemePreference();
   return (
     <View style={[plate.outer, { backgroundColor: isDark ? theme.card : theme.backgroundElement, borderColor: theme.border }, dashed && plate.outerDashed, style]}>
       <View style={[plate.bolt, { backgroundColor: isDark ? theme.primaryLight : theme.border }, plate.boltTL]} />

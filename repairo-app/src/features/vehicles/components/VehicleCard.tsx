@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme, useThemePreference } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 
 const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -61,8 +61,9 @@ interface VehicleCardProps {
 
 export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
   const theme = useTheme();
+  const { isDark } = useThemePreference();
   const commercial = isCommercial(vehicle.vehicle_type);
-  const styles = useStyles(theme, commercial);
+  const styles = useStyles(theme, isDark, commercial);
   const icon = getVehicleIcon(vehicle.vehicle_type);
   const imageUrl = getImageUrl(vehicle.vehicle_image);
   const ownerPhone = vehicle.owner_phone;
@@ -142,9 +143,8 @@ export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
   );
 }
 
-const useStyles = (theme: ReturnType<typeof useTheme>, commercial: boolean) => {
+const useStyles = (theme: ReturnType<typeof useTheme>, isDark: boolean, commercial: boolean) => {
   return useMemo(() => {
-    const isDark = theme.text === '#FAFAFA';
 
     const plateBg = commercial
       ? (isDark ? '#3A2A00' : '#F7C948')

@@ -552,16 +552,6 @@ export default function RepairsListScreen() {
       />
 
       <View style={styles.fabCol}>
-        <Pressable
-          onPress={handleQuickRepair}
-          style={({ pressed }) => [
-            styles.quickFab,
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          <Ionicons name="flash-outline" size={18} color={theme.primaryForeground} />
-          <ThemedText style={styles.quickFabLabel}>Quick</ThemedText>
-        </Pressable>
         <FAB onPress={handleNewRepair} label="New" />
       </View>
 

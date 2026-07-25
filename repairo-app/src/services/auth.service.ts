@@ -17,6 +17,7 @@ interface UserData {
   phone?: string;
   email?: string;
   profile_image?: string | null;
+  shopPrimaryColor?: string | null;
 }
 
 let _currentUser: UserData | null = null;

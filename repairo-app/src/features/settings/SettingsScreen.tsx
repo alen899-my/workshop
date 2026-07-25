@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { StyleSheet, View, Switch, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme, useThemePreference } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
+import ShopAppearanceScreen from '@/features/settings/shop/ShopAppearanceScreen';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -19,6 +20,7 @@ function SettingsRow({
   right,
   isFirst,
   isLast,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -26,10 +28,11 @@ function SettingsRow({
   right?: React.ReactNode;
   isFirst?: boolean;
   isLast?: boolean;
+  onPress?: () => void;
 }) {
   const theme = useTheme();
 
-  return (
+  const content = (
     <View
       style={[
         styles.row,
@@ -55,15 +58,25 @@ function SettingsRow({
       {right && <View style={styles.rowRight}>{right}</View>}
     </View>
   );
+
+  if (onPress) {
+    return <Pressable onPress={onPress}>{content}</Pressable>;
+  }
+  return content;
 }
 
 export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const { top, bottom } = useSafeAreaInsets();
   const theme = useTheme();
   const { theme: currentTheme, setTheme, isDark } = useThemePreference();
+  const [showShopAppearance, setShowShopAppearance] = useState(false);
 
   const isDarkMode = currentTheme === 'dark';
   const isSystem = currentTheme === 'system';
+
+  if (showShopAppearance) {
+    return <ShopAppearanceScreen onClose={() => setShowShopAppearance(false)} />;
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -105,7 +118,6 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
             icon="phone-portrait-outline"
             label="Follow System"
             description="Automatically match your device theme"
-            isLast
             right={
               <Switch
                 value={isSystem}
@@ -115,6 +127,14 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                 ios_backgroundColor={theme.border}
               />
             }
+          />
+
+          <SettingsRow
+            icon="color-palette-outline"
+            label="Shop Appearance"
+            description="Customise your shop's theme color"
+            isLast
+            onPress={() => setShowShopAppearance(true)}
           />
         </View>
 

@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useRBAC } from '@/hooks/use-rbac';
+import { useTheme } from '@/hooks/use-theme';
 
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; permission?: string }[] = [
   { name: 'index', label: 'Home', icon: 'home-outline' },
@@ -76,6 +77,7 @@ function AnimatedTab({
 export default function FloatingTabBar({ state, navigation }: any) {
   const { bottom } = useSafeAreaInsets();
   const { can, loading } = useRBAC();
+  const theme = useTheme();
 
   const visibleTabs = loading
     ? TABS
@@ -96,7 +98,7 @@ export default function FloatingTabBar({ state, navigation }: any) {
               tab={tab}
               focused={focused}
               onPress={() => navigation.navigate(tab.name)}
-              tabIconSelected={'#2DD4BF'}
+              tabIconSelected={theme.tabIconSelected}
               tabIconDefault={'#A1A1AA'}
             />
           );
