@@ -18,7 +18,7 @@ import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import ModalSheet from '@/components/ui/ModalSheet';
 import Toast from '@/components/ui/Toast';
 import { useTheme } from '@/hooks/use-theme';
-import { getCallingCode } from '@/utils/preload-countries';
+import { getCallingCode, getCountryName } from '@/utils/preload-countries';
 import { getCurrentUser, updateCurrentUser } from '@/services/auth.service';
 import { shopService } from '@/services/shop.service';
 import type { Shop } from '@/types';
@@ -204,7 +204,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
     if (!shopId) { setSaving(false); return; }
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: Record<string, unknown> = { ...shop };
       payload.name = form.name || '';
       payload.owner_name = form.owner_name || '';
       payload.phone = form.phone || '';
@@ -222,6 +222,8 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
 
       if (imageFile && imageFile.uri !== shop?.shop_image) {
         payload.shop_image = imageFile;
+      } else {
+        delete payload.shop_image;
       }
 
       const res = await shopService.update(shopId, payload);
@@ -230,28 +232,15 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
         if (res.data?.name && res.data.name !== user?.shopName) updates.shopName = res.data.name;
         if (res.data?.country && res.data.country !== user?.shopCountry) updates.shopCountry = res.data.country;
         if (Object.keys(updates).length > 0) await updateCurrentUser(updates as any);
-        const fetchRes = await shopService.getById(shopId);
-        if (fetchRes.success && fetchRes.data) {
-          const saved = { ...fetchRes.data };
-          if (!saved.shop_image && payload.shop_image) saved.shop_image = String(payload.shop_image);
-          for (const key of ['operating_hours', 'services_offered', 'vehicle_types'] as const) {
-            if (typeof saved[key] === 'string') {
-              try { (saved as any)[key] = JSON.parse(saved[key] as string); } catch {}
-            }
+        const saved = res.data ? { ...res.data } : { ...shop } as Shop;
+        if (typeof saved.shop_image === 'object') saved.shop_image = undefined;
+        for (const key of ['operating_hours', 'services_offered', 'vehicle_types'] as const) {
+          if (typeof saved[key] === 'string') {
+            try { (saved as any)[key] = JSON.parse(saved[key] as string); } catch {}
           }
-          setShop(saved);
-          setForm(saved);
-        } else if (res.data) {
-          const saved = { ...shop, ...res.data };
-          if (!saved.shop_image && payload.shop_image) saved.shop_image = String(payload.shop_image);
-          for (const key of ['operating_hours', 'services_offered', 'vehicle_types'] as const) {
-            if (typeof saved[key] === 'string') {
-              try { (saved as any)[key] = JSON.parse(saved[key] as string); } catch {}
-            }
-          }
-          setShop(saved);
-          setForm(saved);
         }
+        setShop(saved);
+        setForm(saved);
         setToast({ visible: true, message: 'Shop details updated successfully', type: 'success' });
         setEditing(false);
       } else {
@@ -428,7 +417,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
             <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <ThemedText style={styles.sectionLabel}>ADDRESS</ThemedText>
               {display.city ? <View style={styles.infoRow}><Ionicons name="location-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.city}{display.state ? `, ${display.state}` : ''}</ThemedText></View> : null}
-              {display.country ? <View style={styles.infoRow}><Ionicons name="flag-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.country}</ThemedText></View> : null}
+              {display.country ? <View style={styles.infoRow}><Ionicons name="flag-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{getCountryName(display.country) || display.country}</ThemedText></View> : null}
               {display.address ? <ThemedText style={[styles.infoValue, { marginTop: 4, fontStyle: 'italic' }]}>{display.address}</ThemedText> : null}
               {!display.city && !display.country ? <ThemedText style={[styles.infoValue, { fontStyle: 'italic', color: theme.textSecondary }]}>No address set</ThemedText> : null}
             </View>
@@ -569,7 +558,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, gap: 16 }]}>
           <CountryPicker
             value={form.country || ''}
-            selectedName={form.country ? undefined : undefined}
+            selectedName={form.country ? getCountryName(form.country) : undefined}
             onChange={(c) => {
               updateForm('country', c.cca2);
               updateForm('state', '');

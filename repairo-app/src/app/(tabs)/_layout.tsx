@@ -1,13 +1,13 @@
 import { Tabs } from 'expo-router';
-import { ComponentProps } from 'react';
 
 import FloatingTabBar from '@/components/FloatingTabBar';
+import ScreenHeader from '@/components/ScreenHeader';
 
 export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ header: () => <ScreenHeader /> }}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="repairs" />
