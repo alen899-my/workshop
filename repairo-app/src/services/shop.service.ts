@@ -19,7 +19,6 @@ export const shopService = {
     try {
       const token = await getStoredToken();
       const hasFile = Object.values(data).some((v) => v && typeof v === 'object' && (v as any).uri);
-      let body: string | FormData;
       const headers: Record<string, string> = {};
 
       if (hasFile) {
@@ -35,17 +34,26 @@ export const shopService = {
             fd.append(key, String(value));
           }
         }
-        body = fd;
-      } else {
-        headers['Content-Type'] = 'application/json';
-        body = JSON.stringify(data);
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return await new Promise<{ success: boolean; data?: Shop; error?: string }>((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', `${ENV.API_URL}/shops/${id}`);
+          if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          xhr.onload = () => {
+            try { resolve(JSON.parse(xhr.responseText)); }
+            catch { resolve({ success: false, error: 'Invalid response' }); }
+          };
+          xhr.onerror = () => resolve({ success: false, error: 'Network error' });
+          xhr.send(fd);
+        });
       }
 
+      headers['Content-Type'] = 'application/json';
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`${ENV.API_URL}/shops/${id}`, {
         method: 'PUT',
         headers,
-        body,
+        body: JSON.stringify(data),
       });
       return await res.json() as { success: boolean; data?: Shop; error?: string };
     } catch {
