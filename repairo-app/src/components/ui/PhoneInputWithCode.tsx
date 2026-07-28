@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ModalSheet from '@/components/ui/ModalSheet';
 import { Spacing } from '@/constants/theme';
@@ -45,7 +45,7 @@ export default function PhoneInputWithCode({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const displayedCode = controlledCallingCode || getCallingCode(countryCode);
+  const displayedCode = controlledCallingCode || getCallingCode(countryCode) || '';
   const codeWithoutPlus = displayedCode ? displayedCode.replace('+', '') : '';
 
   const stripCode = (num: string): string => {
@@ -78,6 +78,7 @@ export default function PhoneInputWithCode({
     (country: any) => {
       const code = country.callingCode?.[0] ? `+${country.callingCode[0]}` : '';
       onCountryChange({ cca2: country.cca2, callingCode: code, currency: country.currency?.[0] ?? 'USD' });
+      Keyboard.dismiss();
       setOpen(false);
       setSearch('');
     },
@@ -89,7 +90,7 @@ export default function PhoneInputWithCode({
       <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
       <View style={[styles.inputContainer, { borderColor: error ? theme.error : theme.border, backgroundColor: theme.card }]}>
         <Pressable style={styles.codeBtn} onPress={() => setOpen(true)}>
-          <Text style={[styles.codeText, { color: theme.text }]}>{displayedCode}</Text>
+          <Text style={[styles.codeText, { color: displayedCode ? theme.text : theme.tabIconDefault }]}>{displayedCode || 'Code'}</Text>
           <MaterialCommunityIcons name="chevron-down" size={14} color={theme.textSecondary} />
         </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -228,6 +229,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: Spacing.four,
+    minHeight: 200,
   },
   listContent: {
     paddingBottom: Spacing.four,

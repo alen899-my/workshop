@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useRBAC } from '@/hooks/use-rbac';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme, useThemePreference } from '@/hooks/use-theme';
 
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; permission?: string }[] = [
   { name: 'index', label: 'Home', icon: 'home-outline' },
@@ -78,16 +78,19 @@ export default function FloatingTabBar({ state, navigation }: any) {
   const { bottom } = useSafeAreaInsets();
   const { can, loading } = useRBAC();
   const theme = useTheme();
+  const { isDark } = useThemePreference();
 
   const visibleTabs = loading
     ? TABS
     : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
-  const barShadow = 'rgba(0,0,0,0.5)';
+  const barBg = isDark ? '#1C1C1E' : '#111318';
+  const barBorder = isDark ? '#2C2C2E' : '#000000';
+  const barShadow = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)';
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(bottom, 16) }]}>
-      <View style={[styles.bar, { shadowColor: barShadow }]}>  
+      <View style={[styles.bar, { shadowColor: barShadow, backgroundColor: barBg, borderColor: barBorder }]}>  
         {visibleTabs.map((tab) => {
           const routeIndex = state.routes.findIndex((r: any) => r.name === tab.name);
           const focused = state.index === routeIndex;

@@ -162,7 +162,7 @@ export default function DashboardHome() {
     const [sRes, vRes, liveRes, billsRes, usersRes] = await Promise.all([
       repairService.getStats(),
       vehicleService.getAll(),
-      repairService.getAll({ status: 'In Progress' }),
+      repairService.getAll(),
       billService.getAll(),
       userService.getAll('active'),
     ]);
@@ -170,7 +170,7 @@ export default function DashboardHome() {
     if (vRes.success) setVehicleCount(vRes.data?.length ?? 0);
 
     if (liveRes.success) {
-      const all = liveRes.data || [];
+      const all = (liveRes.data || []).filter((r) => r.status !== 'Completed');
       if (isWorker && rbacUser?.userId) {
         const name = (rbacUser.ownerName || '').toLowerCase();
         setLiveRepairs(all.filter((r) => (r.attending_worker_name || '').toLowerCase() === name));

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { formatPhoneForDisplay } from '@/utils/phone';
 import type { Customer } from '@/features/customers/services/customer.service';
 
 interface CustomerCardProps {
@@ -39,7 +40,7 @@ export default function CustomerCard({ customer, onPress }: CustomerCardProps) {
             </Pressable>
           )}
           <ThemedText style={styles.phone} numberOfLines={1}>
-            {customer.phone || '—'}
+            {formatPhoneForDisplay(customer.phone) || '—'}
           </ThemedText>
         </View>
       </View>

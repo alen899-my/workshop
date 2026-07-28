@@ -21,7 +21,7 @@ function RootLayoutInner() {
 
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setStyle(isDark ? 'light' : 'dark');
+      NavigationBar.setStyle(isDark ? 'dark' : 'light');
     }
   }, [isDark]);
 

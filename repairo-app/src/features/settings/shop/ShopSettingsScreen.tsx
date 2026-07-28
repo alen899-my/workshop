@@ -7,12 +7,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import CountryPicker from 'react-native-country-picker-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import CountryPicker from '@/components/ui/CountryPicker';
 import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
@@ -75,15 +74,6 @@ const VEHICLE_CONFIG: { id: string; label: string; icon: keyof typeof Ionicons.g
   { id: 'Other', label: 'Other', icon: 'ellipsis-horizontal' },
 ];
 
-const POPULATION_OPTIONS = [
-  { label: 'Less than 1,000', value: 'less_than_1000' },
-  { label: '1,000 – 5,000', value: '1000_5000' },
-  { label: '5,000 – 25,000', value: '5000_25000' },
-  { label: '25,000 – 100,000', value: '25000_100000' },
-  { label: '100,000 – 500,000', value: '100000_500000' },
-  { label: '500,000+', value: '500000_plus' },
-];
-
 function to12h(time: string): string {
   if (!time) return '';
   const [h, m] = time.split(':').map(Number);
@@ -138,9 +128,6 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
   const [selectedStateCode, setSelectedStateCode] = useState('');
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
   const [citySearch, setCitySearch] = useState('');
-
-  // Population picker
-  const [populationPickerVisible, setPopulationPickerVisible] = useState(false);
 
   const updateStateCode = useCallback((countryCode: string, stateName: string) => {
     if (!countryCode || !stateName) { setSelectedStateCode(''); return; }
@@ -225,7 +212,6 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
       payload.city = form.city || '';
       payload.state = form.state || '';
       payload.address = form.address || '';
-      payload.population = form.population || '';
       payload.is_public = !!form.is_public;
       payload.operating_hours = form.operating_hours && Object.keys(form.operating_hours).length > 0
         ? JSON.stringify(form.operating_hours) : JSON.stringify(getDefaultOperatingHours());
@@ -235,10 +221,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
         ? JSON.stringify(form.vehicle_types) : '[]';
 
       if (imageFile && imageFile.uri !== shop?.shop_image) {
-        const base64 = await FileSystem.readAsStringAsync(imageFile.uri, { encoding: FileSystem.EncodingType.Base64 });
-        const ext = imageFile.uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        payload.shop_image = `data:${mimeType};base64,${base64}`;
+        payload.shop_image = imageFile;
       }
 
       const res = await shopService.update(shopId, payload);
@@ -288,6 +271,16 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
     if (shop?.country && shop?.state) updateStateCode(shop.country, shop.state);
     else setSelectedStateCode('');
   }, [shop, updateStateCode]);
+
+  const startEditing = useCallback(() => {
+    const base: Record<string, any> = shop ? { ...shop } : {};
+    const hours = base.operating_hours as Record<string, { open: string; close: string; closed: boolean }> | undefined;
+    if (!hours || Object.keys(hours).length === 0) {
+      base.operating_hours = getDefaultOperatingHours();
+    }
+    setForm(base as any);
+    setEditing(true);
+  }, [shop]);
 
   const updateForm = useCallback(<K extends keyof Shop>(key: K, value: Shop[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -436,7 +429,6 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
               <ThemedText style={styles.sectionLabel}>ADDRESS</ThemedText>
               {display.city ? <View style={styles.infoRow}><Ionicons name="location-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.city}{display.state ? `, ${display.state}` : ''}</ThemedText></View> : null}
               {display.country ? <View style={styles.infoRow}><Ionicons name="flag-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.country}</ThemedText></View> : null}
-              {display.population ? <View style={styles.infoRow}><Ionicons name="people-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{POPULATION_OPTIONS.find((o) => o.value === display.population)?.label || display.population}</ThemedText></View> : null}
               {display.address ? <ThemedText style={[styles.infoValue, { marginTop: 4, fontStyle: 'italic' }]}>{display.address}</ThemedText> : null}
               {!display.city && !display.country ? <ThemedText style={[styles.infoValue, { fontStyle: 'italic', color: theme.textSecondary }]}>No address set</ThemedText> : null}
             </View>
@@ -492,7 +484,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
 
             <Pressable
               style={({ pressed }) => [styles.editBtn, { backgroundColor: theme.primary }, pressed && { opacity: 0.8 }]}
-              onPress={() => setEditing(true)}
+              onPress={startEditing}
             >
               <Ionicons name="create-outline" size={18} color="#FFFFFF" />
               <ThemedText style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Edit Shop Details</ThemedText>
@@ -575,28 +567,16 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, gap: 16 }]}>
-          <View style={{ gap: 6 }}>
-            <ThemedText style={{ fontSize: 12, fontWeight: '600', marginLeft: 2 }}>Country</ThemedText>
-            <View style={[styles.selectBtn, { borderColor: theme.border, backgroundColor: theme.card }]}>
-              <CountryPicker
-                countryCode={(form.country || 'IN') as any}
-                withFilter
-                withFlag
-                withCountryNameButton={false}
-                withCallingCode={false}
-                withEmoji
-                withAlphaFilter
-                onSelect={(country) => {
-                  updateForm('country', country.cca2);
-                  updateForm('state', '');
-                  updateForm('city', '');
-                  setSelectedStateCode('');
-                }}
-              />
-              <ThemedText style={{ flex: 1, fontSize: 15, fontWeight: '500' }}>{form.country || 'Select Country'}</ThemedText>
-              <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
-            </View>
-          </View>
+          <CountryPicker
+            value={form.country || ''}
+            selectedName={form.country ? undefined : undefined}
+            onChange={(c) => {
+              updateForm('country', c.cca2);
+              updateForm('state', '');
+              updateForm('city', '');
+              setSelectedStateCode('');
+            }}
+          />
           {/* State Picker */}
           <View style={{ gap: 6 }}>
             <ThemedText style={{ fontSize: 12, fontWeight: '600', marginLeft: 2 }}>State</ThemedText>
@@ -622,21 +602,6 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
               <Ionicons name="business-outline" size={18} color={theme.textSecondary} />
               <ThemedText style={{ flex: 1, fontSize: 15, fontWeight: '500', color: form.city ? theme.text : theme.tabIconDefault }}>
                 {form.city || (selectedStateCode ? 'Select City' : 'Select a state first')}
-              </ThemedText>
-              <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
-            </Pressable>
-          </View>
-
-          {/* Population Picker */}
-          <View style={{ gap: 6 }}>
-            <ThemedText style={{ fontSize: 12, fontWeight: '600', marginLeft: 2 }}>Area Population</ThemedText>
-            <Pressable
-              style={({ pressed }) => [styles.selectBtn, { borderColor: theme.border, backgroundColor: theme.card }, pressed && { opacity: 0.7 }]}
-              onPress={() => setPopulationPickerVisible(true)}
-            >
-              <Ionicons name="people-outline" size={18} color={theme.textSecondary} />
-              <ThemedText style={{ flex: 1, fontSize: 15, fontWeight: '500', color: form.population ? theme.text : theme.tabIconDefault }}>
-                {POPULATION_OPTIONS.find((o) => o.value === form.population)?.label || 'Select Population'}
               </ThemedText>
               <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
             </Pressable>
@@ -1000,56 +965,31 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
         </ScrollView>
       </ModalSheet>
 
-      {/* Population Picker Modal */}
-      <ModalSheet visible={populationPickerVisible} title="Select Area Population" onClose={() => setPopulationPickerVisible(false)}>
-        <ScrollView style={{ maxHeight: 400 }} keyboardShouldPersistTaps="handled">
-          {POPULATION_OPTIONS.map((opt) => {
-            const active = form.population === opt.value;
-            return (
-              <Pressable
-                key={opt.value}
-                style={[styles.pickerRow, active && { backgroundColor: theme.backgroundSelected }]}
-                onPress={() => {
-                  updateForm('population', opt.value);
-                  setPopulationPickerVisible(false);
-                }}
-              >
-                <View style={[styles.checkbox, { borderColor: active ? theme.primary : theme.border }, active && { backgroundColor: theme.primary }]}>
-                  {active && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-                </View>
-                <ThemedText style={{ flex: 1, fontSize: 15, fontWeight: active ? '600' : '500', color: active ? theme.primary : theme.text }}>
-                  {opt.label}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </ModalSheet>
-
-      {/* Time Picker Modal */}
       {timePicker && (
-        <Modal visible animationType="fade" transparent onRequestClose={handleTimeDismiss}>
-          <Pressable style={styles.timePickerOverlay} onPress={handleTimeDismiss}>
-            <View style={[styles.timePickerSheet, { backgroundColor: theme.card }]}>
-              <View style={[styles.timePickerHeader, { borderBottomColor: theme.divider }]}>
-                <ThemedText style={{ fontSize: 15, fontWeight: '700' }}>
-                  {DAY_LABELS[timePicker.day]} — {timePicker.field === 'open' ? 'Opening Time' : 'Closing Time'}
-                </ThemedText>
-                <Pressable onPress={handleTimeDone}>
-                  <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary }}>Done</ThemedText>
-                </Pressable>
-              </View>
-              <DateTimePicker
-                value={pendingTime || new Date()}
-                mode="time"
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onValueChange={handleTimeValueChange}
-                onDismiss={handleTimeDismiss}
-              />
-            </View>
-          </Pressable>
-        </Modal>
+        <View style={{ marginTop: 8, alignItems: 'center' }}>
+          <DateTimePicker
+            value={pendingTime || new Date()}
+            mode="time"
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(_event: any, selectedDate?: Date) => {
+              if (_event.type === 'dismissed') {
+                handleTimeDismiss();
+                return;
+              }
+              if (selectedDate) {
+                setPendingTime(selectedDate);
+                const timeStr = `${String(selectedDate.getHours()).padStart(2, '0')}:${String(selectedDate.getMinutes()).padStart(2, '0')}`;
+                const hours = { ...form.operating_hours } as Record<string, { open: string; close: string; closed: boolean }>;
+                const day = hours[timePicker.day] || { open: '09:00', close: '18:00', closed: false };
+                hours[timePicker.day] = { ...day, [timePicker.field]: timeStr };
+                updateForm('operating_hours', hours);
+                setTimePicker(null);
+                setPendingTime(null);
+              }
+            }}
+          />
+        </View>
       )}
 
       <ImagePickerSheet
@@ -1142,8 +1082,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  // ── Time Picker Modal ──
-  timePickerOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  timePickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32 },
-  timePickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1 },
+
 });

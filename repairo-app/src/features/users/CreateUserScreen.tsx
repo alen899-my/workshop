@@ -10,8 +10,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import Toast from '@/components/ui/Toast';
+import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
-import { getCallingCode } from '@/utils/preload-countries';
+import { getCallingCode, countriesCache } from '@/utils/preload-countries';
+import { getCurrentUser } from '@/services/auth.service';
 import { userService } from '@/features/users/services/user.service';
 import type { User, RoleOption } from '@/features/users/services/user.service';
 import { permissionService } from '@/features/permissions/services/permission.service';
@@ -75,10 +77,15 @@ export default function CreateUserScreen({
     [initialUser?.phone],
   );
 
+  const shopCallingCode = useMemo(() => {
+    const user = getCurrentUser();
+    return user?.shopCallingCode || getCallingCode(user?.shopCountry || '') || '+91';
+  }, []);
+
   const [form, setForm] = useState({
     name: initialUser?.name || '',
     phone: parsedPhone?.digits || '',
-    callingCode: parsedPhone?.callingCode || '+91',
+    callingCode: parsedPhone?.callingCode || shopCallingCode,
     countryCode: parsedPhone?.country || 'IN',
     email: initialUser?.email || '',
     password: '',
@@ -442,13 +449,9 @@ export default function CreateUserScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
-          <Pressable style={styles.backBtn} onPress={onClose}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
-          </Pressable>
           <ThemedText style={styles.headerTitle}>
             {isEdit ? 'Edit User' : 'Add User'}
           </ThemedText>
-          <View style={{ width: 38 }} />
         </View>
 
         <SectionList
@@ -462,76 +465,50 @@ export default function CreateUserScreen({
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={styles.formSection}>
-              <View style={styles.fieldCard}>
-                <ThemedText style={styles.fieldLabel}>Full name</ThemedText>
-                <View style={styles.fieldInputRow}>
-                  <Ionicons name="person-outline" size={18} color={theme.textSecondary} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={form.name}
-                    onChangeText={(v) => update('name', v)}
-                    placeholder="Enter full name"
-                    placeholderTextColor={theme.textSecondary + '60'}
-                    returnKeyType="next"
-                  />
+              <InputField
+                label="Full name"
+                value={form.name}
+                onChangeText={(v) => update('name', v)}
+                placeholder="Enter full name"
+                icon="account-outline"
+                autoCapitalize="words"
+              />
+
+              <PhoneInputWithCode
+                countryCode={form.countryCode}
+                callingCode={form.callingCode}
+                phone={form.phone}
+                onCountryChange={handleCountryChange}
+                onPhoneChange={handlePhoneChange}
+                error={phoneError}
+                label="Phone number"
+              />
+              {phoneChecking && (
+                <View style={styles.checkingRow}>
+                  <ActivityIndicator size="small" color={theme.primary} />
+                  <ThemedText style={styles.checkingText}>Checking availability...</ThemedText>
                 </View>
-              </View>
+              )}
 
-              <View style={styles.fieldCard}>
-                <PhoneInputWithCode
-                  countryCode={form.countryCode}
-                  callingCode={form.callingCode}
-                  phone={form.phone}
-                  onCountryChange={handleCountryChange}
-                  onPhoneChange={handlePhoneChange}
-                  error={phoneError}
-                  label="Phone number"
-                />
-                {phoneChecking && (
-                  <View style={styles.checkingRow}>
-                    <ActivityIndicator size="small" color={theme.primary} />
-                    <ThemedText style={styles.checkingText}>Checking availability...</ThemedText>
-                  </View>
-                )}
-              </View>
+              <InputField
+                label="Email"
+                value={form.email}
+                onChangeText={(v) => update('email', v)}
+                placeholder="email@example.com"
+                type="email"
+                keyboardType="email-address"
+              />
 
-              <View style={styles.fieldCard}>
-                <ThemedText style={styles.fieldLabel}>Email</ThemedText>
-                <View style={styles.fieldInputRow}>
-                  <Ionicons name="mail-outline" size={18} color={theme.textSecondary} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={form.email}
-                    onChangeText={(v) => update('email', v)}
-                    placeholder="email@example.com"
-                    placeholderTextColor={theme.textSecondary + '60'}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    returnKeyType="next"
-                  />
-                </View>
-              </View>
+              <InputField
+                label={isEdit ? 'New password' : 'Password'}
+                value={form.password}
+                onChangeText={(v) => update('password', v)}
+                placeholder={isEdit ? 'Leave blank to keep current' : 'Enter password'}
+                type="password"
+              />
 
-              <View style={styles.fieldCard}>
-                <ThemedText style={styles.fieldLabel}>
-                  {isEdit ? 'New password' : 'Password'}
-                </ThemedText>
-                <View style={styles.fieldInputRow}>
-                  <Ionicons name="lock-closed-outline" size={18} color={theme.textSecondary} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={form.password}
-                    onChangeText={(v) => update('password', v)}
-                    placeholder={isEdit ? 'Leave blank to keep current' : 'Enter password'}
-                    placeholderTextColor={theme.textSecondary + '60'}
-                    secureTextEntry
-                    returnKeyType="next"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.fieldCard}>
-                <ThemedText style={styles.fieldLabel}>Role</ThemedText>
+              <View>
+                <ThemedText style={styles.roleFieldLabel}>Role</ThemedText>
                 <View style={styles.roleWrap}>
                   {roleOptions.length > 0 ? roleOptions.map((r) => {
                     const active = form.role === r.slug;
@@ -568,8 +545,8 @@ export default function CreateUserScreen({
               </View>
 
               {isEdit && (
-                <View style={styles.fieldCard}>
-                  <ThemedText style={styles.fieldLabel}>Status</ThemedText>
+                <View>
+                  <ThemedText style={styles.roleFieldLabel}>Status</ThemedText>
                   <View style={styles.roleWrap}>
                     {['active', 'inactive'].map((s) => {
                       const active = form.status === s;
@@ -659,6 +636,12 @@ export default function CreateUserScreen({
           ListFooterComponent={
             <View style={styles.footer}>
               <Pressable
+                style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
+                onPress={onClose}
+              >
+                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+              </Pressable>
+              <Pressable
                 style={({ pressed }) => [
                   styles.submitBtn,
                   pressed && styles.submitBtnPressed,
@@ -694,19 +677,12 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     flex: { flex: 1 },
 
     header: {
-      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       paddingHorizontal: 16,
       paddingBottom: 12,
       backgroundColor: theme.card,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
-    },
-    backBtn: {
-      width: 38, height: 38, borderRadius: 19,
-      alignItems: 'center', justifyContent: 'center',
-      backgroundColor: theme.backgroundElement,
     },
     headerTitle: { fontSize: 17, fontWeight: '700', color: theme.text },
 
@@ -714,39 +690,16 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
 
     formSection: { padding: 16, gap: 14, paddingBottom: 8 },
 
-    fieldCard: {
-      backgroundColor: theme.card,
-      borderRadius: 14,
-      padding: 16,
-      gap: 8,
-    },
-    fieldLabel: {
-      fontSize: 12, fontWeight: '600', color: theme.textSecondary,
-      textTransform: 'uppercase', letterSpacing: 0.4,
-    },
-    fieldInputRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.border,
-      paddingHorizontal: 12,
-    },
-    fieldIcon: { marginRight: 8 },
-    fieldInput: {
-      flex: 1,
-      paddingVertical: 11,
-      fontSize: 15,
-      color: theme.text,
-      fontWeight: '500',
-    },
-
     checkingRow: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       marginTop: 2,
     },
     checkingText: { fontSize: 11, fontWeight: '500', color: theme.textSecondary },
+
+    roleFieldLabel: {
+      fontSize: 12, fontWeight: '600', color: theme.textSecondary,
+      marginLeft: 2, marginBottom: 6,
+    },
 
     roleWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     roleChip: {
@@ -832,9 +785,15 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     permBadgeText: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.2 },
 
-    footer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
+    footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
+    cancelBtn: {
+      flex: 1, height: 50, borderRadius: 12,
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1, borderColor: theme.border,
+    },
+    cancelText: { fontSize: 16, fontWeight: '600', color: theme.textSecondary },
     submitBtn: {
-      height: 50, borderRadius: 12,
+      flex: 1, height: 50, borderRadius: 12,
       backgroundColor: theme.primary,
       alignItems: 'center', justifyContent: 'center',
       shadowColor: theme.primary,

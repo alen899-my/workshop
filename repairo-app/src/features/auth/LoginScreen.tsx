@@ -34,8 +34,8 @@ export default function LoginScreen() {
   const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
-  const [countryCode, setCountryCode] = useState('US');
-  const [callingCode, setCallingCode] = useState(getCallingCode('US'));
+  const [countryCode, setCountryCode] = useState('');
+  const [callingCode, setCallingCode] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);

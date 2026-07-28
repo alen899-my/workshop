@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -31,25 +30,7 @@ export default function FormScreen({
   submitLabel = 'Save', submitting, toast, keyboardPadding, children,
 }: FormScreenProps) {
   const theme = useTheme();
-  const { bottom } = useSafeAreaInsets();
-  const footerOpacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSubscription = Keyboard.addListener(showEvent, () => {
-      Animated.timing(footerOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-    });
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      Animated.timing(footerOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
+  const { top } = useSafeAreaInsets();
 
   const currentStep = tabs.findIndex((t) => t.key === activeTab);
   const isLastStep = currentStep === tabs.length - 1;
@@ -57,7 +38,7 @@ export default function FormScreen({
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: top || 8 }]}>
         <ThemedText style={[styles.headerTitle, { color: theme.text }]}>{title}</ThemedText>
         <ThemedText style={[styles.stepCount, { color: theme.textSecondary }]}>Step {currentStep + 1} of {tabs.length}</ThemedText>
       </View>
@@ -94,39 +75,40 @@ export default function FormScreen({
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[styles.scrollContent, keyboardPadding ? { paddingBottom: keyboardPadding } : null]}
+          contentContainerStyle={[styles.scrollContent, keyboardPadding ? { paddingBottom: keyboardPadding + 100 } : null]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {children}
+
+          <View style={[styles.footer, { borderTopColor: theme.border }]}>
+            {currentStep === 0 ? (
+              <Pressable onPress={onCancel} style={[styles.cancelBtn, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                <ThemedText style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable onPress={onStepBack} style={[styles.backBtn, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                <ThemedText style={[styles.backText, { color: theme.textSecondary }]}>← Back</ThemedText>
+              </Pressable>
+            )}
+            {isLastStep ? (
+              <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
+                <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable onPress={onStepNext} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
+                {submitting
+                  ? <ActivityIndicator size="small" color={theme.primaryForeground} />
+                  : <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>Next →</ThemedText>}
+              </Pressable>
+            )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Animated.View style={[styles.footer, { paddingBottom: bottom || 0, borderTopColor: theme.border, backgroundColor: theme.card, opacity: footerOpacity }]}>
-        {currentStep === 0 ? (
-          <Pressable onPress={onCancel} style={[styles.cancelBtn, { borderColor: theme.border, backgroundColor: theme.card }]}>
-            <ThemedText style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</ThemedText>
-          </Pressable>
-        ) : (
-          <Pressable onPress={onStepBack} style={[styles.backBtn, { borderColor: theme.border, backgroundColor: theme.card }]}>
-            <ThemedText style={[styles.backText, { color: theme.textSecondary }]}>← Back</ThemedText>
-          </Pressable>
-        )}
-        {isLastStep ? (
-          <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
-            <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
-          </Pressable>
-        ) : (
-          <Pressable onPress={onStepNext} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
-            {submitting
-              ? <ActivityIndicator size="small" color={theme.primaryForeground} />
-              : <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>Next →</ThemedText>}
-          </Pressable>
-        )}
-      </Animated.View>
     </ThemedView>
   );
 }

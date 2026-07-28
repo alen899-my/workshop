@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme, useThemePreference } from '@/hooks/use-theme';
+import { formatPhoneForDisplay } from '@/utils/phone';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 
 const VEHICLE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -125,7 +126,7 @@ export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
             <ThemedText style={styles.footerLabel}>Phone</ThemedText>
             <View style={styles.footerPhoneRow}>
               <ThemedText style={styles.footerValue} numberOfLines={1}>
-                {vehicle.owner_phone || '—'}
+                {formatPhoneForDisplay(vehicle.owner_phone || '') || '—'}
               </ThemedText>
               {ownerPhone && (
                 <Pressable

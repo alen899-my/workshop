@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatUTCToLocal } from '@/utils/date';
+import { formatPhoneForDisplay } from '@/utils/phone';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
 function getImageUrl(image?: string): string | null {

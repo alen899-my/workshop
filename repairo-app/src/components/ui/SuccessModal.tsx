@@ -1,13 +1,4 @@
-import React, { useEffect } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withDelay,
-  runOnJS,
-} from 'react-native-reanimated';
+import { Pressable, Modal, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 
@@ -34,51 +25,20 @@ export default function SuccessModal({
   subtitle = 'Job card created successfully',
   actionButtons,
 }: SuccessModalProps) {
-  const bgOpacity = useSharedValue(0);
-  const circleScale = useSharedValue(0);
-  const checkScale = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) {
-      bgOpacity.value = withTiming(1, { duration: 250 });
-      circleScale.value = withSpring(1, { damping: 10, stiffness: 100 });
-      checkScale.value = withDelay(350, withSpring(1, { damping: 8, stiffness: 120 }));
-    } else {
-      bgOpacity.value = 0;
-      circleScale.value = 0;
-      checkScale.value = 0;
-    }
-  }, [visible]);
-
-  const handleDismiss = () => {
-    bgOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
-      if (finished) runOnJS(onClose)();
-    });
-  };
-
-  const rBg = useAnimatedStyle(() => ({ opacity: bgOpacity.value }));
-  const rCircle = useAnimatedStyle(() => ({ transform: [{ scale: circleScale.value }] }));
-  const rCheck = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
-
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={handleDismiss}>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.fullscreen}>
-        <Animated.View style={[styles.backdrop, rBg]}>
-          <Pressable style={styles.flex} onPress={handleDismiss} />
-        </Animated.View>
-
-        <Animated.View style={[styles.card, rCircle]}>
+        <View style={styles.backdrop}>
+          <Pressable style={styles.flex} onPress={onClose} />
+        </View>
+        <View style={styles.card}>
           <View style={styles.circle}>
-            <Animated.View style={rCheck}>
-              <Ionicons name="checkmark" size={44} color="#FFFFFF" />
-            </Animated.View>
+            <Ionicons name="checkmark" size={40} color="#FFFFFF" />
           </View>
-
           <View style={styles.details}>
             <ThemedText style={styles.title}>{title}</ThemedText>
             <ThemedText style={styles.subtitle}>{subtitle}</ThemedText>
           </View>
-
           <View style={styles.btnContainer}>
             {actionButtons && actionButtons.length > 0 ? (
               <View style={styles.actionButtonsCol}>
@@ -102,12 +62,12 @@ export default function SuccessModal({
                 ))}
               </View>
             ) : (
-              <Pressable onPress={handleDismiss} style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.8 }]}>
+              <Pressable onPress={onClose} style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.8 }]}>
                 <ThemedText style={styles.doneText}>Done</ThemedText>
               </Pressable>
             )}
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -141,9 +101,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   circle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#0D9488',
     alignItems: 'center',
     justifyContent: 'center',

@@ -12,9 +12,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import InputField from '@/components/ui/InputField';
+import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import VehicleTypePicker from '@/features/repairs/components/VehicleTypePicker';
 import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import Toast from '@/components/ui/Toast';
+import { stripCallingCode } from '@/utils/phone';
 import { vehicleService } from '@/features/vehicles/services/vehicle.service';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 
@@ -36,14 +38,21 @@ export default function CreateVehicleScreen({
   const styles = useStyles(theme);
   const isEdit = mode === 'edit';
 
+  const parsedPhone = useMemo(
+    () => initialVehicle?.owner_phone ? stripCallingCode(initialVehicle.owner_phone) : null,
+    [initialVehicle?.owner_phone],
+  );
+
   const [form, setForm] = useState({
     vehicleNumber: initialVehicle?.vehicle_number || '',
     vehicleType: initialVehicle?.vehicle_type || '',
     modelName: initialVehicle?.model_name || '',
     brand: initialVehicle?.brand || '',
     ownerName: initialVehicle?.owner_name || '',
-    ownerPhone: initialVehicle?.owner_phone || '',
+    ownerPhone: parsedPhone?.localNumber || '',
   });
+  const [callingCode, setCallingCode] = useState(parsedPhone?.code || '+91');
+  const [countryCode, setCountryCode] = useState('IN');
   const [vehicleImage, setVehicleImage] = useState<string | null>(initialVehicle?.vehicle_image || null);
   const [imageFile, setImageFile] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +66,15 @@ export default function CreateVehicleScreen({
   const update = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handlePhoneChange = useCallback((val: string) => {
+    setForm((prev) => ({ ...prev, ownerPhone: val }));
+  }, []);
+
+  const handleCountryChange = useCallback((c: { cca2: string; callingCode: string; currency: string }) => {
+    setCountryCode(c.cca2);
+    setCallingCode(c.callingCode);
+  }, []);
 
   const pickFromCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -95,9 +113,11 @@ export default function CreateVehicleScreen({
 
     setSubmitting(true);
     try {
+      const fullPhone = `${callingCode}${form.ownerPhone.trim()}`;
       const fd = new FormData();
       fd.append('vehicle_number', form.vehicleNumber.trim());
       fd.append('vehicle_type', form.vehicleType || 'Car');
+      fd.append('owner_phone', fullPhone);
       if (form.modelName) fd.append('model_name', form.modelName);
       if (form.brand) fd.append('brand', form.brand);
       fd.append('status', 'Active');
@@ -208,13 +228,13 @@ export default function CreateVehicleScreen({
             autoCapitalize="words"
           />
 
-          <InputField
+          <PhoneInputWithCode
+            countryCode={countryCode}
+            callingCode={callingCode}
+            phone={form.ownerPhone}
+            onCountryChange={handleCountryChange}
+            onPhoneChange={handlePhoneChange}
             label="Owner Phone"
-            value={form.ownerPhone}
-            onChangeText={(v) => update('ownerPhone', v)}
-            placeholder="Phone number"
-            type="phone"
-            icon="phone-outline"
           />
 
           <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, gap: 10 }}>

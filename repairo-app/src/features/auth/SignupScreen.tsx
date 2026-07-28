@@ -143,6 +143,7 @@ export default function SignupScreen() {
         password: form.password,
         callingCode: form.callingCode,
       });
+      await authService.logout();
       setLoading(false);
       setToast({ visible: true, message: 'Account created! Redirecting to login...' });
       setTimeout(() => router.replace('/auth/login'), 1500);
