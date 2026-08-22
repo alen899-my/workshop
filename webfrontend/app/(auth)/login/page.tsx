@@ -9,6 +9,7 @@ import { WorkshopButton } from "@/components/ui/WorkshopButton";
 import { AuthFormField } from "@/components/ui/AuthFormField";
 import { useToast } from "@/components/ui/WorkshopToast";
 import { permissionService } from "@/services/permission.service";
+import { sanitizePhone } from "@/lib/phone";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
@@ -88,7 +89,7 @@ export default function LoginPage() {
       const errs: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
         const key = issue.path[0]?.toString();
-        if (key && !errs[key]) errs[key] = (issue as any).message || issue.message;
+        if (key && !errs[key]) errs[key] = issue.message || String(issue.path[0]);
       });
       setErrors(errs);
       return;
@@ -193,7 +194,9 @@ export default function LoginPage() {
                   <PhoneInput
                     country="in"
                     value={form.phone}
-                    onChange={(phone) => setForm({ ...form, phone: `+${phone}` })}
+                    onChange={(phone) =>
+                      setForm({ ...form, phone: sanitizePhone(phone, "in") })
+                    }
                     containerClass="!w-full"
                     inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
                     buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"

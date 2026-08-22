@@ -6,113 +6,129 @@
 @import "shadcn/tailwind.css";
 
 /*
-  🎨 REPAIRO THEME TOKENS
-  ─────────────────────────────────
-  Token              Hex         Usage
-  bg-primary         #FAF6EE     App background
-  bg-card-dark       #1A1A1A     Balance/dark cards
-  bg-card-light      #FFFFFF     Elevated cards on cream
-  accent-primary     #8CE64B     CTAs, active states
-  accent-gradient    #8CE64B→#2E5C2E  Chart fills, hero cards
-  text-primary       #1A1A1A     Headings
-  text-secondary     #8A8A80     Subtext
-  text-inverse       #FFFFFF     Text on dark cards
-  accent-gold        #F2C230     Rewards/coins
-  border-subtle      #E8E0CC     Card outlines
+  🔧 WORKSHOP GARAGE THEME
+  Colors sourced directly from two workshop illustrations:
+
+  Image 1 (large): teal steel facade, sandy beige walls, deep garage
+  interior, signal red roller doors, amber hydraulic lift posts,
+  concrete floor, oil drum red.
+
+  Image 2 (mobile): soft sage-mint painted walls, sky-blue roller door,
+  dark brick cornice, fire-engine red truck, hazard orange crate,
+  slate tool cabinet, cream paper notices, red utility pipe.
+
+  Mood: functional, grounded, SaaS-minimal — clean surfaces with
+  just enough warmth to feel like somewhere real work happens.
 */
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #FAF6EE;
-  --foreground: #1A1A1A;
+    /* Base — snow-white clean surfaces */
+    --background: oklch(0.99 0.003 248);           /* snow-white, crisp and cool */
+    --foreground: oklch(0.14 0.025 168);            /* deep garage teal-black text */
 
-  --card: #FFFFFF;
-  --card-foreground: #1A1A1A;
+    /* Cards — clean plaster surface */
+    --card: oklch(1.00 0.000 0);
+    --card-foreground: oklch(0.14 0.025 168);
 
-  --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
+    /* Popover */
+    --popover: oklch(1.00 0.000 0);
+    --popover-foreground: oklch(0.14 0.025 168);
 
-  --primary: #8CE64B;
-  --primary-foreground: #1A1A1A;
+    /* Primary — teal steel facade (dominant building color, image 1) */
+    --primary: oklch(0.48 0.072 188);               /* ~#3d7a78 — teal workshop facade */
+    --primary-foreground: oklch(0.96 0.014 188);    /* pale teal-white */
 
-  --secondary: #E8E0CC;
-  --secondary-foreground: #1A1A1A;
+    /* Secondary — sage-mint painted wall (dominant wall color, image 2) */
+    --secondary: oklch(0.74 0.058 162);             /* ~#8fb8a8 — sage green wall */
+    --secondary-foreground: oklch(0.14 0.025 168);
 
-  --muted: #FAF6EE;
-  --muted-foreground: #8A8A80;
+    /* Muted — clean asphalt mist / cool grey */
+    --muted: oklch(0.94 0.008 248);                 /* cool-toned light grey */
+    --muted-foreground: oklch(0.52 0.030 168);      /* shifted from warm to cool-teal grey */
 
-  --accent: #F2C230;
-  --accent-foreground: #1A1A1A;
+    /* Accent — sky blue roller door (image 2 shifted to teal) */
+    --accent: oklch(0.72 0.075 188);                /* ~#5bb0ae — vibrant teal */
+    --accent-foreground: oklch(0.14 0.025 168);
 
-  --destructive: #DC2626;
-  --destructive-foreground: #FAF6EE;
+    /* Destructive — signal red roller doors / fire extinguisher (both images) */
+    --destructive: oklch(0.44 0.175 22);            /* ~#c0272d — workshop signal red */
+    --destructive-foreground: oklch(0.98 0 0);
 
-  --border: #E8E0CC;
-  --input: #E8E0CC;
-  --ring: #8CE64B;
+    /* Borders — clean metal seam */
+    --border: oklch(0.88 0.012 248);
+    --input: oklch(0.91 0.010 248);
+    --ring: oklch(0.52 0.065 185);
 
-  --radius: 0.5rem;
+    /* Charts — teal → sage → sky blue → amber post → hazard orange */
+    --chart-1: oklch(0.48 0.072 188);              /* teal facade */
+    --chart-2: oklch(0.74 0.058 162);              /* sage wall */
+    --chart-3: oklch(0.72 0.075 188);              /* vibrant teal */
+    --chart-4: oklch(0.68 0.130 80);               /* amber lift post ~#d4a017 */
+    --chart-5: oklch(0.60 0.145 44);               /* hazard orange ~#d4622a */
 
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-primary: #8CE64B;
-  --sidebar-primary-foreground: #1A1A1A;
-  --sidebar-accent: #FAF6EE;
-  --sidebar-accent-foreground: #1A1A1A;
-  --sidebar-border: #E8E0CC;
-  --sidebar-ring: #8CE64B;
+    --radius: 0.3125rem;                            /* 5px — clean SaaS geometry */
 
-  --chart-1: #8CE64B;
-  --chart-2: #2E5C2E;
-  --chart-3: #F2C230;
-  --chart-4: #8A8A80;
-  --chart-5: #E8E0CC;
+    /* Sidebar — clean teal-white panel (matching primary facade) */
+    --sidebar: oklch(0.985 0.008 188);
+    --sidebar-foreground: oklch(0.18 0.030 168);
+    --sidebar-primary: oklch(0.48 0.072 188);
+    --sidebar-primary-foreground: oklch(0.99 0.003 188);
+    --sidebar-accent: oklch(0.95 0.015 188);
+    --sidebar-accent-foreground: oklch(0.14 0.040 188);
+    --sidebar-border: oklch(0.93 0.010 188);
+    --sidebar-ring: oklch(0.52 0.065 185);
 }
 
 .dark {
-  --background: #1A1A1A;
-  --foreground: #FFFFFF;
+    /* Pitch Black Dark Mode */
+    --background: oklch(0 0 0);                     /* True black #000000 */
+    --foreground: oklch(0.98 0 0);                  /* Crisp white text */
 
-  --card: #1A1A1A;
-  --card-foreground: #FFFFFF;
+    --card: oklch(0.05 0 0);                        /* Very dark gray #0d0d0d */
+    --card-foreground: oklch(0.98 0 0);
 
-  --popover: #1A1A1A;
-  --popover-foreground: #FFFFFF;
+    --popover: oklch(0.05 0 0);
+    --popover-foreground: oklch(0.98 0 0);
 
-  --primary: #8CE64B;
-  --primary-foreground: #1A1A1A;
+    /* Primary: Vibrantly Glowing Teal for Dark Mode */
+    --primary: oklch(0.48 0.072 188);
+    --primary-foreground: oklch(0.98 0 0);          /* White text for better readability on teal */
 
-  --secondary: #2A2A2A;
-  --secondary-foreground: #FFFFFF;
+    --secondary: oklch(0.12 0 0);                   /* Dark neutral #1e1e1e */
+    --secondary-foreground: oklch(0.88 0 0);
 
-  --muted: #2A2A2A;
-  --muted-foreground: #8A8A80;
+    --muted: oklch(0.15 0 0);                       /* #262626 */
+    --muted-foreground: oklch(0.65 0 0);            /* #a3a3a3 */
 
-  --accent: #F2C230;
-  --accent-foreground: #1A1A1A;
+    --accent: oklch(0.15 0.040 188);                /* Dark Teal for ghost/outline hover */
+    --accent-foreground: oklch(0.98 0 0);           /* White */
 
-  --destructive: #DC2626;
-  --destructive-foreground: #FFFFFF;
+    --destructive: oklch(0.52 0.190 20);            /* Red */
+    --destructive-foreground: oklch(0.98 0 0);      /* White */
 
-  --border: #333333;
-  --input: #333333;
-  --ring: #8CE64B;
+    /* Grayscale Borders — Increased for visibility on #000 */
+    --border: oklch(0.25 0 0);                      /* Better visibility grey */
+    --input: oklch(0.25 0 0);
+    --ring: oklch(0.48 0.072 188);
 
-  --sidebar: #1A1A1A;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #8CE64B;
-  --sidebar-primary-foreground: #1A1A1A;
-  --sidebar-accent: #2A2A2A;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #333333;
-  --sidebar-ring: #8CE64B;
+    /* Charts */
+    --chart-1: oklch(0.48 0.072 188);              /* Teal */
+    --chart-2: oklch(0.66 0.065 162);              /* Sage */
+    --chart-3: oklch(0.70 0.100 188);              /* Teal */
+    --chart-4: oklch(0.68 0.130 80);               /* Amber */
+    --chart-5: oklch(0.60 0.145 44);               /* Hazard orange */
 
-  --chart-1: #8CE64B;
-  --chart-2: #2E5C2E;
-  --chart-3: #F2C230;
-  --chart-4: #8A8A80;
-  --chart-5: #E8E0CC;
+    /* Sidebar — Pure black to match main theme */
+    --sidebar: oklch(0 0 0);
+    --sidebar-foreground: oklch(0.88 0 0);
+    --sidebar-primary: oklch(0.68 0.12 188);
+    --sidebar-primary-foreground: oklch(0.05 0 0);
+    --sidebar-accent: oklch(0.10 0 0);
+    --sidebar-accent-foreground: oklch(0.88 0 0);
+    --sidebar-border: oklch(0.25 0 0);
+    --sidebar-ring: oklch(0.48 0.072 188);
 }
 
 @theme inline {

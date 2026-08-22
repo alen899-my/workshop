@@ -11,6 +11,7 @@ import { AuthFormField } from "@/components/ui/AuthFormField";
 import { WorkshopSearchableSelect } from "@/components/ui/WorkshopSearchableSelect";
 import { Country } from "country-state-city";
 import countryToCurrency from "country-to-currency";
+import { sanitizePhone } from "@/lib/phone";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
@@ -59,6 +60,7 @@ function AuthFormWrapper({
 
 interface FormState {
   shopName: string;
+  location: string;
   ownerName: string;
   phone: string;
   email: string;
@@ -68,8 +70,14 @@ interface FormState {
   confirmPassword: string;
 }
 
+interface GeoState {
+  latitude?: number;
+  longitude?: number;
+}
+
 const INITIAL: FormState = {
   shopName: "",
+  location: "",
   ownerName: "",
   phone: "",
   email: "",
@@ -82,6 +90,7 @@ const INITIAL: FormState = {
 const signupSchema = z
   .object({
     shopName: z.string().min(1, "Required"),
+    location: z.string().min(1, "Required"),
     ownerName: z.string().min(1, "Required"),
     phone: z.string().min(8, "Invalid phone"),
     email: z.string().email("Invalid email"),
@@ -100,6 +109,7 @@ export default function SignupPage() {
 
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormState>>({});
+  const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
@@ -125,15 +135,44 @@ export default function SignupPage() {
     };
   }
 
+  function getCurrentPosition(): Promise<GeoState> {
+    return new Promise((resolve) => {
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        resolve({});
+        return;
+      }
+      const timer = setTimeout(() => resolve({}), 5000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(timer);
+          resolve({
+            latitude: Number(pos.coords.latitude.toFixed(6)),
+            longitude: Number(pos.coords.longitude.toFixed(6)),
+          });
+        },
+        () => {
+          clearTimeout(timer);
+          resolve({});
+        },
+        { timeout: 4500, maximumAge: 300000 }
+      );
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!agree) {
+      toast({ type: "error", title: "Terms Required", description: "Please agree to the Terms & Conditions to continue" });
+      return;
+    }
 
     const result = signupSchema.safeParse(form);
     if (!result.success) {
       const errs: Partial<FormState> = {};
       result.error.issues.forEach((issue) => {
         const key = issue.path[0] as keyof FormState;
-        if (key && !errs[key]) errs[key] = (issue as any).message;
+        if (key && !errs[key]) errs[key] = issue.message;
       });
       setErrors(errs);
       return;
@@ -143,7 +182,19 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const payload = { ...form, location: "Not Set" };
+      const { latitude, longitude } = await getCurrentPosition();
+      const payload = {
+        shopName: form.shopName,
+        location: form.location,
+        ownerName: form.ownerName,
+        phone: form.phone,
+        email: form.email,
+        country: form.country,
+        currency: form.currency,
+        password: form.password,
+        latitude,
+        longitude,
+      };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register-shop`, {
         method: "POST",
@@ -255,7 +306,9 @@ export default function SignupPage() {
                     <PhoneInput
                       country={form.country.toLowerCase()}
                       value={form.phone}
-                      onChange={(phone) => setForm((f) => ({ ...f, phone: `+${phone}` }))}
+                      onChange={(phone) =>
+                        setForm((f) => ({ ...f, phone: sanitizePhone(phone, f.country) }))
+                      }
                       containerClass="!w-full"
                       inputClass="!w-full !h-[42px] !bg-background !border !border-border !text-foreground !text-sm !rounded-md !px-4 !py-2.5 !pl-12 focus:!border-primary focus:!ring-2 focus:!ring-primary/10 transition-all duration-200"
                       buttonClass="!bg-transparent !border !border-border !border-r-0 !rounded-l-md hover:!bg-muted/50"
@@ -286,10 +339,22 @@ export default function SignupPage() {
                       value={form.country}
                       onChange={(val) => {
                         const code = String(val);
-                        const curr = (countryToCurrency as any)[code] || "USD";
+                        const curr = (countryToCurrency as Record<string, string>)[code] || "USD";
                         setForm((f) => ({ ...f, country: code, currency: curr }));
                       }}
                       error={errors.country}
+                    />
+                  </div>
+
+                  {/* Location */}
+                  <div className="sm:col-span-2">
+                    <AuthFormField
+                      label="Shop Location"
+                      type="text"
+                      placeholder="12 MG Road, Bengaluru, Karnataka"
+                      value={form.location}
+                      onChange={set("location")}
+                      error={errors.location}
                     />
                   </div>
 
@@ -316,6 +381,21 @@ export default function SignupPage() {
                   </div>
 
                 </div>
+
+                <label className="flex items-center gap-2.5 cursor-pointer select-none mt-1">
+                  <input
+                    type="checkbox"
+                    checked={agree}
+                    onChange={(e) => setAgree(e.target.checked)}
+                    className="h-4 w-4 shrink-0 cursor-pointer accent-primary rounded border-border focus:ring-2 focus:ring-primary/30"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    I agree to the{" "}
+                    <span className="font-bold text-primary underline underline-offset-4">
+                      Terms &amp; Conditions
+                    </span>
+                  </span>
+                </label>
 
                 <div className="mt-2">
                   <WorkshopButton
