@@ -1,4 +1,3 @@
-import { UI } from '@/constants/theme';
 import { useEffect } from 'react';
 import { StyleSheet, Pressable, View } from 'react-native';
 import Animated, {
@@ -55,7 +54,7 @@ function AnimatedTab({
   }));
 
   return (
-    <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={tab.label} style={[styles.item, { backgroundColor: focused ? theme.primaryLight : 'transparent', borderRadius: UI.radius }]} onPress={onPress}>
+    <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={tab.label} style={[styles.item, { backgroundColor: focused ? theme.primary : 'transparent', borderRadius: 24 }]} onPress={onPress}>
       <Animated.View style={iconStyle}>
         <Ionicons
           name={tab.icon}
@@ -102,7 +101,7 @@ export default function FloatingTabBar({ state, navigation }: any) {
               tab={tab}
               focused={focused}
               onPress={() => navigation.navigate(tab.name)}
-              tabIconSelected={theme.tabIconSelected}
+              tabIconSelected={theme.primaryForeground}
               tabIconDefault={theme.tabIconDefault}
             />
           );
@@ -124,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: 22,
+    borderRadius: 32,
     height: 72,
     width: '100%',
     paddingHorizontal: 6,

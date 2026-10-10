@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { useState, useMemo } from 'react';
 import { StyleSheet, View, Switch, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,6 +81,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
   return (
     <ThemedView style={styles.container}>
+      <WorkshopBackdrop />
       <View style={[styles.header, { paddingTop: top + 4 }]}>
         <Pressable style={styles.headerBack} onPress={onClose}>
           <Ionicons name="arrow-back" size={20} color={theme.text} />
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     marginBottom: Spacing.two,
     paddingLeft: Spacing.one,
   },
@@ -210,12 +212,12 @@ const styles = StyleSheet.create({
   },
   rowFirst: {
     borderTopWidth: 1,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   rowLast: {
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   rowIcon: {
     width: 36,

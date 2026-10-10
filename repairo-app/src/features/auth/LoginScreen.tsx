@@ -127,16 +127,16 @@ export default function LoginScreen() {
               </Pressable>
 
               <Pressable
-                style={[styles.btn, { backgroundColor: theme.primary, opacity: loading ? 0.6 : 1 }]}
+                style={[styles.btn, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}
                 onPress={handleLogin}
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={theme.primaryForeground} />
+                  <ActivityIndicator color={theme.accentForeground} />
                 ) : (
                   <>
-                    <MaterialCommunityIcons name="login" size={20} color={theme.primaryForeground} />
-                    <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Log In</Text>
+                    <MaterialCommunityIcons name="login" size={20} color={theme.accentForeground} />
+                    <Text style={[styles.btnText, { color: theme.accentForeground }]}>Log In</Text>
                   </>
                 )}
               </Pressable>
@@ -219,7 +219,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     screenTitle: {
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: '400',
       marginBottom: 4,
     },
     screenSub: {

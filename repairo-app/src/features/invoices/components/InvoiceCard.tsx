@@ -169,7 +169,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       backgroundColor: theme.card,
       borderRadius: UI.card.borderRadius,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: theme.card,
       padding: Spacing.three,
     },
     pressed: { opacity: 0.92 },
@@ -195,7 +195,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
 
     registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
 
-    registrationText: { fontSize: 19, fontWeight: '600', color: theme.text, flexShrink: 1 },
+    registrationText: { fontSize: 19, fontWeight: '500', color: theme.text, flexShrink: 1 },
 
     paymentBadge: {
       flexDirection: 'row',

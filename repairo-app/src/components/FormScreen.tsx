@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { UI } from '@/constants/theme';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ export default function FormScreen({
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
+      <WorkshopBackdrop />
       <View style={[styles.header, { paddingTop: top + 12 }]}>
         <ThemedText style={[styles.headerTitle, { color: theme.text }]}>{title}</ThemedText>
         <ThemedText style={[styles.stepCount, { color: theme.textSecondary }]}>Step {currentStep + 1} of {tabs.length}</ThemedText>
@@ -46,7 +48,7 @@ export default function FormScreen({
 
       <View style={styles.stepper}>
         <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
-          <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: theme.primary }]} />
+          <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: theme.accent }]} />
         </View>
         <View style={styles.stepsRow}>
           {tabs.map((tab, i) => {
@@ -97,14 +99,14 @@ export default function FormScreen({
               </Pressable>
             )}
             {isLastStep ? (
-              <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
-                <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
+              <Pressable onPress={onSubmit} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.accent }, submitting && styles.saving]}>
+                <ThemedText style={[styles.primaryText, { color: theme.accentForeground }]}>{submitting ? 'Saving...' : submitLabel}</ThemedText>
               </Pressable>
             ) : (
-              <Pressable onPress={onStepNext} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.primary }, submitting && styles.saving]}>
+              <Pressable onPress={onStepNext} disabled={submitting} style={[styles.primaryBtn, { backgroundColor: theme.accent }, submitting && styles.saving]}>
                 {submitting
-                  ? <ActivityIndicator size="small" color={theme.primaryForeground} />
-                  : <ThemedText style={[styles.primaryText, { color: theme.primaryForeground }]}>Next →</ThemedText>}
+                  ? <ActivityIndicator size="small" color={theme.accentForeground} />
+                  : <ThemedText style={[styles.primaryText, { color: theme.accentForeground }]}>Next →</ThemedText>}
               </Pressable>
             )}
           </View>
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   header: { alignItems: 'flex-start', paddingTop: 8, paddingBottom: 16, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 26, fontWeight: '700' },
+  headerTitle: { fontSize: 26, fontWeight: '500' },
   stepCount: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   stepper: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 16 },
   progressTrack: { height: 4, borderRadius: 2, marginBottom: 8 },

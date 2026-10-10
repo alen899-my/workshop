@@ -233,12 +233,12 @@ export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
           <Ionicons
             name="calendar-outline"
             size={18}
-            color={(calendarOpen || selectedDate !== null) ? theme.primaryForeground : theme.primary}
+            color={(calendarOpen || selectedDate !== null) ? theme.accentForeground : theme.primary}
           />
           {todayLabel && !days.some((d) => d.iso === selectedDate) && (
             <ThemedText style={[
               styles.strip.calBtnLabel,
-              (calendarOpen || selectedDate !== null) && { color: theme.primaryForeground }
+              (calendarOpen || selectedDate !== null) && { color: theme.accentForeground }
             ]}>{todayLabel}</ThemedText>
           )}
         </Pressable>
@@ -336,10 +336,10 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         elevation: 0,
       },
       calBtnActive: {
-        backgroundColor: theme.primary,
+        backgroundColor: theme.accent,
         shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0,
         shadowRadius: 6,
         elevation: 4,
       },
@@ -364,7 +364,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         backgroundColor: theme.coolTint,
       },
       pillActive: {
-        backgroundColor: theme.primary,
+        backgroundColor: theme.accent,
         shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
@@ -393,7 +393,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         color: theme.info,
       },
       pillTextActive: {
-        color: theme.primaryForeground,
+        color: theme.accentForeground,
       },
     });
 
@@ -470,7 +470,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         justifyContent: 'center',
       },
       cellSelected: {
-        backgroundColor: theme.primary,
+        backgroundColor: theme.accent,
         borderRadius: 8,
       },
       cellToday: {
@@ -487,7 +487,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         includeFontPadding: false,
       },
       cellTextSelected: {
-        color: theme.primaryForeground,
+        color: theme.accentForeground,
         fontWeight: '800',
       },
       cellTextToday: {

@@ -927,9 +927,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     gap: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
+    shadowOpacity: 0,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 0,
   },
   vehicleImageWrap: {
     width: 80,

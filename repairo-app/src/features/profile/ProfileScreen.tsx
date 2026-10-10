@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Modal, Pressable, ScrollView, StyleSheet, View,
@@ -141,6 +142,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <WorkshopBackdrop />
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
@@ -311,11 +313,11 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     userCard: {
       alignItems: 'center',
       padding: 24,
-      borderRadius: 20,
+      borderRadius: 24,
       gap: 8,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
+      shadowOpacity: 0.02,
       shadowRadius: 8,
       elevation: 2,
     },
@@ -337,7 +339,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       borderRadius: 8,
     },
     roleBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
-    userName: { fontSize: 20, fontWeight: '800', color: theme.text, marginTop: 4 },
+    userName: { fontSize: 24, fontWeight: '500', color: theme.text, marginTop: 4 },
     roleChip: {
       paddingHorizontal: 12,
       paddingVertical: 4,

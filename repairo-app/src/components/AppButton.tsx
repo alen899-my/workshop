@@ -13,8 +13,8 @@ interface AppButtonProps {
 export default function AppButton({ title, fullWidth = false, onPress, variant = 'white' }: AppButtonProps) {
   const theme = useTheme();
 
-  const bg = variant === 'white' ? theme.card : variant === 'black' ? theme.cardDark : theme.primary;
-  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.primaryForeground : theme.text;
+  const bg = variant === 'white' ? theme.card : variant === 'black' ? theme.cardDark : theme.accent;
+  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.accentForeground : theme.text;
 
   return (
     <Pressable

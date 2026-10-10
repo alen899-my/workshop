@@ -119,7 +119,7 @@ export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
 
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return useMemo(() => StyleSheet.create({
-    card: { ...UI.card, backgroundColor: theme.card, borderColor: theme.border, marginBottom: 12 },
+    card: { ...UI.card, backgroundColor: theme.card, borderColor: theme.card, marginBottom: 12 },
     pressed: { opacity: 0.8 },
     topStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
     typeLabel: { flex: 1, fontSize: 13, fontWeight: '400', color: theme.textSecondary },

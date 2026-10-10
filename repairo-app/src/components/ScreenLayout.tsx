@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ export default function ScreenLayout({ title, description, rightAction, children
 
   return (
     <ThemedView style={styles.container}>
+      <WorkshopBackdrop />
       <View style={[styles.content]}>
         <View style={[styles.header, { paddingTop: top + 12 }]}>
           <View style={styles.titleWrap}>
@@ -48,8 +50,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 16,
   },
   titleWrap: { flex: 1, gap: 6 },
-  title: { fontSize: 30, fontWeight: '700', letterSpacing: -0.5 },
-  description: { fontSize: 13, fontWeight: '500', marginTop: 1 },
+  title: { fontSize: 30, fontWeight: '400', letterSpacing: -0.5 },
+  description: { fontSize: 13, fontWeight: '400', marginTop: 1 },
   rightAction: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   body: { flex: 1 },
 });

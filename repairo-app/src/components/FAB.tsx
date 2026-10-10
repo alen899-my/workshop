@@ -16,7 +16,7 @@ interface FABProps {
 export default function FAB({ onPress, icon = 'add', size = 56, color, label }: FABProps) {
   const theme = useTheme();
   const styles = useStyles(theme);
-  const bgColor = color ?? theme.primary;
+  const bgColor = color ?? theme.accent;
   const withLabel = !!label;
 
   return (
@@ -27,7 +27,7 @@ export default function FAB({ onPress, icon = 'add', size = 56, color, label }: 
         withLabel ? { backgroundColor: bgColor } : { width: size, height: size, borderRadius: UI.radius, backgroundColor: bgColor },
       ]}
     >
-      <Ionicons name={icon} size={withLabel ? 18 : size * 0.5} color={theme.primaryForeground} />
+      <Ionicons name={icon} size={withLabel ? 18 : size * 0.5} color={theme.accentForeground} />
       {label && <Text style={styles.label}>{label}</Text>}
     </Pressable>
   );
@@ -42,7 +42,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
     },
     label: {
-      fontSize: 15, fontWeight: '600', color: theme.primaryForeground,
+      fontSize: 15, fontWeight: '600', color: theme.accentForeground,
     },
   }), [theme]);
   return styles;

@@ -59,7 +59,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       backgroundColor: theme.card,
       borderRadius: UI.card.borderRadius,
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: theme.card,
       padding: 14,
       marginBottom: 10,
       gap: 12,

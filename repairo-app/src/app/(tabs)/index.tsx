@@ -1,3 +1,5 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
+import WorkshopWorkload from '@/components/WorkshopWorkload';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UI, MaxContentWidth } from '@/constants/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -95,9 +97,9 @@ function DashboardCard({
   children: ReactNode;
 }) {
   const theme = useTheme();
-  const tint = tabIcon === 'car-outline' ? theme.coolTint : tabIcon === 'cash-outline' ? theme.successTint : theme.warmTint;
+  const tint = theme.warmTint;
   return (
-    <View style={[plate.outer, { backgroundColor: metric ? tint : theme.card, borderColor: metric ? tint : theme.border }, dashed && plate.outerDashed, style]}>
+    <View style={[plate.outer, { backgroundColor: theme.card, borderColor: theme.card }, dashed && plate.outerDashed, style]}>
       <View style={[plate.body, metric && { flexDirection: 'column' }]}>
         {tabColor && (
           <View style={[plate.tab, compact && plate.tabCompact, metric && { height: 32, width: 32, marginBottom: 0, alignSelf: 'flex-start' }, { backgroundColor: tint, borderRightColor: theme.border }]}>
@@ -206,14 +208,14 @@ export default function DashboardHome() {
   const s = useMemo(() => ({
     headerRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 },
     headerGreeting: { fontSize: 13, fontWeight: '500' as const, color: theme.heroMuted, letterSpacing: 0 },
-    headerName: { fontSize: 27, fontWeight: '600' as const, color: theme.heroText, letterSpacing: 0 },
+    headerName: { fontSize: 28, fontWeight: '400' as const, color: theme.heroText, letterSpacing: 0 },
     headerDate: { fontSize: 12, fontWeight: '500' as const, color: theme.heroMuted, marginTop: 1 },
     medallion: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: theme.card },
     medallionText: { fontSize: 17, fontWeight: '600' as const },
     statsGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: CARD_GAP },
-    statValue: { fontSize: 32, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
-    statLabel: { fontSize: 13, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
-    sectionTitle: { fontSize: 18, fontWeight: '700' as const, letterSpacing: 0, paddingLeft: 2 },
+    statValue: { fontSize: 36, fontWeight: '300' as const, color: theme.text, letterSpacing: 0 },
+    statLabel: { fontSize: 12, fontWeight: '400' as const, color: theme.textSecondary, letterSpacing: 0 },
+    sectionTitle: { fontSize: 18, fontWeight: '500' as const, letterSpacing: 0, paddingLeft: 2 },
     sectionHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, paddingRight: 2 },
     countPlate: { alignSelf: 'flex-start' as const },
     countPlateText: { fontSize: 13, fontWeight: '600' as const, color: theme.text },
@@ -234,7 +236,7 @@ export default function DashboardHome() {
     workerDivider: { width: 1.5, height: 30, backgroundColor: theme.border },
     gaugeOuter: { marginTop: 14, position: 'relative' as const },
     gaugeTrack: { height: 6, borderRadius: 3, backgroundColor: theme.border, overflow: 'hidden' as const },
-    gaugeFill: { height: 6, borderRadius: 3, backgroundColor: theme.warning },
+    gaugeFill: { height: 6, borderRadius: 3, backgroundColor: theme.accent },
     billRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
     billAmount: { fontSize: 16, fontWeight: '600' as const, color: theme.primary },
     viewAllLink: { fontSize: 13, fontWeight: '700' as const },
@@ -242,6 +244,7 @@ export default function DashboardHome() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
+      <WorkshopBackdrop />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -255,8 +258,15 @@ export default function DashboardHome() {
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
-        {/* Dashboard section */}
-        <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 24, borderRadius: 24, gap: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ borderWidth: 1, borderColor: theme.textMuted, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 7 }}>
+            <Text style={{ color: theme.text, fontSize: 19, fontWeight: '500', letterSpacing: -0.6 }}>Repairo</Text>
+          </View>
+          <View style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 24 }}>
+            <Text style={{ color: theme.primaryForeground, fontSize: 12 }}>Workshop</Text>
+          </View>
+        </View>
+        <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 20, borderRadius: 28, gap: 20 }}>
           <View style={s.headerRow}>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={s.headerGreeting}>{greeting}</Text>
@@ -272,7 +282,7 @@ export default function DashboardHome() {
             )}
           </View>
           <View style={{ borderTopWidth: 1, borderTopColor: theme.heroGlass, paddingTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 44, lineHeight: 50, fontWeight: '600', color: theme.heroText, letterSpacing: -2 }}>{loading ? '...' : liveRepairs.length}</Text>
+            <Text style={{ fontSize: 48, lineHeight: 54, fontWeight: '300', color: theme.heroText, letterSpacing: -2 }}>{loading ? '...' : liveRepairs.length}</Text>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: theme.heroText, fontSize: 16, fontWeight: '600' }}>Open repairs</Text>
               <Text style={{ color: theme.heroMuted, fontSize: 13 }}>Your workshop, at a glance</Text>
@@ -312,9 +322,10 @@ export default function DashboardHome() {
           </View>
         )}
 
-        {/* Dashboard section */}
+        <WorkshopWorkload repairs={liveRepairs} loading={loading} />
+
         <View style={{ gap: 10 }}>
-          <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Quick actions</Text>          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginTop: 4 }}>
+          <Text style={[s.sectionTitle, { color: theme.text }]}>Quick actions</Text>          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginTop: 4 }}>
             {[
               { icon: 'construct-outline' as const, label: 'New Repair', onPress: () => setShowRepairModal(true), key: 'repair' },
 
@@ -353,17 +364,17 @@ export default function DashboardHome() {
             ) : liveRepairs.length > 0 ? (
             <View style={{ gap: 10 }}>
               {liveRepairs.slice(0, 4).map((repair) => (
-                <DashboardCard key={repair.id} tabColor={accent.pending} tabIcon="car-sport-outline">
+                <DashboardCard key={repair.id} tabIcon="car-sport-outline" style={{ backgroundColor: theme.panel, borderColor: theme.panel }}>
                   <View style={s.repairRow}>
                     <View style={{ flex: 1, gap: 3 }}>
-                      <Text style={s.plateSerial} numberOfLines={1}>{repair.vehicle_number}</Text>
-                      <Text style={s.repairMeta} numberOfLines={1}>
+                      <Text style={[s.plateSerial, { color: theme.panelText }]} numberOfLines={1}>{repair.vehicle_number}</Text>
+                      <Text style={[s.repairMeta, { color: theme.panelMuted }]} numberOfLines={1}>
                         {repair.model_name || repair.service_type || ''}
                         {repair.attending_worker_name ? ` \u00B7 ${repair.attending_worker_name}` : ''}
                       </Text>
                     </View>
-                    <View style={[s.badge, { backgroundColor: theme.warning + '18', borderColor: theme.warning + '55' }]}>
-                      <Text style={[s.badgeText, { color: theme.warning }]}>{repair.status}</Text>
+                    <View style={[s.badge, { backgroundColor: theme.accent, borderColor: theme.accent }]}>
+                      <Text style={[s.badgeText, { color: theme.accentForeground }]}>{repair.status}</Text>
                     </View>
                   </View>
                 </DashboardCard>

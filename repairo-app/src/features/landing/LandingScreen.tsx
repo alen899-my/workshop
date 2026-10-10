@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ export default function LandingScreen() {
   const theme = useTheme();
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: theme.background }]}>
+      <WorkshopBackdrop />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.brand}>
           <Ionicons name="build-outline" size={22} color={theme.text} />
@@ -50,10 +52,10 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   wordmark: { fontSize: 22, fontWeight: '600', letterSpacing: -0.5 },
   body: { flex: 1, justifyContent: 'center', gap: 16, paddingVertical: 24 },
-  hero: { padding: 24, borderRadius: 24, gap: 16 },
+  hero: { padding: 24, borderRadius: 28, gap: 16 },
   featureIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 1 },
-  title: { fontSize: 36, lineHeight: 42, fontWeight: '600', letterSpacing: -1 },
+  title: { fontSize: 36, lineHeight: 42, fontWeight: '400', letterSpacing: -1 },
   description: { fontSize: 15, lineHeight: 24 },
   features: { ...UI.card, marginTop: 8, gap: 20 },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 12 },

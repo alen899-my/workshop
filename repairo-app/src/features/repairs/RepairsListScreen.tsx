@@ -74,7 +74,7 @@ function SegmentedControl({
     container: {
       flexDirection: 'row',
       backgroundColor: theme.backgroundElement,
-      borderRadius: 10,
+      borderRadius: 24,
       padding: 2,
       position: 'relative',
     },
@@ -83,7 +83,7 @@ function SegmentedControl({
       top: 2,
       bottom: 2,
       backgroundColor: theme.primary,
-      borderRadius: 8,
+      borderRadius: 22,
     },
     tab: {
       flex: 1,
