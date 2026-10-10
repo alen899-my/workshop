@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -23,12 +21,11 @@ import LocationPicker from '@/components/ui/LocationPicker';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import Toast from '@/components/ui/Toast';
 
-import { Spacing } from '@/constants/theme';
+import { Spacing, UI, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { authService } from '@/services/auth.service';
 import { getCallingCode } from '@/utils/preload-countries';
 
-const { width } = Dimensions.get('window');
 const IMG_H = 210;
 
 const STEPS = [
@@ -161,18 +158,21 @@ export default function SignupScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       >
         {/* Hero Image */}
-        <View style={styles.heroWrap}>
-          <Image source={require('@/assets/images/auth.jpg')} style={styles.hero} resizeMode="cover" />
-          <LinearGradient colors={['transparent', theme.background]} style={styles.gradient} pointerEvents="none" />
-
+        <View style={[styles.heroWrap, { height: IMG_H + insets.top }]}>
+          <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { height: IMG_H + insets.top }]}>
+            <View style={{ paddingHorizontal: 24, paddingTop: insets.top + 66, gap: 6 }}>
+              <Text style={{ color: theme.heroText, fontSize: 30, fontWeight: '700', letterSpacing: -1 }}>Repairo</Text>
+              <Text style={{ color: theme.heroMuted, fontSize: 14 }}>A better day at the workshop.</Text>
+            </View>
+          </LinearGradient>
           {/* Back Button */}
           <Pressable style={[styles.back, { top: insets.top + 8 }]} hitSlop={12} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.primaryForeground} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.heroText} />
           </Pressable>
         </View>
 
         {/* Card */}
-        <View style={[styles.card, { marginTop: -32, backgroundColor: theme.background, borderTopLeftRadius: 32, borderTopRightRadius: 32 }]}>
+        <View style={[styles.card, { marginTop: -32, backgroundColor: theme.background, borderTopLeftRadius: UI.sheetRadius, borderTopRightRadius: UI.sheetRadius }]}>
           <ScrollView
             ref={scrollRef}
             style={styles.scrollArea}
@@ -392,7 +392,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMe
     position: 'relative',
   },
   hero: {
-    width,
+    width: '100%',
     height: IMG_H,
   },
   gradient: {
@@ -408,7 +408,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMe
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: theme.heroGlass,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -441,7 +441,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMe
   },
   stepDotText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   stepLine: {
     height: 2,
@@ -510,7 +510,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMe
     alignItems: 'center',
     justifyContent: 'center',
     height: 48,
-    borderRadius: 14,
+    borderRadius: UI.radius,
     gap: 8,
   },
   agreeRow: {

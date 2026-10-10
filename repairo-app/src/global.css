@@ -7,21 +7,21 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 
-  --color-background: #F7F7F5;
-  --color-foreground: #292824;
-  --color-primary: #33332F;
+  --color-background: #F6F5F8;
+  --color-foreground: #252633;
+  --color-primary: #B9461F;
   --color-card: #FFFFFF;
-  --color-border: #E3E3DE;
-  --color-muted: #77766E;
+  --color-border: #E5E3EB;
+  --color-muted: #6A6A79;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #1C1D1B;
-    --color-primary: #E3E4DA;
-    --color-foreground: #E9E9E3;
-    --color-card: #242521;
-    --color-border: #3A3B34;
-    --color-muted: #A4A69B;
+    --color-background: #151720;
+    --color-primary: #F6A279;
+    --color-foreground: #F4F1ED;
+    --color-card: #20232F;
+    --color-border: #45495D;
+    --color-muted: #AAAABD;
   }
 }

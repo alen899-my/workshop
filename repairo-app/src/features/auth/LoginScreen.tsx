@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,13 +18,12 @@ import { router } from 'expo-router';
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import Toast from '@/components/ui/Toast';
-import { Spacing } from '@/constants/theme';
+import { Spacing, UI, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
 import { authService } from '@/services/auth.service';
 import { getCallingCode } from '@/utils/preload-countries';
 
-const { width } = Dimensions.get('window');
 const IMG_H = 210;
 
 export default function LoginScreen() {
@@ -78,13 +75,17 @@ export default function LoginScreen() {
     >
       <View style={styles.flex}>
         {/* Hero Image */}
-        <View style={styles.heroWrap}>
-          <Image source={require('@/assets/images/auth.jpg')} style={styles.hero} resizeMode="cover" />
-          <LinearGradient colors={['transparent', theme.background]} style={styles.gradient} pointerEvents="none" />
+        <View style={[styles.heroWrap, { height: IMG_H + insets.top }]}>
+          <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { height: IMG_H + insets.top }]}>
+            <View style={{ paddingHorizontal: 24, paddingTop: insets.top + 66, gap: 6 }}>
+              <Text style={{ color: theme.heroText, fontSize: 30, fontWeight: '700', letterSpacing: -1 }}>Repairo</Text>
+              <Text style={{ color: theme.heroMuted, fontSize: 14 }}>A better day at the workshop.</Text>
+            </View>
+          </LinearGradient>
 
           {/* Back Button */}
           <Pressable style={[styles.back, { top: insets.top + 8 }]} hitSlop={12} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.primaryForeground} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.heroText} />
           </Pressable>
         </View>
 
@@ -145,7 +146,7 @@ export default function LoginScreen() {
                 <View style={styles.trustRow}>
                   <MaterialCommunityIcons name="shield-lock-outline" size={14} color={theme.textSecondary} />
                   <Text style={[styles.trustText, { color: theme.textSecondary }]}>
-                    Secured with end-to-end encryption
+                    Your workshop, all in one place
                   </Text>
                 </View>
 
@@ -183,7 +184,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       position: 'relative',
     },
     hero: {
-      width,
+      width: '100%',
       height: IMG_H,
     },
     gradient: {
@@ -199,7 +200,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      backgroundColor: theme.heroGlass,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -207,15 +208,18 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       flex: 1,
       paddingHorizontal: Spacing.four,
       paddingTop: Spacing.three,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
+      borderTopLeftRadius: UI.sheetRadius,
+      borderTopRightRadius: UI.sheetRadius,
     },
     content: {
       paddingTop: Spacing.three,
+      width: '100%',
+      maxWidth: MaxContentWidth,
+      alignSelf: 'center',
     },
     screenTitle: {
-      fontSize: 24,
-      fontWeight: '800',
+      fontSize: 28,
+      fontWeight: '700',
       marginBottom: 4,
     },
     screenSub: {
@@ -239,7 +243,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       alignItems: 'center',
       justifyContent: 'center',
       height: 52,
-      borderRadius: 14,
+      borderRadius: UI.radius,
       gap: 8,
       marginTop: Spacing.three,
     },

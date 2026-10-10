@@ -71,7 +71,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const { theme: currentTheme, setTheme, isDark } = useThemePreference();
   const [showShopAppearance, setShowShopAppearance] = useState(false);
 
-  const isDarkMode = currentTheme === 'dark';
+  const isDarkMode = isDark;
   const isSystem = currentTheme === 'system';
 
   if (showShopAppearance) {

@@ -46,9 +46,9 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
   };
 
   const STATUS_LABELS: Record<string, string> = {
-    Pending: 'PENDING',
-    Started: 'IN PROGRESS',
-    Completed: 'COMPLETED',
+    Pending: 'Pending',
+    Started: 'In progress',
+    Completed: 'Completed',
   };
 
   const [showDelete, setShowDelete] = useState(false);
@@ -114,7 +114,7 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
           </ThemedText>
           {repair.phone_number && (
             <Pressable onPress={() => handleCall(repair.phone_number)} style={styles.callBtn}>
-              <Ionicons name="call" size={11} color={theme.textInverse} />
+              <Ionicons name="call" size={11} color={theme.successForeground} />
             </Pressable>
           )}
         </View>
@@ -186,9 +186,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return useMemo(() => StyleSheet.create({
     wrapper: {
       marginHorizontal: Spacing.three,
-      marginBottom: Spacing.two,
+      marginBottom: 12,
       backgroundColor: theme.card,
-      borderRadius: UI.radius,
+      borderRadius: UI.card.borderRadius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.three,
@@ -218,14 +218,17 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     // ── Registration ──
     registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
 
-    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
+    registrationText: { fontSize: 19, fontWeight: '600', color: theme.text, flexShrink: 1 },
 
     // ── Status row ──
     statusRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      marginTop: 6,
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.divider,
     },
     priorityBadge: {
       backgroundColor: theme.error,
@@ -234,9 +237,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       borderRadius: 6,
     },
     priorityText: {
-      fontSize: 9,
+      fontSize: 11,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: theme.errorForeground,
       letterSpacing: 0.5,
     },
     statusBadge: {

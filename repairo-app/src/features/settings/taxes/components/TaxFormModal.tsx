@@ -435,7 +435,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       marginTop: 4,
     },
     btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    submitText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    submitText: { color: theme.primaryForeground, fontSize: 16, fontWeight: '700' },
     pressed: { opacity: 0.82 },
     disabled: { opacity: 0.6 },
   }), [theme]);

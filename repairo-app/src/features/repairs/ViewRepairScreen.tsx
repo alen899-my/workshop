@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -921,12 +922,12 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   vehicleCard: {
     flexDirection: 'row',
     backgroundColor: theme.card,
-    borderRadius: 14,
+    borderRadius: UI.card.borderRadius,
     padding: 12,
     gap: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.02,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -1010,7 +1011,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   // ── Cards ──
   card: {
     backgroundColor: theme.card,
-    borderRadius: 14,
+    borderRadius: UI.card.borderRadius,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1018,14 +1019,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     shadowRadius: 8,
     elevation: 2,
   },
-  cardTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
+  cardTitle: { fontSize: 17, fontWeight: '600', color: theme.text, marginBottom: 16 },
 
   // ── Customer ──
   customerRow: {
@@ -1064,19 +1058,8 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   },
 
   // ── Details ──
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-  },
-  detailLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.divider },
+  detailLabel: { fontSize: 12, fontWeight: '400', color: theme.textSecondary },
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
@@ -1127,7 +1110,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   actionBtnIcon: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: UI.card.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.divider,

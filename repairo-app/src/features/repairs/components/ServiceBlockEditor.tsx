@@ -322,7 +322,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     categoryChipText: {
       fontSize: 12, fontWeight: '700', color: theme.textSecondary,
     },
-    categoryChipTextActive: { color: '#FFFFFF' },
+    categoryChipTextActive: { color: theme.primaryForeground },
 
     divider: { height: 1, backgroundColor: theme.border, marginHorizontal: 0 },
 

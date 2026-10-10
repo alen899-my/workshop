@@ -176,6 +176,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       shadowRadius: 8,
       elevation: 4,
     },
-    saveText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+    saveText: { fontSize: 15, fontWeight: '800', color: theme.primaryForeground },
   });
 };

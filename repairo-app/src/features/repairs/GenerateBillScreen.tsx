@@ -721,7 +721,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     justifyContent: 'center',
   },
   shareBtnText: {
-    color: '#FFFFFF',
+    color: '#123321',
     fontSize: 13,
     fontWeight: '700',
   },

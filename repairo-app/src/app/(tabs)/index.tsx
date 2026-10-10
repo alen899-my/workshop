@@ -1,8 +1,8 @@
-import { UI } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { UI, MaxContentWidth } from '@/constants/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Modal,
   Pressable,
   RefreshControl,
@@ -29,10 +29,7 @@ import CreateCustomerScreen from '@/features/customers/CreateCustomerScreen';
 import CreateVehicleScreen from '@/features/vehicles/CreateVehicleScreen';
 import InvoicesListScreen from '@/features/invoices/InvoicesListScreen';
 
-const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_GAP = 12;
-const GRID_PADDING = 16;
-const HALF_W = (SCREEN_W - GRID_PADDING * 2 - CARD_GAP) / 2;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -85,6 +82,7 @@ function DashboardCard({
   tabIcon,
   compact = false,
   dashed = false,
+  metric = false,
   style,
   children,
 }: {
@@ -92,26 +90,24 @@ function DashboardCard({
   tabIcon?: keyof typeof Ionicons.glyphMap;
   compact?: boolean;
   dashed?: boolean;
+  metric?: boolean;
   style?: any;
   children: ReactNode;
 }) {
   const theme = useTheme();
+  const tint = tabIcon === 'car-outline' ? theme.coolTint : tabIcon === 'cash-outline' ? theme.successTint : theme.warmTint;
   return (
-    <View style={[plate.outer, { backgroundColor: theme.card, borderColor: theme.border }, dashed && plate.outerDashed, style]}>
-      <View style={plate.body}>
+    <View style={[plate.outer, { backgroundColor: metric ? tint : theme.card, borderColor: metric ? tint : theme.border }, dashed && plate.outerDashed, style]}>
+      <View style={[plate.body, metric && { flexDirection: 'column' }]}>
         {tabColor && (
-          <View style={[plate.tab, compact && plate.tabCompact, { backgroundColor: theme.backgroundElement, borderRightColor: theme.border }]}>
-            {tabIcon && <Ionicons name={tabIcon} size={compact ? 16 : 20} color={theme.textSecondary} />}
+          <View style={[plate.tab, compact && plate.tabCompact, metric && { height: 32, width: 32, marginBottom: 0, alignSelf: 'flex-start' }, { backgroundColor: tint, borderRightColor: theme.border }]}>
+            {tabIcon && <Ionicons name={tabIcon} size={compact ? 16 : 20} color={tabColor || theme.primary} />}
           </View>
         )}
         <View style={[plate.content, compact && plate.contentCompact]}>{children}</View>
       </View>
     </View>
   );
-}
-
-function SectionDivider({ color }: { color: string }) {
-  return <View style={{ height: 1, backgroundColor: color, marginTop: 8 }} />;
 }
 
 export default function DashboardHome() {
@@ -209,19 +205,19 @@ export default function DashboardHome() {
 
   const s = useMemo(() => ({
     headerRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 },
-    headerGreeting: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
-    headerName: { fontSize: 21, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
-    headerDate: { fontSize: 12, fontWeight: '600' as const, color: theme.textSecondary, marginTop: 1 },
+    headerGreeting: { fontSize: 13, fontWeight: '500' as const, color: theme.heroMuted, letterSpacing: 0 },
+    headerName: { fontSize: 27, fontWeight: '600' as const, color: theme.heroText, letterSpacing: 0 },
+    headerDate: { fontSize: 12, fontWeight: '500' as const, color: theme.heroMuted, marginTop: 1 },
     medallion: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: theme.card },
     medallionText: { fontSize: 17, fontWeight: '600' as const },
     statsGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: CARD_GAP },
-    statValue: { fontSize: 20, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
-    statLabel: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
-    sectionTitle: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 0, paddingLeft: 2 },
+    statValue: { fontSize: 32, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
+    statLabel: { fontSize: 13, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
+    sectionTitle: { fontSize: 18, fontWeight: '700' as const, letterSpacing: 0, paddingLeft: 2 },
     sectionHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, paddingRight: 2 },
     countPlate: { alignSelf: 'flex-start' as const },
     countPlateText: { fontSize: 13, fontWeight: '600' as const, color: theme.text },
-    actionLabel: { fontSize: 11, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
+    actionLabel: { fontSize: 14, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
     repairRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
     plateSerial: { fontSize: 15.5, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
     repairMeta: { fontSize: 12, fontWeight: '600' as const, color: theme.textSecondary },
@@ -251,13 +247,16 @@ export default function DashboardHome() {
         contentContainerStyle={{
           paddingTop: insets.top + 16,
           paddingBottom: insets.bottom + 100,
-          paddingHorizontal: 16,
-          gap: 22,
+          paddingHorizontal: 20,
+          maxWidth: MaxContentWidth,
+          width: '100%',
+          alignSelf: 'center',
+          gap: 24,
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
         {/* Dashboard section */}
-        <DashboardCard tabColor={accent.header} tabIcon="car-sport">
+        <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 24, borderRadius: 24, gap: 24 }}>
           <View style={s.headerRow}>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={s.headerGreeting}>{greeting}</Text>
@@ -267,18 +266,26 @@ export default function DashboardHome() {
             {user?.profile_image ? (
               <Image source={{ uri: user.profile_image }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: accent.header, backgroundColor: theme.primary + '18' }} contentFit="cover" />
             ) : (
-              <View style={[s.medallion, { borderColor: accent.header }]}>
-                <Text style={[s.medallionText, { color: accent.header }]}>{(displayName[0] || 'R').toUpperCase()}</Text>
+              <View style={[s.medallion, { borderColor: theme.heroGlass, backgroundColor: theme.heroGlass }]}>
+                <Text style={[s.medallionText, { color: theme.heroText }]}>{(displayName[0] || 'R').toUpperCase()}</Text>
               </View>
             )}
           </View>
-        </DashboardCard>
+          <View style={{ borderTopWidth: 1, borderTopColor: theme.heroGlass, paddingTop: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text style={{ fontSize: 44, lineHeight: 50, fontWeight: '600', color: theme.heroText, letterSpacing: -2 }}>{loading ? '...' : liveRepairs.length}</Text>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: theme.heroText, fontSize: 16, fontWeight: '600' }}>Open repairs</Text>
+              <Text style={{ color: theme.heroMuted, fontSize: 13 }}>Your workshop, at a glance</Text>
+            </View>
+            <Ionicons name="build-outline" size={28} color={theme.heroText} />
+          </View>
+        </LinearGradient>
 
         {/* Dashboard section */}
         {loading ? (
           <View style={s.statsGrid}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <DashboardCard key={i} style={{ width: HALF_W }}>
+              <DashboardCard key={i} style={{ flexBasis: '47%', flexGrow: 1 }}>
                 <View style={{ paddingVertical: 14, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color={theme.text} />
                 </View>
@@ -292,13 +299,13 @@ export default function DashboardHome() {
                 { label: 'Total Repairs', value: formatNumber(stats?.totalRepairs ?? 0), icon: 'build-outline' as const, key: 'repairs' },
                 { label: 'Total Vehicles', value: formatNumber(vehicleCount ?? 0), icon: 'car-outline' as const, key: 'vehicles' },
               ].map((card) => (
-                <DashboardCard key={card.label} tabColor={accent[card.key]} tabIcon={card.icon} style={{ flex: 1 }}>
+                <DashboardCard key={card.label} tabColor={accent[card.key]} tabIcon={card.icon} metric style={{ flex: 1 }}>
                   <Text style={s.statValue} numberOfLines={1}>{card.value}</Text>
                   <Text style={s.statLabel}>{card.label}</Text>
                 </DashboardCard>
               ))}
             </View>
-            <DashboardCard tabColor={accent.revenue} tabIcon="cash-outline" style={{ width: '100%' }}>
+            <DashboardCard tabColor={accent.revenue} tabIcon="cash-outline" metric style={{ width: '100%' }}>
               <Text style={s.statValue} numberOfLines={1}>{stats ? formatCurrency(stats.totalRevenue) : '\u2014'}</Text>
               <Text style={s.statLabel}>Revenue</Text>
             </DashboardCard>
@@ -307,9 +314,7 @@ export default function DashboardHome() {
 
         {/* Dashboard section */}
         <View style={{ gap: 10 }}>
-          <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>QUICK ACTIONS</Text>
-          <SectionDivider color={theme.border} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginTop: 4 }}>
+          <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Quick actions</Text>          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginTop: 4 }}>
             {[
               { icon: 'construct-outline' as const, label: 'New Repair', onPress: () => setShowRepairModal(true), key: 'repair' },
 
@@ -332,9 +337,7 @@ export default function DashboardHome() {
         <View style={{ gap: 10 }}>
           <View style={s.sectionHeader}>
             <View>
-              <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>VEHICLES ON REPAIR</Text>
-              <SectionDivider color={theme.border} />
-            </View>
+              <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>On the workshop floor</Text>            </View>
             {liveRepairs.length > 0 && (
               <DashboardCard compact style={s.countPlate}>
                 <Text style={s.countPlateText}>{liveRepairs.length}</Text>
@@ -386,9 +389,7 @@ export default function DashboardHome() {
 
         {/* Dashboard section */}
         <View style={{ gap: 10 }}>
-          <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>WORKERS</Text>
-          <SectionDivider color={theme.border} />
-          <DashboardCard tabColor={accent.workers} tabIcon="people-outline">
+          <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Your team</Text>          <DashboardCard tabColor={accent.workers} tabIcon="people-outline">
             <View style={s.workerRow}>
               <View style={s.workerStat}>
                 <View style={[s.workerDot, { backgroundColor: theme.success }]} />
@@ -420,9 +421,7 @@ export default function DashboardHome() {
         <View style={{ gap: 10 }}>
           <View style={s.sectionHeader}>
             <View>
-              <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>RECENT BILLS</Text>
-              <SectionDivider color={theme.border} />
-            </View>
+              <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Recent invoices</Text>            </View>
             <Pressable onPress={() => setShowInvoicesModal(true)} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
               <Text style={[s.viewAllLink, { color: theme.primary }]}>View All</Text>
             </Pressable>
@@ -485,7 +484,7 @@ export default function DashboardHome() {
 const plate = StyleSheet.create({
   outer: {
     borderWidth: 1,
-    borderRadius: UI.radius,
+    borderRadius: UI.card.borderRadius,
     overflow: 'hidden',
   },
   outerDashed: {

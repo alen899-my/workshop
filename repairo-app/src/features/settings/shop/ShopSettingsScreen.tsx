@@ -476,7 +476,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
               onPress={startEditing}
             >
               <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-              <ThemedText style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>Edit Shop Details</ThemedText>
+              <ThemedText style={{ fontSize: 15, fontWeight: '700', color: theme.primaryForeground }}>Edit Shop Details</ThemedText>
             </Pressable>
           </View>
         </ScrollView>

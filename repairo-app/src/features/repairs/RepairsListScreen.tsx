@@ -495,13 +495,13 @@ export default function RepairsListScreen() {
         </View>
       )}
     </View>
-  ), [loading, filteredRepairs.length, activeTab, tabCounts, handleTabSelect, selectedDate]);
+  ), [loading, filteredRepairs.length, activeTab, tabCounts, handleTabSelect, selectedDate, styles]);
 
   const ListFooter = useMemo(() => {
     if (loading) return <View style={styles.loadingContainer}><ActivityIndicator color={theme.primary} /></View>;
     if (hasMore) return <View style={styles.footer}><ActivityIndicator size="small" color={theme.primary} /></View>;
     return null;
-  }, [loading, hasMore]);
+  }, [loading, hasMore, styles, theme]);
 
   const ListEmpty = useMemo(() => {
     if (loading) return null;
@@ -516,7 +516,7 @@ export default function RepairsListScreen() {
         </ThemedText>
       </View>
     );
-  }, [loading, activeTab]);
+  }, [loading, activeTab, styles, theme]);
 
   return (
     <ScreenLayout

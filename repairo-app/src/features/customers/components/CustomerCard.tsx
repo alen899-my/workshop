@@ -57,7 +57,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.card,
-      borderRadius: UI.radius,
+      borderRadius: UI.card.borderRadius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 14,

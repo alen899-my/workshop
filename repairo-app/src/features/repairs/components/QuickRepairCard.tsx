@@ -91,9 +91,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return StyleSheet.create({
     wrapper: {
       marginHorizontal: Spacing.three,
-      marginBottom: Spacing.two,
+      marginBottom: 12,
       backgroundColor: theme.card,
-      borderRadius: UI.radius,
+      borderRadius: UI.card.borderRadius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.three,
@@ -119,7 +119,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
 
-    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
+    registrationText: { fontSize: 19, fontWeight: '600', color: theme.text, flexShrink: 1 },
     complaint: {
       fontSize: 12,
       fontWeight: '500',

@@ -341,7 +341,7 @@ export default function CurrencySettingsScreen({ onClose }: CurrencySettingsScre
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="save-outline" size={16} color="#FFFFFF" />
-              <ThemedText style={{ fontSize: 15, fontWeight: '700', color: '#FFFFFF' }}>
+              <ThemedText style={{ fontSize: 15, fontWeight: '700', color: theme.primaryForeground }}>
                 Save Changes
               </ThemedText>
             </View>

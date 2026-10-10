@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme, getContrastColor } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 
 interface ConfirmModalProps {
@@ -80,7 +80,7 @@ export default function ConfirmModal({
               ]}
               onPress={onConfirm}
             >
-              <ThemedText style={styles.btnConfirmText}>{confirmLabel}</ThemedText>
+              <ThemedText style={[styles.btnConfirmText, { color: getContrastColor(typeColor) }]}>{confirmLabel}</ThemedText>
             </Pressable>
           </View>
         </View>

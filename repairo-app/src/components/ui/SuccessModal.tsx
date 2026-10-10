@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { useTheme } from '@/hooks/use-theme';
 import { UI } from '@/constants/theme';
 import { Pressable, Modal, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +28,8 @@ export default function SuccessModal({
   subtitle = 'Job card created successfully',
   actionButtons,
 }: SuccessModalProps) {
+  const theme = useTheme();
+  const styles = useStyles(theme);
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.fullscreen}>
@@ -34,7 +38,7 @@ export default function SuccessModal({
         </View>
         <View style={styles.card}>
           <View style={styles.circle}>
-            <Ionicons name="checkmark" size={40} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={40} color={theme.primaryForeground} />
           </View>
           <View style={styles.details}>
             <ThemedText style={styles.title}>{title}</ThemedText>
@@ -54,7 +58,7 @@ export default function SuccessModal({
                     ]}
                   >
                     <View style={styles.btnContent}>
-                      <Ionicons name={btn.icon} size={18} color={btn.primary !== false ? '#FFFFFF' : '#0D9488'} />
+                      <Ionicons name={btn.icon} size={18} color={btn.primary !== false ? theme.primaryForeground : theme.primary} />
                       <ThemedText style={btn.primary !== false ? styles.primaryText : styles.secondaryText}>
                         {btn.label}
                       </ThemedText>
@@ -74,7 +78,7 @@ export default function SuccessModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = (theme: ReturnType<typeof useTheme>) => useMemo(() => StyleSheet.create({
   fullscreen: {
     flex: 1,
     alignItems: 'center',
@@ -90,7 +94,7 @@ const styles = StyleSheet.create({
   card: {
     width: '82%',
     maxWidth: 320,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: UI.radius,
     paddingVertical: 32,
     paddingHorizontal: 24,
@@ -105,7 +109,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#0D9488',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -117,13 +121,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1A1A1A',
+    color: theme.text,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#8A8A80',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     paddingHorizontal: 8,
@@ -136,12 +140,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#0D9488',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   doneText: {
-    color: '#FFFFFF',
+    color: theme.primaryForeground,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#0D9488',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -161,11 +165,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#0D9488',
+    borderColor: theme.border,
   },
   btnContent: {
     flexDirection: 'row',
@@ -174,13 +178,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: theme.primaryForeground,
     fontSize: 14,
     fontWeight: '700',
   },
   secondaryText: {
-    color: '#0D9488',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '700',
   },
-});
+}), [theme]);

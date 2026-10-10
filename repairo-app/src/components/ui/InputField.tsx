@@ -63,7 +63,7 @@ export default function InputField({
         style={[
           styles.inputContainer,
           {
-            borderColor: error ? theme.error : focused ? theme.text : theme.border,
+            borderColor: error ? theme.error : focused ? theme.primary : theme.border,
             backgroundColor: theme.card,
           },
           focused && !error && { shadowColor: theme.text },
@@ -72,7 +72,7 @@ export default function InputField({
         <MaterialCommunityIcons
           name={iconName}
           size={18}
-          color={error ? theme.error : focused ? theme.text : theme.textSecondary}
+          color={error ? theme.error : focused ? theme.primary : theme.textSecondary}
           style={styles.icon}
         />
         <TextInput
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: 2,
   },

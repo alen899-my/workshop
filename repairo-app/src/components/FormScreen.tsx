@@ -39,7 +39,7 @@ export default function FormScreen({
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: top || 8 }]}>
+      <View style={[styles.header, { paddingTop: top + 12 }]}>
         <ThemedText style={[styles.headerTitle, { color: theme.text }]}>{title}</ThemedText>
         <ThemedText style={[styles.stepCount, { color: theme.textSecondary }]}>Step {currentStep + 1} of {tabs.length}</ThemedText>
       </View>
@@ -118,19 +118,19 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   header: { alignItems: 'flex-start', paddingTop: 8, paddingBottom: 16, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 22, fontWeight: '700' },
+  headerTitle: { fontSize: 26, fontWeight: '700' },
   stepCount: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   stepper: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 16 },
-  progressTrack: { height: 3, borderRadius: 2, marginBottom: 8 },
+  progressTrack: { height: 4, borderRadius: 2, marginBottom: 8 },
   progressFill: { height: 3, borderRadius: 2 },
   stepsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   stepItem: { alignItems: 'center', gap: 4, flex: 1 },
   stepDot: {
-    width: 26, height: 26, borderRadius: 13,
+    width: 30, height: 30, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
   stepNumber: { fontSize: 12, fontWeight: '700' },
-  stepLabel: { fontSize: 11, fontWeight: '600' },
+  stepLabel: { fontSize: 12, fontWeight: '600' },
   cancelBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: UI.radius,
     borderWidth: 1,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   backText: { fontSize: 15, fontWeight: '600' },
-  primaryBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12 },
+  primaryBtn: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: UI.radius },
   saving: { opacity: 0.5 },
   primaryText: { fontSize: 15, fontWeight: '700' },
   scrollContent: { padding: 20, paddingBottom: 24 },

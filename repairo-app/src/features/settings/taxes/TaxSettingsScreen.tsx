@@ -410,7 +410,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     emptyBtnText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: theme.primaryForeground,
     },
 
     fabWrap: { position: 'absolute', bottom: 120, right: 20 },

@@ -233,12 +233,12 @@ export default function DateStrip({ selectedDate, onChange }: DateStripProps) {
           <Ionicons
             name="calendar-outline"
             size={18}
-            color={(calendarOpen || selectedDate !== null) ? '#FFF' : theme.primary}
+            color={(calendarOpen || selectedDate !== null) ? theme.primaryForeground : theme.primary}
           />
           {todayLabel && !days.some((d) => d.iso === selectedDate) && (
             <ThemedText style={[
               styles.strip.calBtnLabel,
-              (calendarOpen || selectedDate !== null) && { color: '#FFF' }
+              (calendarOpen || selectedDate !== null) && { color: theme.primaryForeground }
             ]}>{todayLabel}</ThemedText>
           )}
         </Pressable>
@@ -339,7 +339,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         backgroundColor: theme.primary,
         shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.12,
         shadowRadius: 6,
         elevation: 4,
       },
@@ -361,7 +361,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         gap: 2,
       },
       pillToday: {
-        backgroundColor: '#000000',
+        backgroundColor: theme.coolTint,
       },
       pillActive: {
         backgroundColor: theme.primary,
@@ -378,7 +378,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         textAlign: 'center',
       },
       pillWeekdayToday: {
-        color: '#FFFFFF',
+        color: theme.info,
         fontWeight: '700',
       },
       pillDay: {
@@ -390,10 +390,10 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         includeFontPadding: false,
       },
       pillDayToday: {
-        color: '#FFFFFF',
+        color: theme.info,
       },
       pillTextActive: {
-        color: '#FFFFFF',
+        color: theme.primaryForeground,
       },
     });
 
@@ -413,7 +413,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       sheet: {
         width: '100%',
         maxWidth: 320,
-        backgroundColor: theme.primary,
+        backgroundColor: theme.dark,
         borderRadius: 24,
         padding: 16,
         gap: 12,
@@ -487,7 +487,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
         includeFontPadding: false,
       },
       cellTextSelected: {
-        color: '#FFFFFF',
+        color: theme.primaryForeground,
         fontWeight: '800',
       },
       cellTextToday: {
@@ -525,7 +525,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       doneText: {
         fontSize: 14,
         fontWeight: '800',
-        color: theme.primary,
+        color: theme.dark,
       },
     });
 

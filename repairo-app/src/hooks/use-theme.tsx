@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 import * as Storage from '@/services/storage';
 
-import { Colors, DarkColors } from '@/constants/theme';
+import { Colors, DarkColors, type ThemeColors } from '@/constants/theme';
 import { getCurrentUser } from '@/services/auth.service';
 
 const THEME_STORAGE_KEY = 'repairo_theme_preference';
@@ -70,6 +70,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => listener.remove();
   }, [theme]);
 
+  // Match browser-native controls and CSS to the app selection, not only the OS.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const palette = resolvedTheme === 'dark' ? DarkColors : Colors;
+    const root = document.documentElement;
+    root.style.colorScheme = resolvedTheme;
+    const css = { background: palette.background, foreground: palette.text, primary: palette.primary, card: palette.card, border: palette.border, muted: palette.textSecondary };
+    Object.entries(css).forEach(([key, value]) => root.style.setProperty('--color-' + key, value));
+  }, [resolvedTheme]);
+
   const setTheme = useCallback((pref: ThemePreference) => {
     setThemeState(pref);
     setResolvedTheme(computeResolved(pref));
@@ -119,19 +129,40 @@ function darken(hex: string, amount: number) {
   return rgbToHex(f(r), f(g), f(b));
 }
 
-export function useTheme() {
+function luminance(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const linear = (value: number) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
+function contrast(a: string, b: string) {
+  const first = luminance(a), second = luminance(b);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+export function getContrastColor(background: string): string {
+  return contrast(background, '#181A24') > contrast(background, '#FFFFFF') ? '#181A24' : '#FFFFFF';
+}
+
+export function useTheme(): ThemeColors {
   const { resolvedTheme, shopPrimaryColor } = useContext(ThemeContext);
   const base = resolvedTheme === 'dark' ? DarkColors : Colors;
 
   return useMemo(() => {
-    if (!shopPrimaryColor) return base;
+    if (!shopPrimaryColor || !/^#[0-9a-f]{6}$/i.test(shopPrimaryColor)) return base;
 
-    const primary = shopPrimaryColor;
+    let primary = shopPrimaryColor;
+    // The accent also serves as text and icons on surfaces.
+    for (let step = 0; step < 20 && Math.min(contrast(primary, base.background), contrast(primary, base.card), contrast(primary, base.backgroundElement)) < 4.5; step++) {
+      primary = resolvedTheme === 'dark' ? lighten(primary, 0.12) : darken(primary, 0.12);
+    }
     const primaryLight = resolvedTheme === 'dark' ? darken(primary, 0.75) : lighten(primary, 0.9);
-    const { r, g, b } = hexToRgb(primary);
-    const primaryForeground = (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#22231F' : '#FFFFFF';
+    const primaryForeground = getContrastColor(primary);
     const tealMid = primary;
-    const tealDeep = darken(primary, 0.25);
+    const tealDeep = resolvedTheme === 'dark' ? primary : darken(primary, 0.15);
     const tealAccent = primary;
     const tabIconSelected = primary;
 
@@ -146,7 +177,7 @@ export function useTheme() {
       tealAccent,
       tabIconSelected,
     };
-  }, [base, shopPrimaryColor, resolvedTheme]) as typeof Colors;
+  }, [base, shopPrimaryColor, resolvedTheme]) as ThemeColors;
 }
 
 export function useThemePreference() {

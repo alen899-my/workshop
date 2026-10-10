@@ -35,6 +35,7 @@ function AnimatedTab({
   tabIconSelected: string;
   tabIconDefault: string;
 }) {
+  const theme = useTheme();
   const scale = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ function AnimatedTab({
   }));
 
   return (
-    <Pressable style={styles.item} onPress={onPress}>
+    <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={tab.label} style={[styles.item, { backgroundColor: focused ? theme.primaryLight : 'transparent', borderRadius: UI.radius }]} onPress={onPress}>
       <Animated.View style={iconStyle}>
         <Ionicons
           name={tab.icon}
@@ -84,7 +85,7 @@ export default function FloatingTabBar({ state, navigation }: any) {
     ? TABS
     : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
-  const barBg = theme.card;
+  const barBg = theme.floatingBar;
   const barBorder = theme.border;
   const barShadow = theme.text;
 
@@ -123,10 +124,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: UI.radius,
-    height: 64,
+    borderRadius: 22,
+    height: 72,
     width: '100%',
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
     backgroundColor: '#111318',
     borderWidth: 1,
     borderColor: '#000000',
@@ -140,16 +141,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
-    gap: 1,
+    gap: 4,
   },
   indicator: {
     width: 20,
-    height: 3,
+    height: 2,
     borderRadius: 1.5,
     marginTop: 2,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
   },
