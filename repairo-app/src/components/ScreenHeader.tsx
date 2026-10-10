@@ -11,7 +11,7 @@ export default function ScreenHeader() {
   return (
     <View style={[styles.container, { paddingTop: top, backgroundColor: theme.background, borderBottomColor: theme.border }]}>
       <View style={styles.inner}>
-        <ThemedText style={[styles.brand, { color: theme.primary }]}>Repairo</ThemedText>
+        <ThemedText style={[styles.brand, { color: theme.text }]}>Repairo</ThemedText>
       </View>
     </View>
   );
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: -0.5,
   },
 });

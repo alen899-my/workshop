@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { getCurrentUser } from '@/services/auth.service';
-import { Animated, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { UI } from '@/constants/theme';
+import { useMemo, useState } from 'react';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -57,32 +57,6 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
   const imageUrl = getImageUrl(repair.vehicle_image);
   const regTime = repair.created_at ? formatUTCToLocal(repair.created_at) : '';
 
-  const blinkAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const isPriorityUrgentOrHigh = repair.priority === 'High' || repair.priority === 'Urgent';
-    if (isPriorityUrgentOrHigh) {
-      const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(blinkAnim, {
-            toValue: 0.3,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(blinkAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      animation.start();
-      return () => animation.stop();
-    } else {
-      blinkAnim.setValue(1);
-    }
-  }, [repair.priority]);
-
   const handlePress = () => {
     if (showDelete) {
       setShowDelete(false);
@@ -96,8 +70,6 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
     onDelete?.(repair);
   };
 
-  const shopCountry = useMemo(() => getCurrentUser()?.shopCountry, []);
-  const countryCode = shopCountry || 'IND';
   const isHighPriority = repair.status !== 'Completed' && (repair.priority === 'High' || repair.priority === 'Urgent');
   const vehicleTitle = [repair.brand, repair.model_name].filter(Boolean).join(' ') || repair.vehicle_type || 'Vehicle';
 
@@ -119,17 +91,14 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
         )}
 
         <View style={styles.topRight}>
-          {/* Number plate */}
-          <View style={styles.plate}>
-            <View style={styles.plateBadge}>
-              <ThemedText style={styles.plateBadgeText}>{countryCode}</ThemedText>
-            </View>
-            <ThemedText style={styles.plateNumber} numberOfLines={1}>
+          {/* Registration */}
+          <View style={styles.registration}>
+            <ThemedText style={styles.registrationText} numberOfLines={1}>
               {repair.vehicle_number}
             </ThemedText>
           </View>
 
-          {/* Vehicle name under plate */}
+          {/* Vehicle name */}
           <ThemedText style={styles.vehicleTitle} numberOfLines={1}>
             {vehicleTitle}
           </ThemedText>
@@ -190,11 +159,11 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
       {/* Status badges at the bottom */}
       <View style={styles.statusRow}>
         {isHighPriority && (
-          <Animated.View style={[styles.priorityBadge, { opacity: blinkAnim }]}>
+          <View style={[styles.priorityBadge]}>
             <ThemedText style={styles.priorityText}>
               {repair.priority === 'Urgent' ? 'URGENT' : 'HIGH'}
             </ThemedText>
-          </Animated.View>
+          </View>
         )}
 
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '25' }]}>
@@ -216,10 +185,10 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return useMemo(() => StyleSheet.create({
     wrapper: {
-      marginHorizontal: Spacing.two,
+      marginHorizontal: Spacing.three,
       marginBottom: Spacing.two,
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 18,
+      backgroundColor: theme.card,
+      borderRadius: UI.radius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.three,
@@ -233,9 +202,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       gap: Spacing.three,
     },
     vehicleImage: {
-      width: 92,
-      height: 92,
-      borderRadius: 14,
+      width: 64,
+      height: 64,
+      borderRadius: UI.radius,
     },
     vehicleImagePlaceholder: {
       alignItems: 'center',
@@ -246,38 +215,10 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       gap: 4,
     },
 
-    // ── License plate ──
-    plate: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 6,
-      overflow: 'hidden',
-      backgroundColor: theme.backgroundSelected,
-      marginBottom: 2,
-    },
-    plateBadge: {
-      backgroundColor: theme.text,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 6,
-    },
-    plateBadgeText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: theme.background,
-      letterSpacing: 0.5,
-    },
-    plateNumber: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: theme.text,
-      letterSpacing: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
+    // ── Registration ──
+    registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+
+    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
 
     // ── Status row ──
     statusRow: {
@@ -294,7 +235,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     priorityText: {
       fontSize: 9,
-      fontWeight: '900',
+      fontWeight: '600',
       color: '#FFFFFF',
       letterSpacing: 0.5,
     },
@@ -320,7 +261,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     // ── Vehicle title ──
     vehicleTitle: {
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: '600',
       color: theme.text,
     },
 

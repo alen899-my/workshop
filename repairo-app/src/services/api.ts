@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as Storage from '@/services/storage';
 
 import ENV from '@/config/env';
 
@@ -6,17 +6,17 @@ const TOKEN_KEY = 'repairo_token';
 
 export async function setToken(token: string | null) {
   if (token) {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await Storage.setItemAsync(TOKEN_KEY, token);
   } else {
     try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await Storage.deleteItemAsync(TOKEN_KEY);
     } catch {}
   }
 }
 
 export async function getStoredToken(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(TOKEN_KEY);
+    return await Storage.getItemAsync(TOKEN_KEY);
   } catch {
     return null;
   }

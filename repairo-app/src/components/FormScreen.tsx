@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -116,10 +117,10 @@ export default function FormScreen({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: { alignItems: 'center', paddingTop: 8, paddingBottom: 2, paddingHorizontal: 20 },
+  header: { alignItems: 'flex-start', paddingTop: 8, paddingBottom: 16, paddingHorizontal: 20 },
   headerTitle: { fontSize: 22, fontWeight: '700' },
   stepCount: { fontSize: 12, fontWeight: '500', marginTop: 2 },
-  stepper: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 },
+  stepper: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 16 },
   progressTrack: { height: 3, borderRadius: 2, marginBottom: 8 },
   progressFill: { height: 3, borderRadius: 2 },
   stepsRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -131,21 +132,21 @@ const styles = StyleSheet.create({
   stepNumber: { fontSize: 12, fontWeight: '700' },
   stepLabel: { fontSize: 11, fontWeight: '600' },
   cancelBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5,
+    flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: UI.radius,
+    borderWidth: 1,
   },
   cancelText: { fontSize: 15, fontWeight: '600' },
   backBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1.5,
+    flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: UI.radius,
+    borderWidth: 1,
   },
   backText: { fontSize: 15, fontWeight: '600' },
   primaryBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12 },
   saving: { opacity: 0.5 },
   primaryText: { fontSize: 15, fontWeight: '700' },
-  scrollContent: { padding: 16, paddingBottom: 8 },
+  scrollContent: { padding: 20, paddingBottom: 24 },
   footer: {
-    flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 8,
+    flexDirection: 'row', gap: 12, paddingHorizontal: 0, paddingTop: 16,
     borderTopWidth: 1,
   },
 });

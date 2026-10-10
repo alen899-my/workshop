@@ -6,7 +6,6 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getCurrentUser } from '@/services/auth.service';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -216,11 +215,8 @@ export default function VehicleDetailScreen({
               </View>
             </Pressable>
             <View style={styles.vehicleInfo}>
-              <View style={styles.plate}>
-                <View style={styles.plateBadge}>
-                  <ThemedText style={styles.plateBadgeText}>{getCurrentUser()?.shopCountry || 'IND'}</ThemedText>
-                </View>
-                <ThemedText style={styles.plateNumber} numberOfLines={1}>{vehicle.vehicle_number}</ThemedText>
+              <View style={styles.registration}>
+                <ThemedText style={styles.registrationText} numberOfLines={1}>{vehicle.vehicle_number}</ThemedText>
               </View>
               {vehicle.status === 'Inactive' && (
                 <View style={styles.inactiveBadge}>
@@ -440,25 +436,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     vehicleImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
     vehicleInfo: { flex: 1, justifyContent: 'center', gap: 4 },
 
-    plate: {
-      flexDirection: 'row', alignItems: 'stretch',
-      borderRadius: 5, overflow: 'hidden',
-      backgroundColor: theme.backgroundSelected,
-      alignSelf: 'flex-start',
-    },
-    plateBadge: {
-      backgroundColor: theme.text,
-      alignItems: 'center', justifyContent: 'center',
-      paddingHorizontal: 6,
-    },
-    plateBadgeText: {
-      fontSize: 9, fontWeight: '800',
-      color: theme.background, letterSpacing: 0.5,
-    },
-    plateNumber: {
-      fontSize: 17, fontWeight: '900', color: theme.text,
-      letterSpacing: 1, paddingHorizontal: 8, paddingVertical: 4,
-    },
+    registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+
+    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
     inactiveBadge: {
       alignSelf: 'flex-start',
       paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,

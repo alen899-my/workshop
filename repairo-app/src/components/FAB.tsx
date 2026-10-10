@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ export default function FAB({ onPress, icon = 'add', size = 56, color, label }: 
       onPress={onPress}
       style={[
         styles.button,
-        withLabel ? { backgroundColor: bgColor } : { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor },
+        withLabel ? { backgroundColor: bgColor } : { width: size, height: size, borderRadius: UI.radius, backgroundColor: bgColor },
       ]}
     >
       <Ionicons name={icon} size={withLabel ? 18 : size * 0.5} color={theme.primaryForeground} />
@@ -36,12 +37,12 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
     button: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 6, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 28,
+      gap: 6, paddingHorizontal: 20, paddingVertical: 14, borderRadius: UI.radius,
       shadowColor: theme.text, shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+      shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
     },
     label: {
-      fontSize: 15, fontWeight: '700', color: theme.primaryForeground,
+      fontSize: 15, fontWeight: '600', color: theme.primaryForeground,
     },
   }), [theme]);
   return styles;

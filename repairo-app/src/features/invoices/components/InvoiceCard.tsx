@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -77,12 +78,9 @@ export default function InvoiceCard({ invoice, onPress, onDelete }: InvoiceCardP
         )}
 
         <View style={styles.topRight}>
-          {/* Number plate */}
-          <View style={styles.plate}>
-            <View style={styles.plateBadge}>
-              <ThemedText style={styles.plateBadgeText}>{user?.shopCountry || 'IND'}</ThemedText>
-            </View>
-            <ThemedText style={styles.plateNumber} numberOfLines={1}>
+          {/* Registration */}
+          <View style={styles.registration}>
+            <ThemedText style={styles.registrationText} numberOfLines={1}>
               {invoice.vehicle_number || '-'}
             </ThemedText>
           </View>
@@ -166,10 +164,10 @@ import { useState } from 'react';
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return useMemo(() => StyleSheet.create({
     wrapper: {
-      marginHorizontal: Spacing.two,
+      marginHorizontal: Spacing.three,
       marginBottom: Spacing.two,
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 18,
+      backgroundColor: theme.card,
+      borderRadius: UI.radius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: Spacing.three,
@@ -184,7 +182,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     vehicleImage: {
       width: 80,
       height: 80,
-      borderRadius: 14,
+      borderRadius: UI.radius,
     },
     vehicleImagePlaceholder: {
       alignItems: 'center',
@@ -195,35 +193,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       gap: 4,
     },
 
-    plate: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 6,
-      overflow: 'hidden',
-      backgroundColor: theme.backgroundSelected,
-    },
-    plateBadge: {
-      backgroundColor: theme.text,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 6,
-    },
-    plateBadgeText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: theme.background,
-      letterSpacing: 0.5,
-    },
-    plateNumber: {
-      fontSize: 16,
-      fontWeight: '900',
-      color: theme.text,
-      letterSpacing: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
+    registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+
+    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
 
     paymentBadge: {
       flexDirection: 'row',
@@ -245,7 +217,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
 
     vehicleTitle: {
       fontSize: 13,
-      fontWeight: '800',
+      fontWeight: '600',
       color: theme.text,
     },
 
@@ -286,7 +258,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     amount: {
       fontSize: 18,
-      fontWeight: '900',
+      fontWeight: '600',
       color: theme.primary,
     },
     deleteBtn: {

@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -246,10 +247,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: UI.radius,
     paddingHorizontal: 14,
-    height: 52,
+    height: UI.controlHeight,
   },
   icon: {
     marginRight: 10,

@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,8 +80,8 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderRadius: UI.radius,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 14,

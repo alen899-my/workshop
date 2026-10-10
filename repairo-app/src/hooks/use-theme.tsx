@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { Appearance } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import * as Storage from '@/services/storage';
 
 import { Colors, DarkColors } from '@/constants/theme';
 import { getCurrentUser } from '@/services/auth.service';
@@ -40,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Load stored preference and primary color on mount
   useEffect(() => {
-    SecureStore.getItemAsync(THEME_STORAGE_KEY).then((stored) => {
+    Storage.getItemAsync(THEME_STORAGE_KEY).then((stored) => {
       if (stored === 'light' || stored === 'dark' || stored === 'system') {
         setThemeState(stored);
       }
@@ -73,7 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((pref: ThemePreference) => {
     setThemeState(pref);
     setResolvedTheme(computeResolved(pref));
-    SecureStore.setItemAsync(THEME_STORAGE_KEY, pref).catch(() => {});
+    Storage.setItemAsync(THEME_STORAGE_KEY, pref).catch(() => {});
   }, [computeResolved]);
 
   const setShopPrimaryColor = useCallback((color: string | null) => {
@@ -127,10 +127,9 @@ export function useTheme() {
     if (!shopPrimaryColor) return base;
 
     const primary = shopPrimaryColor;
-    const primaryLight = lighten(primary, 0.85);
-    const primaryForeground = '#FFFFFF';
-    const success = primary;
-    const info = primary;
+    const primaryLight = resolvedTheme === 'dark' ? darken(primary, 0.75) : lighten(primary, 0.9);
+    const { r, g, b } = hexToRgb(primary);
+    const primaryForeground = (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#22231F' : '#FFFFFF';
     const tealMid = primary;
     const tealDeep = darken(primary, 0.25);
     const tealAccent = primary;
@@ -141,14 +140,13 @@ export function useTheme() {
       primary,
       primaryLight,
       primaryForeground,
-      success,
-      info,
+      tealAccentForeground: primaryForeground,
       tealMid,
       tealDeep,
       tealAccent,
       tabIconSelected,
     };
-  }, [base, shopPrimaryColor]) as typeof Colors;
+  }, [base, shopPrimaryColor, resolvedTheme]) as typeof Colors;
 }
 
 export function useThemePreference() {

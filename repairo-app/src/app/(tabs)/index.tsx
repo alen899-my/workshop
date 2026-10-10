@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ThemedView } from '@/components/themed-view';
-import { useTheme, useThemePreference } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useCurrency } from '@/hooks/use-currency';
 import { useRBAC } from '@/hooks/use-rbac';
 import { getCurrentUser } from '@/services/auth.service';
@@ -43,12 +44,6 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-function getGreetingEmoji(): string {
-  const h = new Date().getHours();
-  if (h < 12) return '\u2600\uFE0F';
-  if (h < 17) return '\u26C5';
-  return '\u{1F319}';
-}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -84,8 +79,8 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-// ---- Full card rendered as a registration plate: bolts, thick border, colored code-tab ----
-function Plate({
+// Shared dashboard card.
+function DashboardCard({
   tabColor,
   tabIcon,
   compact = false,
@@ -101,17 +96,12 @@ function Plate({
   children: ReactNode;
 }) {
   const theme = useTheme();
-  const { isDark } = useThemePreference();
   return (
-    <View style={[plate.outer, { backgroundColor: isDark ? theme.card : theme.backgroundElement, borderColor: theme.border }, dashed && plate.outerDashed, style]}>
-      <View style={[plate.bolt, { backgroundColor: isDark ? theme.primaryLight : theme.border }, plate.boltTL]} />
-      <View style={[plate.bolt, { backgroundColor: isDark ? theme.primaryLight : theme.border }, plate.boltTR]} />
-      <View style={[plate.bolt, { backgroundColor: isDark ? theme.primaryLight : theme.border }, plate.boltBL]} />
-      <View style={[plate.bolt, { backgroundColor: isDark ? theme.primaryLight : theme.border }, plate.boltBR]} />
+    <View style={[plate.outer, { backgroundColor: theme.card, borderColor: theme.border }, dashed && plate.outerDashed, style]}>
       <View style={plate.body}>
         {tabColor && (
-          <View style={[plate.tab, compact && plate.tabCompact, { backgroundColor: tabColor, borderRightColor: theme.border }]}>
-            {tabIcon && <Ionicons name={tabIcon} size={compact ? 15 : 19} color="#FFFFFF" />}
+          <View style={[plate.tab, compact && plate.tabCompact, { backgroundColor: theme.backgroundElement, borderRightColor: theme.border }]}>
+            {tabIcon && <Ionicons name={tabIcon} size={compact ? 16 : 20} color={theme.textSecondary} />}
           </View>
         )}
         <View style={[plate.content, compact && plate.contentCompact]}>{children}</View>
@@ -120,20 +110,8 @@ function Plate({
   );
 }
 
-// ---- Dashed "road lane" divider used under section titles ----
-const roadDividerStyles = StyleSheet.create({
-  roadDivider: { flexDirection: 'row', gap: 5, paddingLeft: 2, marginTop: 5 },
-  roadDash: { width: 10, height: 2.5, borderRadius: 2, opacity: 0.6 },
-});
-
-function RoadDivider({ color }: { color: string }) {
-  return (
-    <View style={roadDividerStyles.roadDivider}>
-      {Array.from({ length: 16 }).map((_, i) => (
-        <View key={i} style={[roadDividerStyles.roadDash, { backgroundColor: color }]} />
-      ))}
-    </View>
-  );
+function SectionDivider({ color }: { color: string }) {
+  return <View style={{ height: 1, backgroundColor: color, marginTop: 8 }} />;
 }
 
 export default function DashboardHome() {
@@ -210,7 +188,6 @@ export default function DashboardHome() {
   const dayName = DAYS[now.getDay()];
   const dateStr = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
   const greeting = getGreeting();
-  const emoji = getGreetingEmoji();
   const displayName = user?.ownerName || user?.shopName || 'User';
 
   const activeWorkers = stats?.workers?.filter((w) => Number(w.active_jobs) > 0).length || 0;
@@ -232,39 +209,38 @@ export default function DashboardHome() {
 
   const s = useMemo(() => ({
     headerRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 },
-    headerGreeting: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 1 },
-    headerName: { fontSize: 21, fontWeight: '800' as const, color: theme.text, letterSpacing: 0.3 },
+    headerGreeting: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
+    headerName: { fontSize: 21, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
     headerDate: { fontSize: 12, fontWeight: '600' as const, color: theme.textSecondary, marginTop: 1 },
-    medallion: { width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: theme.card },
-    medallionText: { fontSize: 17, fontWeight: '800' as const },
+    medallion: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: theme.card },
+    medallionText: { fontSize: 17, fontWeight: '600' as const },
     statsGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: CARD_GAP },
-    statValue: { fontSize: 20, fontWeight: '800' as const, color: theme.text, letterSpacing: 0.5 },
-    statLabel: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
-    sectionTitle: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 1, paddingLeft: 2 },
+    statValue: { fontSize: 20, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
+    statLabel: { fontSize: 11, fontWeight: '700' as const, color: theme.textSecondary, letterSpacing: 0 },
+    sectionTitle: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 0, paddingLeft: 2 },
     sectionHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, paddingRight: 2 },
     countPlate: { alignSelf: 'flex-start' as const },
-    countPlateText: { fontSize: 13, fontWeight: '800' as const, color: theme.text },
-    actionLabel: { fontSize: 11, fontWeight: '800' as const, color: theme.text, letterSpacing: 0.3 },
+    countPlateText: { fontSize: 13, fontWeight: '600' as const, color: theme.text },
+    actionLabel: { fontSize: 11, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
     repairRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
-    plateSerial: { fontSize: 15.5, fontWeight: '800' as const, color: theme.text, letterSpacing: 1 },
+    plateSerial: { fontSize: 15.5, fontWeight: '600' as const, color: theme.text, letterSpacing: 0 },
     repairMeta: { fontSize: 12, fontWeight: '600' as const, color: theme.textSecondary },
-    badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-    badgeText: { fontSize: 10.5, fontWeight: '800' as const },
+    badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1 },
+    badgeText: { fontSize: 10.5, fontWeight: '600' as const },
     viewAllBtn: { alignItems: 'center' as const, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },
     viewAllText: { fontSize: 13, fontWeight: '600' as const },
     emptyText: { fontSize: 12.5, fontWeight: '600' as const, color: theme.textSecondary },
     workerRow: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 4 },
     workerStat: { flex: 1, alignItems: 'center' as const, gap: 4 },
     workerDot: { width: 9, height: 9, borderRadius: 4.5 },
-    workerStatValue: { fontSize: 20, fontWeight: '800' as const, color: theme.text },
+    workerStatValue: { fontSize: 20, fontWeight: '600' as const, color: theme.text },
     workerStatLabel: { fontSize: 10.5, fontWeight: '700' as const, color: theme.textSecondary },
     workerDivider: { width: 1.5, height: 30, backgroundColor: theme.border },
     gaugeOuter: { marginTop: 14, position: 'relative' as const },
-    gaugeNeedle: { position: 'absolute' as const, top: -7, marginLeft: -6, width: 0, height: 0, borderLeftWidth: 6, borderRightWidth: 6, borderBottomWidth: 7, borderLeftColor: 'transparent' as const, borderRightColor: 'transparent' as const, borderBottomColor: theme.text, zIndex: 2 },
     gaugeTrack: { height: 6, borderRadius: 3, backgroundColor: theme.border, overflow: 'hidden' as const },
     gaugeFill: { height: 6, borderRadius: 3, backgroundColor: theme.warning },
     billRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
-    billAmount: { fontSize: 16, fontWeight: '800' as const, color: theme.primary },
+    billAmount: { fontSize: 16, fontWeight: '600' as const, color: theme.primary },
     viewAllLink: { fontSize: 13, fontWeight: '700' as const },
   }), [theme]);
 
@@ -280,33 +256,33 @@ export default function DashboardHome() {
         }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
-        {/* Header — the shop's own "registration plate" */}
-        <Plate tabColor={accent.header} tabIcon="car-sport">
+        {/* Dashboard section */}
+        <DashboardCard tabColor={accent.header} tabIcon="car-sport">
           <View style={s.headerRow}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={s.headerGreeting}>{emoji} {greeting.toUpperCase()}</Text>
+              <Text style={s.headerGreeting}>{greeting}</Text>
               <Text style={s.headerName} numberOfLines={1}>{displayName}</Text>
               <Text style={s.headerDate}>{dayName}, {dateStr}</Text>
             </View>
             {user?.profile_image ? (
-              <Image source={{ uri: user.profile_image }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: accent.header, backgroundColor: theme.primary + '18' }} contentFit="cover" />
+              <Image source={{ uri: user.profile_image }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: accent.header, backgroundColor: theme.primary + '18' }} contentFit="cover" />
             ) : (
               <View style={[s.medallion, { borderColor: accent.header }]}>
                 <Text style={[s.medallionText, { color: accent.header }]}>{(displayName[0] || 'R').toUpperCase()}</Text>
               </View>
             )}
           </View>
-        </Plate>
+        </DashboardCard>
 
-        {/* Stats — each a full plate */}
+        {/* Dashboard section */}
         {loading ? (
           <View style={s.statsGrid}>
             {Array.from({ length: 4 }).map((_, i) => (
-              <Plate key={i} style={{ width: HALF_W }}>
+              <DashboardCard key={i} style={{ width: HALF_W }}>
                 <View style={{ paddingVertical: 14, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color={theme.text} />
                 </View>
-              </Plate>
+              </DashboardCard>
             ))}
           </View>
         ) : (
@@ -316,23 +292,23 @@ export default function DashboardHome() {
                 { label: 'Total Repairs', value: formatNumber(stats?.totalRepairs ?? 0), icon: 'build-outline' as const, key: 'repairs' },
                 { label: 'Total Vehicles', value: formatNumber(vehicleCount ?? 0), icon: 'car-outline' as const, key: 'vehicles' },
               ].map((card) => (
-                <Plate key={card.label} tabColor={accent[card.key]} tabIcon={card.icon} style={{ flex: 1 }}>
+                <DashboardCard key={card.label} tabColor={accent[card.key]} tabIcon={card.icon} style={{ flex: 1 }}>
                   <Text style={s.statValue} numberOfLines={1}>{card.value}</Text>
                   <Text style={s.statLabel}>{card.label}</Text>
-                </Plate>
+                </DashboardCard>
               ))}
             </View>
-            <Plate tabColor={accent.revenue} tabIcon="cash-outline" style={{ width: '100%' }}>
+            <DashboardCard tabColor={accent.revenue} tabIcon="cash-outline" style={{ width: '100%' }}>
               <Text style={s.statValue} numberOfLines={1}>{stats ? formatCurrency(stats.totalRevenue) : '\u2014'}</Text>
               <Text style={s.statLabel}>Revenue</Text>
-            </Plate>
+            </DashboardCard>
           </View>
         )}
 
-        {/* Quick Actions — mini plates */}
+        {/* Dashboard section */}
         <View style={{ gap: 10 }}>
           <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>QUICK ACTIONS</Text>
-          <RoadDivider color={theme.border} />
+          <SectionDivider color={theme.border} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP, marginTop: 4 }}>
             {[
               { icon: 'construct-outline' as const, label: 'New Repair', onPress: () => setShowRepairModal(true), key: 'repair' },
@@ -344,37 +320,37 @@ export default function DashboardHome() {
                 onPress={action.onPress}
                 style={({ pressed }) => [{ flexBasis: 0, flexGrow: 1, flexShrink: 1, minWidth: 130 }, pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] }]}
               >
-                <Plate tabColor={accent[action.key]} tabIcon={action.icon} compact>
-                  <Text style={s.actionLabel} numberOfLines={2}>{action.label.toUpperCase()}</Text>
-                </Plate>
+                <DashboardCard tabColor={accent[action.key]} tabIcon={action.icon} compact>
+                  <Text style={s.actionLabel} numberOfLines={2}>{action.label}</Text>
+                </DashboardCard>
               </Pressable>
             ))}
           </View>
         </View>
 
-        {/* Vehicles on Repair — each row a full plate */}
+        {/* Dashboard section */}
         <View style={{ gap: 10 }}>
           <View style={s.sectionHeader}>
             <View>
               <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>VEHICLES ON REPAIR</Text>
-              <RoadDivider color={theme.border} />
+              <SectionDivider color={theme.border} />
             </View>
             {liveRepairs.length > 0 && (
-              <Plate compact style={s.countPlate}>
+              <DashboardCard compact style={s.countPlate}>
                 <Text style={s.countPlateText}>{liveRepairs.length}</Text>
-              </Plate>
+              </DashboardCard>
             )}
           </View>
           {loading ? (
-            <Plate dashed>
+            <DashboardCard dashed>
               <View style={{ paddingVertical: 18, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={theme.text} />
                 </View>
-              </Plate>
+              </DashboardCard>
             ) : liveRepairs.length > 0 ? (
             <View style={{ gap: 10 }}>
               {liveRepairs.slice(0, 4).map((repair) => (
-                <Plate key={repair.id} tabColor={accent.pending} tabIcon="car-sport-outline">
+                <DashboardCard key={repair.id} tabColor={accent.pending} tabIcon="car-sport-outline">
                   <View style={s.repairRow}>
                     <View style={{ flex: 1, gap: 3 }}>
                       <Text style={s.plateSerial} numberOfLines={1}>{repair.vehicle_number}</Text>
@@ -387,7 +363,7 @@ export default function DashboardHome() {
                       <Text style={[s.badgeText, { color: theme.warning }]}>{repair.status}</Text>
                     </View>
                   </View>
-                </Plate>
+                </DashboardCard>
               ))}
               {liveRepairs.length > 4 && (
                 <Pressable
@@ -399,20 +375,20 @@ export default function DashboardHome() {
               )}
             </View>
           ) : (
-            <Plate dashed>
+            <DashboardCard dashed>
               <View style={{ paddingVertical: 20, alignItems: 'center', gap: 8 }}>
                 <Ionicons name="checkmark-circle-outline" size={28} color={theme.textSecondary} />
                 <Text style={s.emptyText}>No vehicles in repair right now</Text>
               </View>
-            </Plate>
+            </DashboardCard>
           )}
         </View>
 
-        {/* Workers — fuel-gauge plate */}
+        {/* Dashboard section */}
         <View style={{ gap: 10 }}>
           <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>WORKERS</Text>
-          <RoadDivider color={theme.border} />
-          <Plate tabColor={accent.workers} tabIcon="people-outline">
+          <SectionDivider color={theme.border} />
+          <DashboardCard tabColor={accent.workers} tabIcon="people-outline">
             <View style={s.workerRow}>
               <View style={s.workerStat}>
                 <View style={[s.workerDot, { backgroundColor: theme.success }]} />
@@ -433,35 +409,34 @@ export default function DashboardHome() {
               </View>
             </View>
             <View style={s.gaugeOuter}>
-              <View style={[s.gaugeNeedle, { left: `${gaugePct}%` }]} />
               <View style={s.gaugeTrack}>
                 <View style={[s.gaugeFill, { width: `${gaugePct}%` }]} />
               </View>
             </View>
-          </Plate>
+          </DashboardCard>
         </View>
 
-        {/* Recent Bills — each row a full plate */}
+        {/* Dashboard section */}
         <View style={{ gap: 10 }}>
           <View style={s.sectionHeader}>
             <View>
               <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>RECENT BILLS</Text>
-              <RoadDivider color={theme.border} />
+              <SectionDivider color={theme.border} />
             </View>
             <Pressable onPress={() => setShowInvoicesModal(true)} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
               <Text style={[s.viewAllLink, { color: theme.primary }]}>View All</Text>
             </Pressable>
           </View>
           {loading ? (
-            <Plate dashed>
+            <DashboardCard dashed>
               <View style={{ paddingVertical: 18, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={theme.text} />
                 </View>
-              </Plate>
+              </DashboardCard>
             ) : recentBills.length > 0 ? (
             <View style={{ gap: 10 }}>
               {recentBills.map((bill) => (
-                <Plate key={bill.id} tabColor={accent.revenue} tabIcon="receipt-outline">
+                <DashboardCard key={bill.id} tabColor={accent.revenue} tabIcon="receipt-outline">
                   <View style={s.billRow}>
                     <View style={{ flex: 1, gap: 3 }}>
                       <Text style={s.plateSerial} numberOfLines={1}>{bill.vehicle_number || `#${bill.id}`}</Text>
@@ -471,16 +446,16 @@ export default function DashboardHome() {
                     </View>
                     <Text style={s.billAmount}>{formatCurrency(bill.total_amount)}</Text>
                   </View>
-                </Plate>
+                </DashboardCard>
               ))}
             </View>
           ) : (
-            <Plate dashed>
+            <DashboardCard dashed>
               <View style={{ paddingVertical: 20, alignItems: 'center', gap: 8 }}>
                 <Ionicons name="receipt-outline" size={28} color={theme.textSecondary} />
                 <Text style={s.emptyText}>No bills yet</Text>
               </View>
-            </Plate>
+            </DashboardCard>
           )}
         </View>
 
@@ -506,44 +481,36 @@ export default function DashboardHome() {
   );
 }
 
-// ---- Plate primitive styles (colors overridden inline via theme) ----
+// ---- DashboardCard primitive styles (colors overridden inline via theme) ----
 const plate = StyleSheet.create({
   outer: {
-    borderWidth: 2.5,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderRadius: UI.radius,
     overflow: 'hidden',
   },
   outerDashed: {
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
   },
-  bolt: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    zIndex: 3,
-  },
-  boltTL: { top: 5, left: 5 },
-  boltTR: { top: 5, right: 5 },
-  boltBL: { bottom: 5, left: 5 },
-  boltBR: { bottom: 5, right: 5 },
   body: {
     flexDirection: 'row',
     alignItems: 'stretch',
   },
   tab: {
-    width: 46,
+    width: 40,
+    margin: 12,
+    marginRight: 0,
+    borderRadius: UI.radius,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'stretch',
-    borderRightWidth: 2,
+    borderRightWidth: 0,
   },
   tabCompact: {
     width: 38,
   },
   content: {
     flex: 1,
-    padding: 14,
+    padding: UI.card.padding,
     gap: 4,
     justifyContent: 'center',
   },

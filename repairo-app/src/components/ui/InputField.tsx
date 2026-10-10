@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -122,10 +123,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: UI.radius,
     paddingHorizontal: 14,
-    height: 52,
+    height: UI.controlHeight,
   },
   icon: {
     marginRight: 10,

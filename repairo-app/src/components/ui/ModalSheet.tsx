@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import type { ReactNode } from 'react';
 import {
   Modal,
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: UI.sheetRadius,
+    borderTopRightRadius: UI.sheetRadius,
     maxHeight: '85%',
     paddingBottom: 32,
   },
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: UI.radius,
     alignItems: 'center',
     justifyContent: 'center',
   },

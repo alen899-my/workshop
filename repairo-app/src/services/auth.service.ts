@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as Storage from '@/services/storage';
 
 import { api, setToken } from './api';
 import { getCallingCode, waitForCountries } from '@/utils/preload-countries';
@@ -24,7 +24,7 @@ let _currentUser: UserData | null = null;
 
 export async function loadStoredUser(): Promise<UserData | null> {
   try {
-    const raw = await SecureStore.getItemAsync(USER_KEY);
+    const raw = await Storage.getItemAsync(USER_KEY);
     if (raw) {
       _currentUser = JSON.parse(raw);
       return _currentUser;
@@ -36,7 +36,7 @@ export async function loadStoredUser(): Promise<UserData | null> {
 export async function updateCurrentUser(data: Partial<UserData>) {
   if (_currentUser) {
     _currentUser = { ..._currentUser, ...data };
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(_currentUser));
+    await Storage.setItemAsync(USER_KEY, JSON.stringify(_currentUser));
   }
 }
 
@@ -47,9 +47,9 @@ export function getCurrentUser(): UserData | null {
 async function saveUser(user: UserData | null) {
   _currentUser = user;
   if (user) {
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    await Storage.setItemAsync(USER_KEY, JSON.stringify(user));
   } else {
-    try { await SecureStore.deleteItemAsync(USER_KEY); } catch {}
+    try { await Storage.deleteItemAsync(USER_KEY); } catch {}
   }
 }
 

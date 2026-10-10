@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { StyleSheet, View, Pressable, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
+import * as Storage from '@/services/storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme, useThemePreference } from '@/hooks/use-theme';
@@ -33,7 +33,7 @@ export default function ShopAppearanceScreen({ onClose }: ShopAppearanceScreenPr
       const res = await shopService.update(user.shopId, { primary_color: color });
       if (res.success) {
         await updateCurrentUser({ shopPrimaryColor: color });
-        await SecureStore.setItemAsync('repairo_shop_primary_color', color);
+        await Storage.setItemAsync('repairo_shop_primary_color', color);
         setShopPrimaryColor(color);
         setShowSuccess(true);
       } else {
@@ -62,7 +62,7 @@ export default function ShopAppearanceScreen({ onClose }: ShopAppearanceScreenPr
               const res = await shopService.update(user.shopId!, { primary_color: '' });
               if (res.success) {
                 await updateCurrentUser({ shopPrimaryColor: null });
-                await SecureStore.deleteItemAsync('repairo_shop_primary_color');
+                await Storage.deleteItemAsync('repairo_shop_primary_color');
                 setShopPrimaryColor(null);
                 setColor(Colors.primary);
               } else {

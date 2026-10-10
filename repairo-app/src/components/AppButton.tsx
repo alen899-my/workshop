@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -13,7 +14,7 @@ export default function AppButton({ title, fullWidth = false, onPress, variant =
   const theme = useTheme();
 
   const bg = variant === 'white' ? theme.card : variant === 'black' ? theme.cardDark : theme.primary;
-  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.textInverse : theme.text;
+  const fg = variant === 'black' ? theme.textInverse : variant === 'green' ? theme.primaryForeground : theme.text;
 
   return (
     <Pressable
@@ -22,7 +23,7 @@ export default function AppButton({ title, fullWidth = false, onPress, variant =
         styles.base,
         fullWidth && styles.fullWidth,
         pressed && styles.pressed,
-        { backgroundColor: bg },
+        { backgroundColor: bg, borderColor: variant === 'white' ? theme.border : bg },
       ]}
     >
       <Text style={[styles.text, { color: fg }]}>{title}</Text>
@@ -32,8 +33,10 @@ export default function AppButton({ title, fullWidth = false, onPress, variant =
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 28,
-    height: 56,
+    borderRadius: UI.radius,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    height: UI.controlHeight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -46,8 +49,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0,
   },
 });

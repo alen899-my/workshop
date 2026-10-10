@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { Pressable, Modal, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     width: '82%',
     maxWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: UI.radius,
     paddingVertical: 32,
     paddingHorizontal: 24,
     alignItems: 'center',

@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -104,7 +105,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       width: '100%',
       maxWidth: 320,
       backgroundColor: theme.card,
-      borderRadius: 24,
+      borderRadius: UI.radius,
       padding: Spacing.four,
       alignItems: 'center',
       shadowColor: '#000',
@@ -147,13 +148,13 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     btn: {
       flex: 1,
       height: 46,
-      borderRadius: 14,
+      borderRadius: UI.radius,
       alignItems: 'center',
       justifyContent: 'center',
     },
     btnCancel: {
       backgroundColor: theme.backgroundElement,
-      borderWidth: 1.5,
+      borderWidth: 1,
       borderColor: theme.border,
     },
     btnPressed: {

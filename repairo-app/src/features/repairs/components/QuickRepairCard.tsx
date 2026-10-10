@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { getCurrentUser } from '@/services/auth.service';
+import { UI } from '@/constants/theme';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,8 +42,6 @@ export default function QuickRepairCard({ repair, onPress, onDelete }: QuickRepa
 
   const imageUrl = getImageUrl(repair.vehicle_image);
   const complaintPreview = getComplaintPreview(repair.complaints);
-  const shopCountry = useMemo(() => getCurrentUser()?.shopCountry, []);
-  const countryCode = shopCountry || 'IND';
 
   return (
     <Pressable
@@ -61,11 +58,8 @@ export default function QuickRepairCard({ repair, onPress, onDelete }: QuickRepa
         )}
 
         <View style={styles.content}>
-          <View style={styles.plate}>
-            <View style={styles.plateBadge}>
-              <ThemedText style={styles.plateBadgeText}>{countryCode}</ThemedText>
-            </View>
-            <ThemedText style={styles.plateNumber} numberOfLines={1}>
+          <View style={styles.registration}>
+            <ThemedText style={styles.registrationText} numberOfLines={1}>
               {repair.vehicle_number}
             </ThemedText>
           </View>
@@ -96,12 +90,12 @@ export default function QuickRepairCard({ repair, onPress, onDelete }: QuickRepa
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   return StyleSheet.create({
     wrapper: {
-      marginHorizontal: Spacing.two,
+      marginHorizontal: Spacing.three,
       marginBottom: Spacing.two,
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 18,
+      backgroundColor: theme.card,
+      borderRadius: UI.radius,
       borderWidth: 1,
-      borderColor: '#F59E0B' + '30',
+      borderColor: theme.border,
       padding: Spacing.three,
     },
     pressed: { opacity: 0.92 },
@@ -113,7 +107,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     image: {
       width: 64,
       height: 64,
-      borderRadius: 14,
+      borderRadius: UI.radius,
     },
     imagePlaceholder: {
       alignItems: 'center',
@@ -123,36 +117,9 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       flex: 1,
       gap: 6,
     },
-    plate: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 6,
-      overflow: 'hidden',
-      backgroundColor: theme.backgroundSelected,
-      alignSelf: 'flex-start',
-    },
-    plateBadge: {
-      backgroundColor: theme.text,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 5,
-    },
-    plateBadgeText: {
-      fontSize: 8,
-      fontWeight: '800',
-      color: theme.background,
-      letterSpacing: 0.5,
-    },
-    plateNumber: {
-      fontSize: 15,
-      fontWeight: '900',
-      color: theme.text,
-      letterSpacing: 0.8,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
+    registration: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
+
+    registrationText: { fontSize: 17, fontWeight: '600', color: theme.text, flexShrink: 1 },
     complaint: {
       fontSize: 12,
       fontWeight: '500',

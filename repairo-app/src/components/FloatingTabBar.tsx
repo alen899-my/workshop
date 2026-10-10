@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useEffect } from 'react';
 import { StyleSheet, Pressable, View } from 'react-native';
 import Animated, {
@@ -10,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useRBAC } from '@/hooks/use-rbac';
-import { useTheme, useThemePreference } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 
 const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap; permission?: string }[] = [
   { name: 'index', label: 'Home', icon: 'home-outline' },
@@ -44,7 +45,7 @@ function AnimatedTab({
   }, [focused]);
 
   const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.8 + scale.value * 0.4 }],
+    transform: [{ scale: 1 + scale.value * 0.04 }],
   }));
 
   const indicatorStyle = useAnimatedStyle(() => ({
@@ -78,15 +79,14 @@ export default function FloatingTabBar({ state, navigation }: any) {
   const { bottom } = useSafeAreaInsets();
   const { can, loading } = useRBAC();
   const theme = useTheme();
-  const { isDark } = useThemePreference();
 
   const visibleTabs = loading
     ? TABS
     : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
-  const barBg = isDark ? '#1C1C1E' : '#111318';
-  const barBorder = isDark ? '#2C2C2E' : '#000000';
-  const barShadow = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)';
+  const barBg = theme.card;
+  const barBorder = theme.border;
+  const barShadow = theme.text;
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(bottom, 16) }]}>
@@ -102,7 +102,7 @@ export default function FloatingTabBar({ state, navigation }: any) {
               focused={focused}
               onPress={() => navigation.navigate(tab.name)}
               tabIconSelected={theme.tabIconSelected}
-              tabIconDefault={'#A1A1AA'}
+              tabIconDefault={theme.tabIconDefault}
             />
           );
         })}
@@ -123,16 +123,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderRadius: 28,
+    borderRadius: UI.radius,
     height: 64,
+    width: '100%',
     paddingHorizontal: 4,
     backgroundColor: '#111318',
     borderWidth: 1,
     borderColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 10,
+    elevation: 2,
   },
   item: {
     flex: 1,

@@ -21,7 +21,7 @@ export default function ScreenLayout({ title, description, rightAction, children
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.content]}>
-        <View style={[styles.header, { paddingTop: top }]}>
+        <View style={[styles.header, { paddingTop: top + 12 }]}>
           <View style={styles.titleWrap}>
             <ThemedText style={[styles.title, { color: theme.text }]}>{title}</ThemedText>
             {description && (
@@ -45,11 +45,11 @@ const styles = StyleSheet.create({
   content: { flex: 1, maxWidth: MaxContentWidth, alignSelf: 'center', width: '100%' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 2,
+    paddingHorizontal: 20, paddingBottom: 16,
   },
-  titleWrap: { flex: 1, gap: 1 },
-  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
-  description: { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  titleWrap: { flex: 1, gap: 4 },
+  title: { fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
+  description: { fontSize: 13, fontWeight: '500', marginTop: 1 },
   rightAction: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   body: { flex: 1 },
 });
