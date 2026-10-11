@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -159,15 +160,16 @@ export default function SignupScreen() {
       >
         {/* Hero Image */}
         <View style={[styles.heroWrap, { height: IMG_H + insets.top }]}>
-          <LinearGradient colors={[theme.heroStart, theme.heroEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { height: IMG_H + insets.top }]}>
-            <View style={{ paddingHorizontal: 24, paddingTop: insets.top + 66, gap: 6 }}>
-              <Text style={{ color: theme.heroText, fontSize: 30, fontWeight: '700', letterSpacing: -1 }}>Repairo</Text>
-              <Text style={{ color: theme.heroMuted, fontSize: 14 }}>A better day at the workshop.</Text>
-            </View>
-          </LinearGradient>
+          <Image
+            source={require('../../../assets/images/auth.jpg')}
+            style={[styles.hero, { height: IMG_H + insets.top }]}
+            contentFit="cover"
+            accessibilityLabel="Workshop"
+          />
+          <LinearGradient colors={['transparent', theme.background]} style={styles.gradient} pointerEvents="none" />
           {/* Back Button */}
           <Pressable style={[styles.back, { top: insets.top + 8 }]} hitSlop={12} onPress={() => router.back()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.heroText} />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
           </Pressable>
         </View>
 
@@ -408,7 +410,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => { const styles = useMe
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.heroGlass,
+    backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
