@@ -18,7 +18,7 @@ import { taxService } from '@/features/repairs/services/tax.service';
 import { vehicleService } from '@/features/repairs/services/vehicle.service';
 
 import BillItemEditor from './components/BillItemEditor';
-import ServiceBlockEditor, { JOB_CATEGORIES } from './components/ServiceBlockEditor';
+import ServiceBlockEditor from './components/ServiceBlockEditor';
 import type { ServiceBlock } from './components/ServiceBlockEditor';
 import { toBlocks, toJobList } from './utils/jobs';
 import VehicleTypePicker from './components/VehicleTypePicker';
@@ -160,12 +160,6 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     const jobs = toJobList(initialRepair?.complaints);
     return toBlocks(jobs.type, jobs.tasks);
   });
-
-  // One category for the whole job — stored as the single block type and service_type.
-  const jobType = serviceBlocks[0]?.type || 'Repair';
-  const setJobType = useCallback((type: string) => {
-    setServiceBlocks((prev) => toBlocks(type, toJobList(prev).tasks));
-  }, []);
 
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [serviceCharge, setServiceCharge] = useState(0);
@@ -477,31 +471,6 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     );
   };
 
-  const renderJobTypeChips = () => {
-    if (isView) {
-      return <InputField label="Job Category" value={jobType} onChangeText={() => {}} editable={false} />;
-    }
-    return (
-      <View>
-        <ThemedText style={styles.fieldLabel}>Job Category</ThemedText>
-        <View style={styles.chipRow}>
-          {JOB_CATEGORIES.map((c) => {
-            const active = jobType === c.id;
-            return (
-              <Pressable
-                key={c.id}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setJobType(c.id)}
-              >
-                <ThemedText style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</ThemedText>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
-
   const renderTab = () => {
     switch (activeTab) {
       case 'vehicle':
@@ -630,7 +599,6 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
       case 'service':
         return (
           <View style={styles.tabContent}>
-            {renderJobTypeChips()}
             <ServiceBlockEditor blocks={serviceBlocks} onChange={setServiceBlocks} />
 
             <Card title="Assignment" styles={styles}>
@@ -702,9 +670,6 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
             </Card>
 
             <Card title="Jobs to Do" styles={styles}>
-              <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary, marginBottom: 4 }}>
-                {jobType}
-              </ThemedText>
               {(() => {
                 const filled = toJobList(serviceBlocks).tasks.filter((t) => t.text.trim());
                 if (!filled.length) {

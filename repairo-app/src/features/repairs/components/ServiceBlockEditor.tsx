@@ -20,67 +20,10 @@ interface ServiceBlockEditorProps {
   onChange: (blocks: ServiceBlock[]) => void;
 }
 
-// ─── Job-level category config (one picker per job, rendered by the parent) ─
-
-export const JOB_CATEGORIES: {
-  id: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  bg: string;
-  placeholder: string;
-}[] = [
-  {
-    id: 'Repair',
-    label: 'Repair',
-    icon: 'build-outline',
-    color: '#E05A5A',
-    bg: '#FFF0F0',
-    placeholder: 'e.g. Engine noise, brake squeak…',
-  },
-  {
-    id: 'Servicing',
-    label: 'Servicing',
-    icon: 'sync-outline',
-    color: '#0D9488',
-    bg: '#EEF6F5',
-    placeholder: 'e.g. Oil change, air filter…',
-  },
-  {
-    id: 'Inspection',
-    label: 'Inspection',
-    icon: 'search-outline',
-    color: '#5FA8D3',
-    bg: '#EDF6FB',
-    placeholder: 'e.g. Brake pad wear, tyre depth…',
-  },
-  {
-    id: 'Modification',
-    label: 'Modification',
-    icon: 'color-wand-outline',
-    color: '#B399D4',
-    bg: '#F4F0FA',
-    placeholder: 'e.g. Paint wrap, custom exhaust…',
-  },
-  {
-    id: 'Other',
-    label: 'Other',
-    icon: 'ellipsis-horizontal-circle-outline',
-    color: '#8A8A80',
-    bg: '#F3F3F0',
-    placeholder: 'Describe other work needed…',
-  },
-];
-
-export function jobCategoryConfig(type?: string) {
-  return JOB_CATEGORIES.find((c) => c.id === type) || JOB_CATEGORIES[0];
-}
-
 // ─── Single Jobs-to-do editor ────────────────────────────────────────────────
 
 export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEditorProps) {
   const job = useMemo(() => toJobList(blocks), [blocks]);
-  const cfg = jobCategoryConfig(job.type);
 
   // Normalize legacy multi-block data to one list, and always keep one empty row.
   useEffect(() => {
@@ -125,11 +68,11 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
       <View style={styles.block}>
         {/* Header */}
         <View style={styles.blockHeader}>
-          <View style={[styles.blockIconWrap, { backgroundColor: cfg.bg }]}>
-            <Ionicons name="clipboard-outline" size={18} color={cfg.color} />
+          <View style={[styles.blockIconWrap, { backgroundColor: theme.primary + '12' }]}>
+            <Ionicons name="clipboard-outline" size={18} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText style={[styles.blockCategoryLabel, { color: cfg.color }]}>
+            <ThemedText style={styles.blockCategoryLabel}>
               Jobs to do
             </ThemedText>
             <ThemedText style={styles.blockSubLabel}>
@@ -149,7 +92,7 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
                 style={styles.issueInput}
                 value={task.text}
                 onChangeText={(t) => updateTaskText(ti, t)}
-                placeholder={cfg.placeholder}
+                placeholder="e.g. Oil change, brake noise…"
                 placeholderTextColor={theme.tabIconDefault}
                 multiline={false}
               />
@@ -165,9 +108,9 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
         </View>
 
         {/* Add Item Button */}
-        <Pressable style={[styles.addTaskCardBtn, { backgroundColor: cfg.bg }]} onPress={addTask}>
-          <Ionicons name="add-circle-outline" size={16} color={cfg.color} />
-          <ThemedText style={[styles.addTaskCardText, { color: cfg.color }]}>
+        <Pressable style={[styles.addTaskCardBtn, { backgroundColor: theme.primary + '12' }]} onPress={addTask}>
+          <Ionicons name="add-circle-outline" size={16} color={theme.primary} />
+          <ThemedText style={[styles.addTaskCardText, { color: theme.primary }]}>
             Add Item
           </ThemedText>
         </Pressable>
