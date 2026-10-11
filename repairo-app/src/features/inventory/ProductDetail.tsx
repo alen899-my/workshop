@@ -82,7 +82,7 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
   const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value));
   return <AppScreen>
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}><Pressable onPress={onClose} disabled={busy} accessibilityLabel="Back to inventory"><Ionicons name="arrow-back" size={24} color={theme.text} /></Pressable><Text style={styles.title}>Product details</Text></View>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
       <View style={[styles.card, { backgroundColor: theme.card }]}>
         {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.photo} contentFit="cover" /> : null}
         <Text style={styles.title}>{product.name}</Text><Text themeColor="textSecondary">{product.sku} · {product.is_active ? 'Active' : 'Archived'}</Text>

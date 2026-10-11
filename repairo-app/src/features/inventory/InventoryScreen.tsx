@@ -125,7 +125,7 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       ) : null}
       <Text style={styles.title}>{editing ? editing === 'new' ? 'New product' : 'Edit product' : onSelect ? 'Add from inventory' : 'Inventory'}</Text>
     </View>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
       {!!error && <View style={[styles.card, { backgroundColor: theme.card }]}><Text style={{ color: theme.destructive }}>{error}</Text>{!editing && <PrimaryButton title="Retry" variant="outline" onPress={() => { void load(); }} />}</View>}
       {editing ? <>
         <Text themeColor="textSecondary">{currentShop?.name} · Prices in {currentShop?.currency || 'INR'}</Text>
