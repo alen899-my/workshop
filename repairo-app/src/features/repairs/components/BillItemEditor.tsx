@@ -42,7 +42,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   editable = true,
 }: BillItemEditorProps, ref) {
   const theme = useTheme();
-  const { can, user } = useRBAC();
+  const { can } = useRBAC();
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const canUseInventory = editable && !!shopId && can('view:inventory');
   const styles = useMemo(() => StyleSheet.create({
@@ -553,7 +553,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   return (
     <View style={styles.wrapper}>
       <Modal visible={inventoryOpen} animationType="slide" onRequestClose={() => setInventoryOpen(false)}>
-        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} allowShopSwitch={user?.role === 'super-admin'} />}
+        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} />}
       </Modal>
       {items.some(item => item.product_id != null) && <ThemedText style={styles.noItemsText}>Stock updates when you save. Removing a saved inventory item returns its quantity to stock.</ThemedText>}
 
