@@ -1,35 +1,41 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import AppButton from '@/components/AppButton';
 
 import LandingScreen from '@/features/landing/LandingScreen';
 import { useTheme } from '@/hooks/use-theme';
 import { router, useFocusEffect } from 'expo-router';
-import { getStoredToken } from '@/services/api';
-import { loadStoredUser } from '@/services/auth.service';
+import { authService } from '@/services/auth.service';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      (async () => {
+      const checkSession = async () => {
         setLoading(true);
+        setError('');
         try {
-          // Load persisted user data first
-          await loadStoredUser();
-          const token = await getStoredToken();
+          const authenticated = await authService.restoreSession();
           if (cancelled) return;
-          if (token) {
+          if (authenticated) {
             router.replace('/(tabs)');
             return;
           }
-        } catch {}
+        } catch (err) {
+          if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to verify your session');
+        }
         if (!cancelled) setLoading(false);
-      })();
+      };
+      void checkSession();
       return () => { cancelled = true; };
-    }, []),
+      // Changing attempt deliberately reruns the focus check after a network error.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attempt]),
   );
 
   if (loading) {
@@ -40,5 +46,11 @@ export default function HomeScreen() {
     );
   }
 
+  if (error) return (
+    <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: theme.background }}>
+      <Text style={{ color: theme.text }}>{error}</Text>
+      <AppButton title="Try again" variant="green" onPress={() => setAttempt((value) => value + 1)} />
+    </View>
+  );
   return <LandingScreen />;
 }

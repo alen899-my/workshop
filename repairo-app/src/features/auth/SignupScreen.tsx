@@ -20,12 +20,11 @@ import CountryPicker from '@/components/ui/CountryPicker';
 import InputField from '@/components/ui/InputField';
 import LocationPicker from '@/components/ui/LocationPicker';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
-import Toast from '@/components/ui/Toast';
 
-import { Spacing, UI, MaxContentWidth } from '@/constants/theme';
+import { Spacing, UI } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { authService } from '@/services/auth.service';
-import { getCallingCode } from '@/utils/preload-countries';
+import { AuthError, authService } from '@/services/auth.service';
+import { DEFAULT_PHONE_COUNTRY, DEFAULT_CALLING_CODE, normalizeAuthPhone, passwordError, validEmail } from '@/utils/auth-validation';
 
 const IMG_H = 210;
 
@@ -49,6 +48,7 @@ interface FormData {
   confirmPassword: string;
   countryName: string;
   callingCode: string;
+  phoneCountry: string;
 }
 
 type Errors = Partial<Record<keyof FormData, string>>;
@@ -63,18 +63,20 @@ export default function SignupScreen() {
     shopName: '',
     location: '',
     phone: '',
-    country: '',
-    currency: 'USD',
+    country: 'IN',
+    currency: 'INR',
     ownerName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    countryName: '',
-    callingCode: '',
+    countryName: 'India',
+    callingCode: DEFAULT_CALLING_CODE,
+    phoneCountry: DEFAULT_PHONE_COUNTRY,
   });
   const [errors, setErrors] = useState<Errors>({});
   const [agree, setAgree] = useState(false);
-  const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const [submitError, setSubmitError] = useState('');
+  const submitting = useRef(false);
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -83,11 +85,6 @@ export default function SignupScreen() {
     const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
     return () => { show.remove(); hide.remove(); };
   }, []);
-
-  useEffect(() => {
-    const code = getCallingCode(form.country);
-    if (code) update('callingCode', code);
-  }, [form.country]);
 
   const update = useCallback(<K extends keyof FormData>(key: K, val: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -100,13 +97,14 @@ export default function SignupScreen() {
       if (s === 0) {
         if (!form.shopName.trim()) e.shopName = 'Shop name is required';
         if (!form.location.trim()) e.location = 'Location is required';
-        if (form.phone.length < 7) e.phone = 'Valid phone number required';
+        if (!normalizeAuthPhone(form.phone, form.phoneCountry)) e.phone = 'Enter a valid phone number for the selected country';
         if (!form.country) e.country = 'Select your country';
       } else if (s === 1) {
         if (!form.ownerName.trim()) e.ownerName = 'Owner name is required';
-        if (!form.email.includes('@')) e.email = 'Valid email required';
+        if (!validEmail(form.email)) e.email = 'Enter a valid email address';
       } else if (s === 2) {
-        if (form.password.length < 6) e.password = 'At least 6 characters';
+        const issue = passwordError(form.password);
+        if (issue) e.password = issue;
         if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
       }
       setErrors(e);
@@ -125,28 +123,33 @@ export default function SignupScreen() {
   }, []);
 
   const handleRegister = useCallback(async () => {
-    if (!validateStep(2)) return;
+    if (submitting.current) return;
+    setSubmitError('');
+    for (let index = 0; index < 3; index++) {
+      if (!validateStep(index)) { setStep(index); return; }
+    }
     if (!agree) return;
+    const phone = normalizeAuthPhone(form.phone, form.phoneCountry)!;
+    submitting.current = true;
     Keyboard.dismiss();
     setLoading(true);
     try {
       await authService.register({
-        shopName: form.shopName,
-        location: form.location,
-        phone: `${form.callingCode}${form.phone}`,
-        ownerName: form.ownerName,
-        country: form.country,
-        currency: form.currency,
-        email: form.email,
-        password: form.password,
-        callingCode: form.callingCode,
+        shopName: form.shopName.trim(), location: form.location.trim(), phone,
+        ownerName: form.ownerName.trim(), country: form.country, currency: form.currency,
+        email: form.email.trim().toLowerCase(), password: form.password,
+        phoneCountry: form.phoneCountry, latitude: form.latitude, longitude: form.longitude,
       });
-      await authService.logout();
-      setLoading(false);
-      setToast({ visible: true, message: 'Account created! Redirecting to login...' });
-      setTimeout(() => router.replace('/auth/login'), 1500);
-    } catch (err: any) {
-      setErrors({ shopName: err?.message || 'Registration failed' });
+      router.replace({ pathname: '/auth/login', params: { registered: '1' } });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      if (err instanceof AuthError && Object.keys(err.fields).length) {
+        setErrors(err.fields);
+        const keys = Object.keys(err.fields);
+        setStep(keys.some((key) => ['shopName', 'location', 'phone', 'country', 'currency'].includes(key)) ? 0 : keys.some((key) => ['ownerName', 'email'].includes(key)) ? 1 : 2);
+      }
+    } finally {
+      submitting.current = false;
       setLoading(false);
     }
   }, [form, agree, validateStep]);
@@ -238,17 +241,18 @@ export default function SignupScreen() {
                     error={errors.location}
                   />
                   <PhoneInputWithCode
-                    countryCode={form.country}
+                    countryCode={form.phoneCountry}
+                    valueFormat="national"
                     callingCode={form.callingCode}
                     phone={form.phone}
-                    onCountryChange={(c) => { update('country', c.cca2); update('currency', c.currency); update('callingCode', c.callingCode); }}
+                    onCountryChange={(c) => { update('phoneCountry', c.cca2); update('callingCode', c.callingCode); }}
                     onPhoneChange={(v) => update('phone', v)}
                     error={errors.phone}
                   />
                   <CountryPicker
                     value={form.country}
                     selectedName={form.countryName}
-                    onChange={(c) => { update('country', c.cca2); update('currency', c.currency); update('countryName', c.name); update('callingCode', c.callingCode); }}
+                    onChange={(c) => { update('country', c.cca2); update('currency', c.currency); update('countryName', c.name); }}
                     error={errors.country}
                   />
                 </View>
@@ -286,8 +290,9 @@ export default function SignupScreen() {
                     label="Create Password"
                     value={form.password}
                     onChangeText={(v) => update('password', v)}
-                    placeholder="At least 6 characters"
+                    placeholder="At least 15 characters"
                     type="password"
+                    autoComplete="new-password"
                     error={errors.password}
                   />
                   <InputField
@@ -296,6 +301,7 @@ export default function SignupScreen() {
                     onChangeText={(v) => update('confirmPassword', v)}
                     placeholder="Re-enter password"
                     type="password"
+                    autoComplete="new-password"
                     icon="lock-check-outline"
                     error={errors.confirmPassword}
                   />
@@ -304,6 +310,7 @@ export default function SignupScreen() {
 
               {/* Bottom Actions — now scrolling with content */}
               <View style={styles.bottom}>
+                {!!submitError && <Text accessibilityRole="alert" style={{ color: theme.error, marginBottom: 12 }}>{submitError}</Text>}
                 {/* Agree checkbox – last step */}
                 {step === 2 && (
                   <Pressable style={styles.agreeRow} onPress={() => setAgree(!agree)}>
@@ -325,7 +332,7 @@ export default function SignupScreen() {
 
                 {step > 0 && step < 2 && (
                   <View style={styles.bottomRow}>
-                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep}>
+                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep} disabled={loading}>
                       <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primaryForeground} />
                       <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Back</Text>
                     </Pressable>
@@ -345,7 +352,7 @@ export default function SignupScreen() {
 
                 {step === 2 && (
                   <View style={styles.bottomRow}>
-                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep}>
+                    <Pressable style={[styles.btnHalf, { backgroundColor: theme.text }]} onPress={prevStep} disabled={loading}>
                       <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primaryForeground} />
                       <Text style={[styles.btnText, { color: theme.primaryForeground }]}>Back</Text>
                     </Pressable>
@@ -375,12 +382,7 @@ export default function SignupScreen() {
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type="success"
-        onHide={() => setToast({ visible: false, message: '' })}
-      />
+
     </View>
   );
 }

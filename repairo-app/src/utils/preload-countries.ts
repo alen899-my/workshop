@@ -4,7 +4,7 @@ import { FlagType, getAllCountries } from 'react-native-country-picker-modal';
 let cache: Record<string, any> | null = null;
 let resolved = false;
 const promise = getAllCountries(FlagType.EMOJI).then((map) => {
-  cache = map;
+  cache = Object.fromEntries(Object.values(map).map((country) => [country.cca2, country]));
   resolved = true;
 }).catch((err) => {
   console.error('preload-countries error:', err);

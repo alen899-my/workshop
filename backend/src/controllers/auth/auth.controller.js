@@ -1,310 +1,162 @@
 const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const { isSupportedCountry } = require('libphonenumber-js/max');
+const { normalizePhone, normalizeEmail, passwordError, PHONE_DIGITS_SQL } = require('../../utils/auth-validation');
 const JWT_SECRET = process.env.JWT_SECRET;
+const sessionVersion = require('../../utils/session-version');
+const INVALID_LOGIN = 'Phone number or password is incorrect';
+const dummyHash = bcrypt.hashSync('not-a-real-account-password', 10);
 
-/**
- * Normalize a phone number sent from the Expo app.
- *
- * The PhoneInputWithCode component already stores the calling code inside
- * the `phone` state (e.g. "+919876543210"), but both LoginScreen and
- * SignupScreen then prepend the calling code *again* before sending, which
- * produces strings like "+1+919876543210" or "+91+919876543210".
- *
- * This helper:
- *  1. Strips any embedded duplicate calling-code prefix so the result is
- *     a single clean E.164 number (e.g. "+919876543210").
- *  2. If no '+' is present at all, adds one so the DB comparison is consistent.
- */
-function normalizePhone(raw) {
-  if (!raw) return raw;
-  const str = String(raw).trim();
-
-  // Match pattern: one or more leading +<digits> groups followed by the real number
-  // e.g. "+1+919876543210"  -> "+919876543210"
-  //      "+91+919876543210" -> "+919876543210"
-  //      "+919876543210"    -> "+919876543210" (unchanged)
-  const multiPrefix = /^(\+\d{1,4})+(?=\d{6,})/;
-  const match = str.match(multiPrefix);
-  if (match) {
-    // Keep only the LAST calling-code prefix + the subscriber number
-    // Find where the final '+' (that precedes the longest suffix) starts
-    const lastPlus = str.lastIndexOf('+');
-    if (lastPlus > 0) {
-      // There are multiple '+' groups; keep from the last '+' onward
-      return str.slice(lastPlus);
-    }
-  }
-
-  // Ensure the number always starts with '+'
-  if (!str.startsWith('+')) return '+' + str;
-  return str;
+function session(user) {
+  return {
+    token: jwt.sign({ id: user.id, shopId: user.shop_id, role: user.role, roleId: user.role_id, ver: sessionVersion(user.password_hash) }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' }),
+    data: {
+      userId: user.id, shopId: user.shop_id, shopName: user.shop_name || 'Global Systems',
+      ownerName: user.owner_name || user.name, phone: user.phone, email: user.email,
+      role: user.role, roleId: user.role_id, profile_image: user.profile_image,
+      shopCountry: user.shop_country === 'India' ? 'IN' : (user.shop_country || 'IN'),
+      shopCurrency: user.shop_currency || 'INR',
+    },
+  };
 }
 
-// @desc    Register a new workshop (The "Triple-Handshake" Flow)
 exports.registerShop = async (req, res) => {
-  const { 
-    shopName, location, ownerName, phone, email, password, 
-    country, currency, latitude, longitude, place_id,
-    state, city, address
-  } = req.body;
+  const body = req.body || {};
+  const shopName = typeof body.shopName === 'string' ? body.shopName.trim() : '';
+  const ownerName = typeof body.ownerName === 'string' ? body.ownerName.trim() : '';
+  const location = typeof body.location === 'string' ? body.location.trim() : '';
+  const country = typeof body.country === 'string' ? body.country.toUpperCase() : 'IN';
+  const currency = typeof body.currency === 'string' ? body.currency.toUpperCase() : 'INR';
+  const phone = normalizePhone(body.phone, body.phoneCountry);
+  const email = normalizeEmail(body.email);
+  const fields = {};
+  if (!shopName || shopName.length > 255) fields.shopName = 'Enter a shop name (up to 255 characters)';
+  if (!ownerName || ownerName.length > 100) fields.ownerName = 'Enter an owner name (up to 100 characters)';
+  if (!location || location.length > 255) fields.location = 'Enter a location (up to 255 characters)';
+  if (!isSupportedCountry(country)) fields.country = 'Select a valid country';
+  if (!/^[A-Z]{3}$/.test(currency)) fields.currency = 'Select a valid currency';
+  if (!phone) fields.phone = 'Enter a valid phone number with country code';
+  if (!email) fields.email = 'Enter a valid email address';
+  const passwordIssue = passwordError(body.password);
+  if (passwordIssue) fields.password = passwordIssue;
+  for (const [field, limit] of [['latitude', 90], ['longitude', 180]]) {
+    if (body[field] != null && (typeof body[field] !== 'number' || !Number.isFinite(body[field]) || Math.abs(body[field]) > limit)) fields.location = 'Invalid location coordinates';
+  }
+  if (Object.keys(fields).length) return res.status(400).json({ success: false, error: 'Please check your details', fields });
 
+  let client;
+  let inTransaction = false;
   try {
-    const normalizedPhone = normalizePhone(phone);
-    console.log('[REGISTER] Phone received:', JSON.stringify(phone), '| Normalized:', JSON.stringify(normalizedPhone));
-
-    // 1. Validate if user phone or email already exists
-    const userCheck = await db.query('SELECT * FROM users WHERE phone = $1 OR email = $2', [normalizedPhone, email || '']);
-    if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone or Email already registered' });
-
-    // 2. Hash password securely
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Check if shop already exists
-    const shopCheck = await db.query('SELECT * FROM shops WHERE name = $1', [shopName]);
-    if (shopCheck.rows.length > 0) {
-      return res.status(400).json({ success: false, error: 'Shop already exists' });
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    client = await db.pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+    // Serialize registrations for the same identity, including legacy formats.
+    for (const identity of [phone, email].sort()) await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [identity]);
+    const existing = await client.query('SELECT id FROM users WHERE ' + PHONE_DIGITS_SQL + ' = $1 OR lower(email) = $2 LIMIT 1', [phone.slice(1), email]);
+    if (existing.rows.length) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(409).json({ success: false, error: 'An account with these details already exists. Log in or reset your password.' });
     }
-
-    // 3. Resolve shop_owner roleId
-    const roleR = await db.query("SELECT id FROM roles WHERE slug = 'shop_owner'");
-    const roleId = roleR.rows.length > 0 ? roleR.rows[0].id : null;
-
-    // 4. Atomic Transaction: Create Shop -> Create User -> Link Role
-    await db.query('BEGIN');
-
-    // Insert new shop
-    const shopResult = await db.query(
-      `INSERT INTO shops (
-        name, location, owner_name, phone, country, currency, 
-        latitude, longitude, place_id, state, city, address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-      [
-        shopName, location, ownerName, normalizedPhone, country || 'India', currency || 'INR',
-        latitude, longitude, place_id, state, city, address
-      ]
+    const role = await client.query("SELECT id FROM roles WHERE slug = 'shop_owner'");
+    if (!role.rows[0]) throw new Error('Owner role is not configured');
+    const roleId = role.rows[0].id;
+    const shop = await client.query(
+      'INSERT INTO shops (name, location, owner_name, phone, country, currency, latitude, longitude, place_id, state, city, address) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
+      [shopName, location, ownerName, phone, country, currency, body.latitude ?? null, body.longitude ?? null, body.place_id ?? null, body.state ?? null, body.city ?? null, body.address ?? null],
     );
-    const shopId = shopResult.rows[0].id;
-
-    const userResult = await db.query(
-      'INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [shopId, ownerName, normalizedPhone, email, passwordHash, 'shop_owner', roleId]
+    const shopId = shop.rows[0].id;
+    const result = await client.query(
+      'INSERT INTO users (shop_id, name, phone, email, password_hash, role, role_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+      [shopId, ownerName, phone, email, passwordHash, 'shop_owner', roleId],
     );
-    const userId = userResult.rows[0].id;
-
-    await db.query('COMMIT');
-
-    // 5. Generate Session JWT with identity context
-    const token = jwt.sign({ id: userId, shopId, role: 'shop_owner', roleId }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.status(201).json({
-      success: true,
-      message: 'Workshop successfully provisioned',
-      token,
-      data: {
-        userId,
-        shopId,
-        shopName,
-        ownerName,
-        phone: normalizedPhone,
-        role: 'shop_owner',
-        shopCountry: country || 'IN',
-        shopCurrency: currency || 'INR'
-      }
-    });
-
+    // Sign before commit so a configuration failure cannot create a ghost account.
+    const auth = session({ id: result.rows[0].id, shop_id: shopId, role: 'shop_owner', role_id: roleId, name: ownerName, phone, email, password_hash: passwordHash, shop_name: shopName, shop_country: country, shop_currency: currency });
+    await client.query('COMMIT');
+    inTransaction = false;
+    return res.status(201).json({ success: true, message: 'Account created', ...auth });
   } catch (error) {
-    if (db) await db.query('ROLLBACK');
-    console.error('Registration Error:', error);
-    res.status(500).json({ success: false, error: 'Server error during shop provisioning' });
+    if (inTransaction) await client.query('ROLLBACK').catch(() => {});
+    if (error.code === '23505') return res.status(409).json({ success: false, error: 'An account with these details already exists. Log in or reset your password.' });
+    console.error('Registration failed:', error.code || 'internal');
+    return res.status(500).json({ success: false, error: 'Unable to create your account. Please try again.' });
+  } finally {
+    client?.release();
   }
 };
 
-// @desc    Login for all identities (Owner, Admin, Tech)
 exports.login = async (req, res) => {
-  const { phone: rawPhone, password } = req.body;
-  const phone = normalizePhone(rawPhone);
-
-  console.log('[LOGIN] Attempt for phone (raw):', JSON.stringify(rawPhone), '| normalized:', JSON.stringify(phone));
-
+  const { phone: rawPhone, password, phoneCountry } = req.body || {};
+  const phone = normalizePhone(rawPhone, phoneCountry);
+  if (!phone || typeof password !== 'string' || !password || Buffer.byteLength(password, 'utf8') > 72) {
+    return res.status(400).json({ success: false, error: 'Enter a valid phone number and password' });
+  }
   try {
-    // Log similar phones for debugging
-    const similarPhones = await db.query(
-      `SELECT phone FROM users WHERE replace(phone, '+', '') = replace($1, '+', '') LIMIT 5`,
-      [phone]
+    const result = await db.query(
+      "SELECT u.*, s.name AS shop_name, s.owner_name, s.currency AS shop_currency, s.country AS shop_country, to_jsonb(s)->>'deleted_at' AS shop_deleted_at, to_jsonb(s)->>'status' AS shop_status FROM users u LEFT JOIN shops s ON u.shop_id = s.id WHERE " + PHONE_DIGITS_SQL.replaceAll('phone', 'u.phone') + ' = $1 LIMIT 2',
+      [phone.slice(1)],
     );
-    if (similarPhones.rows.length > 0) {
-      console.log('[LOGIN] Found phones with matching digits:', similarPhones.rows.map(r => r.phone));
-    } else {
-      console.log('[LOGIN] No phone found matching digits. Sample phones in DB:',
-        (await db.query('SELECT phone FROM users LIMIT 5')).rows.map(r => r.phone));
-    }
-
-    // We use LEFT JOIN to allow global admins (who might have no shop_id) to log in
-    const userResult = await db.query(
-      'SELECT u.*, s.name as shop_name, s.owner_name, s.currency as shop_currency, s.country as shop_country FROM users u LEFT JOIN shops s ON u.shop_id = s.id WHERE u.phone = $1',
-      [phone]
-    );
-
-    if (userResult.rows.length === 0) {
-      console.log('[LOGIN] FAIL - No account found for phone:', JSON.stringify(phone));
-      return res.status(400).json({ success: false, error: 'No account found with this phone number' });
-    }
-
-    const user = userResult.rows[0];
-
-    // Password Verification
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, error: 'Incorrect password' });
-    }
-    
-    // Generate JWT Token with full identity context
-    const token = jwt.sign(
-      { id: user.id, shopId: user.shop_id, role: user.role, roleId: user.role_id }, 
-      JWT_SECRET, 
-      { expiresIn: '7d' }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Access granted',
-      token,
-      data: {
-        userId: user.id,
-        shopId: user.shop_id,
-        shopName: user.shop_name || 'Global Systems',
-        shopCurrency: user.shop_currency || 'INR',
-        shopCountry: user.shop_country || 'IN',
-        ownerName: user.owner_name || user.name,
-        phone: user.phone,
-        roleId: user.role_id,
-        role: user.role
-      }
-    });
-
+    const user = result.rows.length === 1 ? result.rows[0] : null;
+    const match = await bcrypt.compare(password, user?.password_hash || dummyHash);
+    const active = user && !user.deleted_at && (!user.status || user.status.toLowerCase() === 'active') && !user.shop_deleted_at && (!user.shop_status || user.shop_status.toLowerCase() === 'active');
+    if (!match || !active) return res.status(401).json({ success: false, error: INVALID_LOGIN });
+    return res.json({ success: true, ...session({ ...user, phone }) });
   } catch (error) {
-    console.error('Login Handshake Error:', error);
-    res.status(500).json({ success: false, error: 'Platform connectivity error' });
+    console.error('Login failed:', error.code || 'internal');
+    return res.status(500).json({ success: false, error: 'Unable to log in. Please try again.' });
   }
 };
 
 const crypto = require('crypto');
+exports.getSession = (req, res) => res.json({ success: true, data: session(req.authUser).data });
 const sendEmail = require('../../config/mailer');
+const RESET_MESSAGE = 'If an account uses that email, a password reset link will be sent.';
 
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ success: false, error: 'Email is required' });
-
+  const email = normalizeEmail(req.body?.email);
+  if (!email) return res.status(400).json({ success: false, error: 'Enter a valid email address' });
   try {
-    const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User with this email not found' });
+    const result = await db.query('SELECT id, status, deleted_at FROM users WHERE lower(email) = $1 LIMIT 2', [email]);
+    const user = result.rows.length === 1 ? result.rows[0] : null;
+    if (user && !user.deleted_at && (!user.status || user.status.toLowerCase() === 'active')) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const hash = crypto.createHash('sha256').update(token).digest('hex');
+      await db.query('UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3', [hash, new Date(Date.now() + 3600000), user.id]);
+      const base = process.env.FRONTEND_URL;
+      if (!base) throw new Error('Password reset URL not configured');
+      const url = new URL('/reset-password', base);
+      url.searchParams.set('token', token);
+      url.searchParams.set('email', email);
+      const sent = await sendEmail({ to: email, subject: 'Reset your Repairo password', text: 'Reset your password using this link within one hour: ' + url.toString() });
+      if (!sent) console.error('Password reset delivery failed');
     }
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000); // 1 hour
-
-    await db.query(
-      'UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE email = $3',
-      [resetToken, resetExpires, email]
-    );
-
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}&email=${email}`;
-    const message = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Reset Your Password</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
-          body { font-family: 'Google Sans', Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; line-height: 1.6; }
-          .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-          .header { background-color: #ffffff; padding: 30px; text-align: center; border-bottom: 1px solid #eff2f1; }
-          .logo { font-size: 28px; font-weight: 700; color: #3d7a78; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
-          .content { padding: 40px 30px; color: #333333; }
-          h1 { font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 20px; color: #1a1f1e; }
-          p { font-size: 15px; color: #555555; margin-bottom: 24px; }
-          .button-wrap { text-align: center; margin: 35px 0; }
-          .button { display: inline-block; padding: 14px 28px; background-color: #3d7a78; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(61, 122, 120, 0.2); }
-          .footer { background-color: #f9fbfb; padding: 25px 30px; text-align: center; border-top: 1px solid #eff2f1; }
-          .footer p { font-size: 13px; color: #888888; margin: 0; }
-          .link-fallback { font-size: 13px; color: #888888; word-break: break-all; margin-top: 30px; padding: 15px; background: #f4f7f6; border-radius: 6px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2 class="logo">REPAIRO</h2>
-          </div>
-          <div class="content">
-            <h1>Reset your password</h1>
-            <p>We received a request to reset the password for your Repairo account associated with this email address.</p>
-            <p>If you made this request, you can reset your password immediately by clicking the button below:</p>
-            
-            <div class="button-wrap">
-              <a href="${resetUrl}" class="button">Reset Password</a>
-            </div>
-            
-            <p>This link will expire in exactly 1 hour for security reasons.</p>
-            
-         
-          </div>
-          <div class="footer">
-            <p>If you didn't request a password reset, you can safely ignore this email. Your account remains secure.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const emailSent = await sendEmail({
-      to: email,
-      subject: 'Password Reset Request',
-      html: message,
-    });
-
-    if (!emailSent) {
-      return res.status(500).json({ success: false, error: 'Email could not be sent' });
-    }
-
-    res.status(200).json({ success: true, message: 'Password reset link sent to your email' });
-  } catch (error) {
-    console.error('Forgot Password Error:', error);
-    res.status(500).json({ success: false, error: 'Server error during password reset' });
+    return res.json({ success: true, message: RESET_MESSAGE });
+  } catch {
+    // Do not expose account existence or mail delivery status.
+    console.error('Password reset request failed');
+    return res.json({ success: true, message: RESET_MESSAGE });
   }
 };
 
 exports.resetPassword = async (req, res) => {
-  const { token, email, newPassword } = req.body;
-  if (!token || !email || !newPassword) {
-    return res.status(400).json({ success: false, error: 'Missing required parameters' });
-  }
-
+  const { token, newPassword } = req.body || {};
+  const email = normalizeEmail(req.body?.email);
+  if (!email || typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ success: false, error: 'Invalid or expired reset link' });
+  const issue = passwordError(newPassword);
+  if (issue) return res.status(400).json({ success: false, error: issue });
   try {
-    const userResult = await db.query(
-      'SELECT * FROM users WHERE email = $1 AND reset_password_token = $2 AND reset_password_expires > NOW()',
-      [email, token]
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    // Conditional update makes a reset token single-use, even under concurrency.
+    const result = await db.query(
+      "UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE lower(email) = $2 AND reset_password_token = $3 AND reset_password_expires > NOW() AND deleted_at IS NULL AND lower(status) = 'active' RETURNING id",
+      [passwordHash, email, hash],
     );
-
-    if (userResult.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'Invalid or expired token' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    await db.query(
-      'UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2',
-      [passwordHash, email]
-    );
-
-    res.status(200).json({ success: true, message: 'Password updated successfully' });
-  } catch (error) {
-    console.error('Reset Password Error:', error);
-    res.status(500).json({ success: false, error: 'Server error during password reset' });
+    if (result.rows.length !== 1) return res.status(400).json({ success: false, error: 'Invalid or expired reset link' });
+    return res.json({ success: true, message: 'Password updated. You can now log in.' });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Unable to reset password. Please try again.' });
   }
 };

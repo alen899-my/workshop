@@ -1,7 +1,8 @@
 import * as Storage from '@/services/storage';
 
-import { api, setToken } from './api';
-import { getCallingCode, waitForCountries } from '@/utils/preload-countries';
+import { api, getStoredToken, setToken, setUnauthorizedHandler } from './api';
+import { router } from 'expo-router';
+import { getCallingCode } from '@/utils/preload-countries';
 
 const USER_KEY = 'repairo_user';
 
@@ -23,6 +24,7 @@ interface UserData {
 let _currentUser: UserData | null = null;
 
 export async function loadStoredUser(): Promise<UserData | null> {
+  _currentUser = null;
   try {
     const raw = await Storage.getItemAsync(USER_KEY);
     if (raw) {
@@ -45,31 +47,51 @@ export function getCurrentUser(): UserData | null {
 }
 
 async function saveUser(user: UserData | null) {
-  _currentUser = user;
   if (user) {
     await Storage.setItemAsync(USER_KEY, JSON.stringify(user));
   } else {
-    try { await Storage.deleteItemAsync(USER_KEY); } catch {}
+    await Storage.deleteItemAsync(USER_KEY);
+  }
+  _currentUser = user;
+}
+
+export class AuthError extends Error {
+  constructor(message: string, public fields: Record<string, string> = {}) { super(message); }
+}
+
+async function persistSession(token: string, user: UserData) {
+  try {
+    await saveUser(user);
+    await setToken(token);
+  } catch {
+    await Promise.allSettled([setToken(null), saveUser(null)]);
+    _currentUser = null;
+    throw new Error('Could not save your session. Please try logging in again.');
   }
 }
 
 export const authService = {
+  async restoreSession(): Promise<boolean> {
+    if (!await getStoredToken()) { await saveUser(null); return false; }
+    const res = await api.get<UserData>('/auth/session');
+    if (res.status === 401) { await this.logout(); return false; }
+    if (!res.success || !res.data?.userId) throw new Error(res.error || 'Unable to verify your session');
+    const user = { ...res.data, shopCallingCode: getCallingCode(res.data.shopCountry || 'IN') };
+    await saveUser(user);
+    return true;
+  },
   async login(phone: string, password: string) {
     const res: { success: boolean; token?: string; data?: UserData; error?: string } =
       await api.post('/auth/login', { phone, password });
-    if (!res.success) {
+    if (!res.success || !res.token || !res.data?.userId) {
       throw new Error(res.error || 'Login failed');
-    }
-    if (res.token) {
-      await setToken(res.token);
     }
     // Compute and persist the calling code from shop country so it's available immediately
     if (res.data?.shopCountry) {
-      await waitForCountries();
       const code = getCallingCode(res.data.shopCountry);
       if (code) res.data.shopCallingCode = code;
     }
-    await saveUser(res.data ?? null);
+    await persistSession(res.token, res.data);
     return res;
   },
 
@@ -82,28 +104,31 @@ export const authService = {
     country: string;
     currency: string;
     password: string;
-    callingCode?: string;
+    phoneCountry?: string;
+    latitude?: number;
+    longitude?: number;
   }) {
-    const { callingCode, ...payload } = data;
-    const res: { success: boolean; token?: string; data?: UserData; error?: string } =
-      await api.post('/auth/register-shop', payload);
+    const res: { success: boolean; token?: string; data?: UserData; error?: string; fields?: Record<string, string> } =
+      await api.post('/auth/register-shop', data);
     if (!res.success) {
-      throw new Error(res.error || 'Registration failed');
+      throw new AuthError(res.error || 'Registration failed', res.fields);
     }
-    if (res.token) {
-      await setToken(res.token);
-    }
-    // Merge the callingCode from the signup form into the persisted user so
-    // CreateRepairScreen can use it without waiting for country data to load
-    const userData: UserData | null = res.data
-      ? { ...res.data, ...(callingCode ? { shopCallingCode: callingCode } : {}) }
-      : null;
-    await saveUser(userData);
+    // Signup returns to login. Do not briefly create a session and then log out.
     return res;
   },
 
   async logout() {
-    await setToken(null);
-    await saveUser(null);
+    _currentUser = null;
+    await Promise.all([setToken(null), saveUser(null)]);
+  },
+
+  async forgotPassword(email: string) {
+    const res = await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
+    if (!res.success) throw new Error(res.error || 'Unable to request a password reset');
   },
 };
+
+setUnauthorizedHandler(async () => {
+  await authService.logout();
+  router.replace('/auth/login');
+});

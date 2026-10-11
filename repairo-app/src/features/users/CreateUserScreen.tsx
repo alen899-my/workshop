@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeAuthPhone, passwordError } from '@/utils/auth-validation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Keyboard, KeyboardAvoidingView,
-  Platform, Pressable, SectionList, StyleSheet, Switch, TextInput, View,
+  Platform, Pressable, SectionList, StyleSheet, Switch, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import Toast from '@/components/ui/Toast';
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
-import { getCallingCode, countriesCache } from '@/utils/preload-countries';
+import { getCallingCode } from '@/utils/preload-countries';
 import { getCurrentUser } from '@/services/auth.service';
 import { userService } from '@/features/users/services/user.service';
 import type { User, RoleOption } from '@/features/users/services/user.service';
@@ -74,7 +75,7 @@ export default function CreateUserScreen({
 
   const parsedPhone = useMemo(
     () => initialUser?.phone ? extractCallingCode(initialUser.phone) : null,
-    [initialUser?.phone],
+    [initialUser],
   );
 
   const shopCallingCode = useMemo(() => {
@@ -102,7 +103,6 @@ export default function CreateUserScreen({
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
   const [phoneError, setPhoneError] = useState<string | undefined>(undefined);
   const [phoneChecking, setPhoneChecking] = useState(false);
-  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ visible: true, message, type });
@@ -114,7 +114,7 @@ export default function CreateUserScreen({
         const filtered = res.data.filter((r) => r.slug !== 'super-admin');
         setRoleOptions(filtered);
         if (isEdit && initialUser?.role === 'super-admin' && filtered.length > 0) {
-          update('role', filtered[0].slug);
+          setForm((previous) => ({ ...previous, role: filtered[0].slug }));
         }
       }
     });
@@ -141,23 +141,20 @@ export default function CreateUserScreen({
     });
   }, [form.role]);
 
-  const debouncedCheckPhone = useCallback((phone: string, callingCode: string) => {
-    if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
-    const fullPhone = `${callingCode}${phone}`;
-    if (!phone || phone.length < 7) {
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const fullPhone = normalizeAuthPhone(form.phone, form.countryCode);
       setPhoneError(undefined);
-      return;
-    }
-
-    checkTimerRef.current = setTimeout(async () => {
+      if (!fullPhone) { setPhoneChecking(false); return; }
       setPhoneChecking(true);
       const res = await userService.checkPhone(fullPhone, isEdit ? initialUser?.id : undefined);
-      if (res.success) {
-        setPhoneError(res.exists ? 'This phone number is already registered' : undefined);
-      }
+      if (cancelled) return;
+      if (res.success) setPhoneError(res.exists ? 'This phone number is already registered' : undefined);
       setPhoneChecking(false);
     }, 500);
-  }, [isEdit, initialUser?.id]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [form.phone, form.countryCode, isEdit, initialUser?.id]);
 
   const update = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -165,13 +162,13 @@ export default function CreateUserScreen({
 
   const handlePhoneChange = useCallback((value: string) => {
     setForm((prev) => ({ ...prev, phone: value }));
-    debouncedCheckPhone(value, form.callingCode);
-  }, [debouncedCheckPhone, form.callingCode]);
+    setPhoneError(undefined);
+  }, []);
 
   const handleCountryChange = useCallback((c: { cca2: string; callingCode: string; currency: string }) => {
     setForm((prev) => ({ ...prev, countryCode: c.cca2, callingCode: c.callingCode }));
-    if (form.phone) debouncedCheckPhone(form.phone, c.callingCode);
-  }, [debouncedCheckPhone, form.phone]);
+    setPhoneError(undefined);
+  }, []);
 
   const getOverrideState = useCallback((slug: string): OverrideState => {
     if (additionalPerms.has(slug)) return 'added';
@@ -179,28 +176,6 @@ export default function CreateUserScreen({
     if (rolePermissionSlugs.has(slug)) return 'inherited';
     return 'default';
   }, [additionalPerms, excludedPerms, rolePermissionSlugs]);
-
-  const toggleOverride = useCallback((slug: string) => {
-    const current = getOverrideState(slug);
-
-    if (current === 'default') {
-      setAdditionalPerms((prev) => new Set(prev).add(slug));
-    } else if (current === 'inherited') {
-      setExcludedPerms((prev) => new Set(prev).add(slug));
-    } else if (current === 'added') {
-      setAdditionalPerms((prev) => {
-        const next = new Set(prev);
-        next.delete(slug);
-        return next;
-      });
-    } else {
-      setExcludedPerms((prev) => {
-        const next = new Set(prev);
-        next.delete(slug);
-        return next;
-      });
-    }
-  }, [getOverrideState]);
 
   const onToggleSwitch = useCallback((slug: string, value: boolean) => {
     const current = getOverrideState(slug);
@@ -274,7 +249,12 @@ export default function CreateUserScreen({
     if (!isEdit && !form.password.trim()) { showToast('Password is required', 'error'); return; }
     if (phoneError) { showToast('Fix the phone number error first', 'error'); return; }
 
-    const fullPhone = `${form.callingCode}${form.phone.trim()}`;
+    const fullPhone = normalizeAuthPhone(form.phone, form.countryCode);
+    if (!fullPhone) { showToast('Enter a valid phone number for the selected country', 'error'); return; }
+    if (!isEdit || form.password) {
+      const issue = passwordError(form.password);
+      if (issue) { showToast(issue, 'error'); return; }
+    }
 
     setSubmitting(true);
     try {
@@ -286,7 +266,7 @@ export default function CreateUserScreen({
           email: form.email.trim() || undefined,
           role: form.role,
           status: form.status,
-          password: form.password.trim() || undefined,
+          password: form.password || undefined,
           additional_permissions: Array.from(additionalPerms),
           excluded_permissions: Array.from(excludedPerms),
         });
@@ -295,7 +275,7 @@ export default function CreateUserScreen({
           name: form.name.trim(),
           phone: fullPhone,
           email: form.email.trim(),
-          password: form.password.trim(),
+          password: form.password,
           role: form.role,
           status: form.status,
           additional_permissions: Array.from(additionalPerms),
@@ -379,7 +359,7 @@ export default function CreateUserScreen({
         )}
       </Pressable>
     );
-  }, [additionalPerms, excludedPerms, rolePermissionSlugs, toggleModule, theme]);
+  }, [additionalPerms, excludedPerms, rolePermissionSlugs, toggleModule, theme, styles]);
 
   const renderPermissionItem = useCallback(({ item }: { item: Permission }) => {
     const state = getOverrideState(item.slug);
@@ -438,7 +418,7 @@ export default function CreateUserScreen({
         />
       </View>
     );
-  }, [getOverrideState, onToggleSwitch, theme]);
+  }, [getOverrideState, onToggleSwitch, theme, styles]);
 
   const isFormValid = form.name.trim() && form.phone.trim().length >= 7 && (isEdit || form.password.trim()) && !phoneError;
 
@@ -475,6 +455,7 @@ export default function CreateUserScreen({
               />
 
               <PhoneInputWithCode
+                valueFormat="national"
                 countryCode={form.countryCode}
                 callingCode={form.callingCode}
                 phone={form.phone}

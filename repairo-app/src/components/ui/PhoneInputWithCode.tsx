@@ -1,11 +1,11 @@
-import { UI } from '@/constants/theme';
+import { Spacing, UI } from '@/constants/theme';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ModalSheet from '@/components/ui/ModalSheet';
-import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getCallingCode, waitForCountries, countriesCache } from '@/utils/preload-countries';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 
 interface CountryData {
   cca2: string;
@@ -21,6 +21,8 @@ interface Props {
   error?: string;
   label?: string;
   callingCode?: string;
+  /** Existing forms use international values; auth forms keep national input. */
+  valueFormat?: 'international' | 'national';
 }
 
 export default function PhoneInputWithCode({
@@ -31,6 +33,7 @@ export default function PhoneInputWithCode({
   error,
   label = 'Phone Number',
   callingCode: controlledCallingCode,
+  valueFormat = 'international',
 }: Props) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
@@ -47,22 +50,33 @@ export default function PhoneInputWithCode({
   }, []);
 
   const displayedCode = controlledCallingCode || getCallingCode(countryCode) || '';
-  const codeWithoutPlus = displayedCode ? displayedCode.replace('+', '') : '';
 
   const stripCode = (num: string): string => {
     if (displayedCode && num.startsWith(displayedCode)) return num.slice(displayedCode.length).trimStart();
-    if (codeWithoutPlus && num.startsWith(codeWithoutPlus)) return num.slice(codeWithoutPlus.length).trimStart();
     return num;
   };
 
-  const localNumber = stripCode(phone);
+  const localNumber = valueFormat === 'national' ? phone : stripCode(phone);
 
   const handlePhoneChange = useCallback(
     (text: string) => {
-      const cleaned = text.replace(/[^0-9\s\-()]/g, '');
-      onPhoneChange(displayedCode + cleaned);
+      const international = text.trim().replace(/^00/, '+');
+      if (international.startsWith('+')) {
+        const parsed = parsePhoneNumberFromString(international, { extract: false });
+        if (parsed?.isValid() && parsed.country) {
+          onCountryChange({ cca2: parsed.country, callingCode: `+${parsed.countryCallingCode}`, currency: countriesCache?.[parsed.country]?.currency?.[0] ?? 'USD' });
+          onPhoneChange(valueFormat === 'national' ? parsed.nationalNumber : parsed.number);
+          return;
+        }
+        // Retain invalid international input for validation instead of silently
+        // converting it into a different number.
+        onPhoneChange(international);
+        return;
+      }
+      const cleaned = text.replace(/[^0-9]/g, '');
+      onPhoneChange(valueFormat === 'national' || !cleaned ? cleaned : displayedCode + cleaned);
     },
-    [displayedCode, onPhoneChange],
+    [displayedCode, onPhoneChange, onCountryChange, valueFormat],
   );
 
   const filtered = useMemo(() => {
@@ -79,18 +93,19 @@ export default function PhoneInputWithCode({
     (country: any) => {
       const code = country.callingCode?.[0] ? `+${country.callingCode[0]}` : '';
       onCountryChange({ cca2: country.cca2, callingCode: code, currency: country.currency?.[0] ?? 'USD' });
+      if (valueFormat === 'international' && localNumber) onPhoneChange(code + localNumber);
       Keyboard.dismiss();
       setOpen(false);
       setSearch('');
     },
-    [onCountryChange],
+    [onCountryChange, onPhoneChange, localNumber, valueFormat],
   );
 
   return (
     <View style={styles.wrapper}>
       <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
       <View style={[styles.inputContainer, { borderColor: error ? theme.error : theme.border, backgroundColor: theme.card }]}>
-        <Pressable style={styles.codeBtn} onPress={() => setOpen(true)}>
+        <Pressable style={styles.codeBtn} onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`Country code ${countryCode} ${displayedCode}`}>
           <Text style={[styles.codeText, { color: displayedCode ? theme.text : theme.tabIconDefault }]}>{displayedCode || 'Code'}</Text>
           <MaterialCommunityIcons name="chevron-down" size={14} color={theme.textSecondary} />
         </Pressable>
@@ -103,6 +118,8 @@ export default function PhoneInputWithCode({
           placeholderTextColor={theme.tabIconDefault}
           keyboardType="phone-pad"
           autoComplete="tel"
+          accessibilityLabel={label}
+          maxLength={64}
         />
       </View>
       {error && (
@@ -133,6 +150,7 @@ export default function PhoneInputWithCode({
 
         <FlatList
           data={filtered}
+          ListEmptyComponent={<Text style={{ color: theme.textSecondary, padding: 16 }}>{all ? 'No countries found' : 'Loading countries...'}</Text>}
           keyExtractor={(item: any) => item.cca2}
           renderItem={({ item }: { item: any }) => {
             const active = item.cca2 === countryCode;

@@ -1,5 +1,4 @@
-import ENV from '@/config/env';
-import { api, getStoredToken } from './api';
+import { api } from './api';
 
 export interface UserPermissionsResponse {
   role_permissions: string[];
@@ -14,14 +13,6 @@ export const permissionService = {
   },
 
   async getUserPermissions(userId: number): Promise<{ success: boolean; data?: UserPermissionsResponse; error?: string }> {
-    try {
-      const token = await getStoredToken();
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`${ENV.API_URL}/permissions/user/${userId}`, { headers });
-      return await res.json();
-    } catch {
-      return { success: false, error: 'Connection failed' };
-    }
+    return api.get<UserPermissionsResponse>(`/permissions/user/${userId}`);
   },
 };

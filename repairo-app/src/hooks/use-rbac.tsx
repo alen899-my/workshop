@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { getCurrentUser, loadStoredUser } from '@/services/auth.service';
 import { permissionService } from '@/services/permission.service';
@@ -25,13 +25,15 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(getCurrentUser());
+  const revision = useRef(0);
 
-  const init = async () => {
+  const init = useCallback(async () => {
+    const current = ++revision.current;
     setLoading(true);
+    setPermissions([]);
     const stored = await loadStoredUser();
-    if (stored) {
-      setUser(stored);
-    }
+    if (current !== revision.current) return;
+    setUser(stored);
 
     const u = stored || getCurrentUser();
     if (!u?.role) {
@@ -44,6 +46,7 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
     // plus any user-level overrides (additional ∖ excluded)
     if (u.userId) {
       const res = await permissionService.getUserPermissions(u.userId);
+      if (current !== revision.current) return;
       if (res.success && res.data) {
         setPermissions(res.data.effective_permissions);
         setLoading(false);
@@ -53,15 +56,18 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
 
     // Fallback: fetch role-based permissions only
     const res = await permissionService.getRolePermissions(u.role);
+    if (current !== revision.current) return;
     if (res.success && res.data) {
       setPermissions(res.data);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    init();
-  }, []);
+    const pendingRevision = revision;
+    void Promise.resolve().then(init);
+    return () => { pendingRevision.current++; };
+  }, [init]);
 
   const can = (slug: string): boolean => {
     return permissions.includes('*') || permissions.includes(slug);

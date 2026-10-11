@@ -14,16 +14,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
-import Toast from '@/components/ui/Toast';
+import ModalSheet from '@/components/ui/ModalSheet';
 import { Spacing, UI, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
-import { authService } from '@/services/auth.service';
-import { getCallingCode } from '@/utils/preload-countries';
+import { authService, getCurrentUser } from '@/services/auth.service';
+import { DEFAULT_PHONE_COUNTRY, DEFAULT_CALLING_CODE, normalizeAuthPhone, validEmail } from '@/utils/auth-validation';
 
 const IMG_H = 210;
 
@@ -32,12 +32,20 @@ export default function LoginScreen() {
   const styles = useStyles(theme);
   const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
-  const [countryCode, setCountryCode] = useState('');
-  const [callingCode, setCallingCode] = useState('');
+  const [countryCode, setCountryCode] = useState(DEFAULT_PHONE_COUNTRY);
+  const [callingCode, setCallingCode] = useState(DEFAULT_CALLING_CODE);
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+  const { registered } = useLocalSearchParams<{ registered?: string }>();
+  const [submitError, setSubmitError] = useState('');
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const submitting = useRef(false);
+  const resetting = useRef(false);
   const { refresh: refreshRBAC } = useRBAC();
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -49,25 +57,47 @@ export default function LoginScreen() {
   }, []);
 
   const handleLogin = useCallback(async () => {
+    if (submitting.current) return;
     const e: typeof errors = {};
-    if (phone.length < 5) e.phone = 'Valid phone number required';
+    const normalizedPhone = normalizeAuthPhone(phone, countryCode);
+    if (!normalizedPhone) e.phone = 'Enter a valid phone number for the selected country';
     if (!password) e.password = 'Password is required';
     setErrors(e);
-    if (Object.keys(e).length) return;
-
+    setSubmitError('');
+    if (Object.keys(e).length || !normalizedPhone) return;
+    submitting.current = true;
     Keyboard.dismiss();
     setLoading(true);
     try {
-      await authService.login(`${callingCode}${phone}`, password);
+      await authService.login(normalizedPhone, password);
       await refreshRBAC();
-      setToast({ visible: true, message: 'Welcome back! Logged in successfully' });
-      setTimeout(() => router.replace('/(tabs)'), 1200);
-    } catch (err: any) {
-      setErrors({ phone: err?.message || 'Login failed' });
+      if (!getCurrentUser()) throw new Error('Session expired. Please log in again.');
+      router.replace('/(tabs)');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
-  }, [phone, password, refreshRBAC]);
+  }, [phone, countryCode, password, refreshRBAC]);
+
+  const handleReset = async () => {
+    if (resetting.current) return;
+    setResetError('');
+    setResetMessage('');
+    if (!validEmail(resetEmail)) { setResetError('Enter your account email address'); return; }
+    resetting.current = true;
+    setResetLoading(true);
+    try {
+      await authService.forgotPassword(resetEmail);
+      setResetMessage('If an account uses that email, a password reset link will be sent. Check your inbox and spam folder.');
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      resetting.current = false;
+      setResetLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -107,8 +137,12 @@ export default function LoginScreen() {
               </Text>
 
               <View style={styles.fields}>
+                {registered === '1' && <Text accessibilityLiveRegion="polite" style={{ color: theme.success }}>Account created. Log in with your phone number and password.</Text>}
+                {!!submitError && <Text accessibilityRole="alert" style={{ color: theme.error }}>{submitError}</Text>}
                 <PhoneInputWithCode
                   countryCode={countryCode}
+                  callingCode={callingCode}
+                  valueFormat="national"
                   phone={phone}
                   onCountryChange={(c) => { setCountryCode(c.cca2); setCallingCode(c.callingCode); }}
                   onPhoneChange={(v) => { setPhone(v); setErrors((p) => ({ ...p, phone: undefined })); }}
@@ -120,11 +154,12 @@ export default function LoginScreen() {
                   onChangeText={(v) => { setPassword(v); setErrors((p) => ({ ...p, password: undefined })); }}
                   placeholder="Enter your password"
                   type="password"
+                  autoComplete="current-password"
                   error={errors.password}
                 />
               </View>
 
-              <Pressable style={styles.forgotWrap}>
+              <Pressable style={styles.forgotWrap} accessibilityRole="button" onPress={() => { setResetOpen(true); setResetError(''); setResetMessage(''); }}>
                 <Text style={[styles.forgotText, { color: theme.primary }]}>Forgot password?</Text>
               </Pressable>
 
@@ -154,7 +189,7 @@ export default function LoginScreen() {
 
                 <Pressable style={styles.linkWrap} onPress={() => router.replace('/auth/signup')}>
                   <Text style={[styles.linkText, { color: theme.textSecondary }]}>
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Text style={{ color: theme.primary, fontWeight: '700' }}>Sign up</Text>
                   </Text>
                 </Pressable>
@@ -163,12 +198,16 @@ export default function LoginScreen() {
           </ScrollView>
         </View>
       </View>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type="success"
-        onHide={() => setToast({ visible: false, message: '' })}
-      />
+      <ModalSheet visible={resetOpen} title="Reset password" onClose={() => setResetOpen(false)}>
+        <View style={{ padding: 24, gap: 16 }}>
+          <Text style={{ color: theme.textSecondary }}>Enter the email address registered to your account.</Text>
+          <InputField label="Email" value={resetEmail} onChangeText={setResetEmail} type="email" autoComplete="email" error={resetError} />
+          {!!resetMessage && <Text accessibilityLiveRegion="polite" style={{ color: theme.success }}>{resetMessage}</Text>}
+          <Pressable accessibilityRole="button" style={[styles.btn, { backgroundColor: theme.accent, opacity: resetLoading ? 0.6 : 1 }]} onPress={handleReset} disabled={resetLoading}>
+            {resetLoading ? <ActivityIndicator color={theme.accentForeground} /> : <Text style={[styles.btnText, { color: theme.accentForeground }]}>Send reset link</Text>}
+          </Pressable>
+        </View>
+      </ModalSheet>
     </KeyboardAvoidingView>
   );
 }

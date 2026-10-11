@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "migrate:inventory": "node scripts/migrate_inventory.js"
+    "migrate:inventory": "node scripts/migrate_inventory.js",
+    "test:auth": "node --test tests/auth.test.js",
+    "audit:auth": "node scripts/audit_auth_phones.js"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +20,9 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
     "jsonwebtoken": "^9.0.3",
+    "libphonenumber-js": "^1.13.15",
     "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
     "nodemailer": "^8.0.4",

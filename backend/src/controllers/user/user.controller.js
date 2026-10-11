@@ -1,3 +1,4 @@
+const { normalizePhone, normalizeEmail, passwordError, PHONE_DIGITS_SQL } = require('../../utils/auth-validation');
 const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
 const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
@@ -145,6 +146,14 @@ exports.createUser = async (req, res) => {
 
   let { name, phone, email, password, role, status, shop_id, additional_permissions, excluded_permissions } = req.body;
 
+  phone = normalizePhone(phone);
+  const issue = passwordError(password);
+  if (!phone || issue) return res.status(400).json({ success: false, error: issue || 'Enter a valid international phone number' });
+  if (email) {
+    email = normalizeEmail(email);
+    if (!email) return res.status(400).json({ success: false, error: 'Enter a valid email address' });
+  } else email = null;
+
   if (!isSuperAdmin) {
     shop_id = requesterShopId;
     if (!OWNER_ASSIGNABLE_ROLES.includes(role)) {
@@ -160,7 +169,7 @@ exports.createUser = async (req, res) => {
   if (permError) return res.status(403).json({ success: false, error: permError });
 
   try {
-    const userCheck = await db.query('SELECT id FROM users WHERE phone = $1', [phone]);
+    const userCheck = await db.query('SELECT id FROM users WHERE ' + PHONE_DIGITS_SQL + ' = $1', [phone.slice(1)]);
     if (userCheck.rows.length > 0) return res.status(400).json({ success: false, error: 'Phone already registered' });
 
     if (!password) return res.status(400).json({ success: false, error: 'Password is required' });
@@ -182,7 +191,8 @@ exports.createUser = async (req, res) => {
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
-    console.error('createUser Error:', error);
+    if (error.code === '23505') return res.status(409).json({ success: false, error: 'Phone or email already registered' });
+    console.error('createUser Error:', error.code);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
@@ -191,7 +201,19 @@ exports.updateUser = async (req, res) => {
   const { role: requesterRole, shopId: requesterShopId, id: requesterId } = req.user;
   const isSuperAdmin = requesterRole === 'super-admin';
 
-  const { name, phone, email, role, status, password, shop_id, profile_image, additional_permissions, excluded_permissions } = req.body;
+  let { name, phone, email, role, status, password, shop_id, profile_image, additional_permissions, excluded_permissions } = req.body;
+  if (phone !== undefined) {
+    phone = normalizePhone(phone);
+    if (!phone) return res.status(400).json({ success: false, error: 'Enter a valid international phone number' });
+  }
+  if (email) {
+    email = normalizeEmail(email);
+    if (!email) return res.status(400).json({ success: false, error: 'Enter a valid email address' });
+  }
+  if (password) {
+    const issue = passwordError(password);
+    if (issue) return res.status(400).json({ success: false, error: issue });
+  }
   try {
     const existing = await db.query('SELECT id, shop_id, profile_image FROM users WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: 'User not found' });
@@ -290,18 +312,20 @@ exports.updateUser = async (req, res) => {
 
     res.status(200).json({ success: true, data: result.rows[0] });
   } catch (error) {
-    console.error('updateUser Error:', error);
+    if (error.code === '23505') return res.status(409).json({ success: false, error: 'Phone or email already registered' });
+    console.error('updateUser Error:', error.code);
     res.status(500).json({ success: false, error: 'Server error during update' });
   }
 };
 
 // @desc    Check if phone is already registered (used for form validation)
 exports.checkPhone = async (req, res) => {
-  const { phone } = req.params;
+  const phone = normalizePhone(req.params.phone);
+  if (!phone) return res.status(400).json({ success: false, error: 'Enter a valid international phone number' });
   const excludeId = req.query.excludeId;
   try {
-    let query = 'SELECT id FROM users WHERE phone = $1 AND deleted_at IS NULL';
-    const params = [phone];
+    let query = 'SELECT id FROM users WHERE ' + PHONE_DIGITS_SQL + ' = $1';
+    const params = [phone.slice(1)];
     if (excludeId) {
       query += ' AND id != $2';
       params.push(excludeId);
