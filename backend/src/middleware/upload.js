@@ -22,6 +22,7 @@ const upload = multer({
                    : req.originalUrl.includes('/vehicles') ? 'vehicles'
                    : req.originalUrl.includes('/users') ? 'users'
                    : req.originalUrl.includes('/shops') ? 'shops'
+                   : req.originalUrl.includes('/inventory') ? 'inventory'
                    : 'uploads';
       cb(null, `workshop/${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`);
     }

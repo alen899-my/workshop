@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { AppScreen, PrimaryButton, LoadingState } from '@/components/design-system';
 import { ThemedText as Text } from '@/components/themed-text';
 import InputField from '@/components/ui/InputField';
+import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
 import { inventoryService, type Product, type InventoryShop } from './inventory.service';
@@ -24,6 +27,8 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
   const [selected, setSelected] = useState<Product | null>(null);
   const [editing, setEditing] = useState<Product | 'new' | null>(null);
   const [form, setForm] = useState(blank), [saving, setSaving] = useState(false);
+  const [imageAsset, setImageAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false), [pickerOpen, setPickerOpen] = useState(false);
   const request = useRef(0), savingRef = useRef(false);
   const currentShop = shops.find(s => s.id === shopId);
   const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: currentShop?.currency || 'INR' }).format(Number(value));
@@ -61,12 +66,26 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
   }, [load]);
 
   const edit = (product: Product | 'new') => {
-    setError(''); setEditing(product);
+    setError(''); setEditing(product); setImageAsset(null); setPhotoRemoved(false); setPickerOpen(false);
     setForm(product === 'new' ? blank : {
       name: product.name, sku: product.sku, category: product.category, unit: product.unit, location: product.location,
       cost_price: String(product.cost_price), selling_price: String(product.selling_price), reorder_level: String(product.reorder_level), opening_stock: '0',
     });
   };
+  const pickFromGallery = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { setError('Photo library permission is needed to add a product photo.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) { setImageAsset(result.assets[0]); setPhotoRemoved(false); }
+  };
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { setError('Camera permission is needed to take a product photo.'); return; }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets[0]) { setImageAsset(result.assets[0]); setPhotoRemoved(false); }
+  };
+  const existingPhoto = editing && editing !== 'new' && !photoRemoved ? editing.image_url || null : null;
+  const previewUri = imageAsset?.uri || existingPhoto;
   const save = async () => {
     if (!shopId || !editing || savingRef.current) return;
     if (!form.name.trim() || !form.sku.trim() || !form.unit.trim()) { setError('Name, SKU and unit are required.'); return; }
@@ -78,7 +97,20 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       ...(editing !== 'new' ? { version: editing.version, is_active: editing.is_active } : {}),
     }, editing === 'new' ? undefined : editing.id);
     savingRef.current = false; setSaving(false);
-    if (res.success && res.data) { setEditing(null); setSelected(res.data); void load(); }
+    if (res.success && res.data) {
+      let saved = res.data;
+      if (imageAsset) {
+        const up = await inventoryService.image(saved.id, shopId, imageAsset);
+        if (up.success && up.data) saved = up.data;
+        else setError(up.error || 'Product saved, but the photo could not be uploaded. Open the product to retry.');
+      } else if (photoRemoved && editing !== 'new' && editing?.image_url) {
+        const up = await inventoryService.removeImage(saved.id, shopId);
+        if (up.success && up.data) saved = up.data;
+        else setError(up.error || 'Product saved, but the photo could not be removed.');
+      }
+      setImageAsset(null); setPhotoRemoved(false);
+      setEditing(null); setSelected(saved); void load();
+    }
     else setError(res.error || 'Could not save product');
   };
 
@@ -101,7 +133,16 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
           label={({ name: 'Product name', sku: 'SKU / part number', category: 'Category', unit: 'Unit (piece, litre, set)', location: 'Bin / shelf location', cost_price: 'Purchase cost', selling_price: 'Selling price', reorder_level: 'Low-stock threshold', opening_stock: 'Opening stock' })[key]}
           value={form[key]} onChangeText={value => setForm(previous => ({ ...previous, [key]: value }))}
           editable={!saving && !(key === 'unit' && editing !== 'new')} />)}
+        <Text themeColor="textSecondary">Photo (optional)</Text>
+        {previewUri ? <>
+          <Image source={{ uri: previewUri }} style={styles.photo} contentFit="cover" />
+          <View style={styles.row}>
+            <PrimaryButton title="Change" variant="outline" onPress={() => setPickerOpen(true)} disabled={saving} />
+            <PrimaryButton title="Remove" variant="outline" onPress={() => { setImageAsset(null); setPhotoRemoved(true); }} disabled={saving} />
+          </View>
+        </> : <PrimaryButton title="Add photo" icon="camera-outline" variant="outline" onPress={() => setPickerOpen(true)} disabled={saving} />}
         <PrimaryButton title={saving ? 'Saving…' : 'Save product'} disabled={saving} onPress={save} />
+        <ImagePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} onCamera={() => { void takePhoto(); }} onGallery={() => { void pickFromGallery(); }} />
       </> : <>
         {!fixedShop && shops.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {shops.map(shop => <Pressable key={shop.id} onPress={() => setShopId(shop.id)} style={[styles.chip, { backgroundColor: shop.id === shopId ? theme.accent : theme.card }]}><Text>{shop.name}</Text></Pressable>)}
@@ -112,7 +153,10 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
         {!onSelect && can('manage:inventory') && <PrimaryButton title="New product" icon="add" onPress={() => edit('new')} disabled={!shopId} />}
         {onSelect && <Text themeColor="textSecondary">Items are added to the bill. Stock is deducted when you save billing details.</Text>}
         {products.map(product => <Pressable key={product.id} disabled={!!onSelect && Number(product.stock) <= 0} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: onSelect && Number(product.stock) <= 0 ? 0.55 : 1 }]}>
-          <View style={styles.between}><Text style={styles.product}>{product.name}</Text><Ionicons name={onSelect ? 'add-circle-outline' : 'chevron-forward'} size={22} color={theme.primary} /></View>
+          <View style={styles.between}>
+            {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.thumb} contentFit="cover" /> : null}
+            <Text style={styles.product}>{product.name}</Text><Ionicons name={onSelect ? 'add-circle-outline' : 'chevron-forward'} size={22} color={theme.primary} />
+          </View>
           <Text themeColor="textSecondary">{product.sku}{product.category ? ' · ' + product.category : ''}</Text>
           <View style={styles.between}><Text>{Number(product.stock)} {product.unit} available</Text><Text>{money(product.selling_price)}</Text></View>
           {Number(product.stock) <= Number(product.reorder_level) && <Text style={{ color: theme.destructive }}>{Number(product.stock) === 0 ? 'Out of stock' : 'Low stock'}</Text>}
@@ -129,4 +173,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   chip: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20 }, search: { padding: 16, borderWidth: 1, borderRadius: 16, fontSize: 15 },
   card: { padding: 18, borderRadius: 24, borderWidth: 1, gap: 10 }, product: { fontSize: 18, fontWeight: '600', flex: 1 },
+  thumb: { width: 46, height: 46, borderRadius: 12 }, photo: { width: '100%', height: 200, borderRadius: 16 },
 });

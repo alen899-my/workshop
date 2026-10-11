@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
 CREATE INDEX IF NOT EXISTS inventory_products_shop ON inventory_products(shop_id, is_active, name);
 CREATE INDEX IF NOT EXISTS inventory_movements_product ON inventory_movements(product_id, id DESC);
 ALTER TABLE repair_bills ADD COLUMN IF NOT EXISTS inventory_revision INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE inventory_products ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 INSERT INTO permissions (module_name, permission_name, slug, description)
 VALUES ('Inventory', 'View inventory', 'view:inventory', 'View products, availability and stock history'),

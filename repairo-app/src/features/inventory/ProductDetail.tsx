@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { AppScreen, PrimaryButton, LoadingState } from '@/components/design-system';
 import { ThemedText as Text } from '@/components/themed-text';
 import InputField from '@/components/ui/InputField';
+import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
 import { inventoryService, type Product, type Movement } from './inventory.service';
@@ -16,6 +19,7 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [kind, setKind] = useState<'receipt' | 'adjustment'>('receipt');
   const [quantity, setQuantity] = useState(''), [reason, setReason] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const attempt = useRef({ payload: '', id: '' }), busyRef = useRef(false);
   const history = useCallback(async (before?: string) => {
     setLoading(true);
@@ -24,7 +28,10 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
     else setError(res.error || 'Could not load stock history');
     setLoading(false);
   }, [product.id, product.shop_id]);
-  useEffect(() => { void history(); }, [history]);
+  useEffect(() => {
+    const timeout = setTimeout(() => { void history(); }, 0);
+    return () => clearTimeout(timeout);
+  }, [history]);
   const saveStock = async () => {
     if (busyRef.current) return;
     if (!quantity.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) === 0 || (kind === 'receipt' && Number(quantity) < 0) || !reason.trim()) {
@@ -46,11 +53,38 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
     busyRef.current = false; setBusy(false);
     if (res.success && res.data) onUpdate(res.data); else setError(res.error || 'Could not update product');
   };
+  const changePhoto = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (busyRef.current) return;
+    busyRef.current = true; setBusy(true); setError('');
+    const res = await inventoryService.image(product.id, product.shop_id, asset);
+    busyRef.current = false; setBusy(false);
+    if (res.success && res.data) onUpdate(res.data); else setError(res.error || 'Photo upload failed');
+  };
+  const removePhoto = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true; setBusy(true); setError('');
+    const res = await inventoryService.removeImage(product.id, product.shop_id);
+    busyRef.current = false; setBusy(false);
+    if (res.success && res.data) onUpdate(res.data); else setError(res.error || 'Photo could not be removed');
+  };
+  const pickFromGallery = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { setError('Photo library permission is needed to add a product photo.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) void changePhoto(result.assets[0]);
+  };
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { setError('Camera permission is needed to take a product photo.'); return; }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets[0]) void changePhoto(result.assets[0]);
+  };
   const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(value));
   return <AppScreen>
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}><Pressable onPress={onClose} disabled={busy} accessibilityLabel="Back to inventory"><Ionicons name="arrow-back" size={24} color={theme.text} /></Pressable><Text style={styles.title}>Product details</Text></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}>
       <View style={[styles.card, { backgroundColor: theme.card }]}>
+        {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.photo} contentFit="cover" /> : null}
         <Text style={styles.title}>{product.name}</Text><Text themeColor="textSecondary">{product.sku} · {product.is_active ? 'Active' : 'Archived'}</Text>
         <Text style={styles.stock}>{Number(product.stock)} <Text>{product.unit} in stock</Text></Text>
         <Text>Reorder at {Number(product.reorder_level)} {product.unit}</Text>
@@ -59,7 +93,14 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
         {!!product.category && <Text>Category: {product.category}</Text>}
         {!!product.location && <Text>Location: {product.location}</Text>}
         {can('manage:inventory') && <PrimaryButton title="Edit product" variant="outline" onPress={onEdit} disabled={busy} />}
+        {can('manage:inventory') && (product.image_url
+          ? <View style={styles.row}>
+              <PrimaryButton title="Change photo" variant="outline" onPress={() => setPickerOpen(true)} disabled={busy} />
+              <PrimaryButton title="Remove photo" variant="outline" onPress={() => { void removePhoto(); }} disabled={busy} />
+            </View>
+          : <PrimaryButton title="Add photo" icon="camera-outline" variant="outline" onPress={() => setPickerOpen(true)} disabled={busy} />)}
       </View>
+      <ImagePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} onCamera={() => { void takePhoto(); }} onGallery={() => { void pickFromGallery(); }} />
       {!!error && <Text style={{ color: theme.destructive }}>{error}</Text>}
       {can('manage:inventory') && product.is_active && <View style={[styles.card, { backgroundColor: theme.card }]}>
         <Text style={styles.heading}>Update stock</Text>
@@ -88,6 +129,7 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
 const styles = StyleSheet.create({
   header: { padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16 }, title: { fontSize: 24, fontWeight: '600', flexShrink: 1 },
   content: { padding: 20, gap: 16, width: '100%', maxWidth: 840, alignSelf: 'center' }, card: { borderRadius: 24, padding: 20, gap: 14 },
+  photo: { width: '100%', height: 220, borderRadius: 16 },
   stock: { fontSize: 38, fontWeight: '500' }, heading: { fontSize: 18, fontWeight: '600' },
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, chip: { borderRadius: 20, padding: 12 },
   between: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, movement: { paddingVertical: 12, borderBottomWidth: 1, gap: 6 },

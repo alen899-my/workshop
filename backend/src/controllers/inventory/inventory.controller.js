@@ -1,5 +1,6 @@
 const db = require('../../config/db');
 const { fail, number, id, text, shopScope, transaction, roundStock } = require('../../services/inventory.service');
+const { getFileUrl, deleteFromR2 } = require('../../middleware/upload');
 
 const handle = action => async (req, res) => {
   try { res.json({ success: true, ...await action(req) }); }
@@ -89,3 +90,22 @@ exports.history = handle(async req => {
   const { rows } = await db.query('SELECT m.*, u.name AS actor_name FROM inventory_movements m LEFT JOIN users u ON u.id=m.actor_id WHERE m.shop_id=$1 AND m.product_id=$2 AND m.id < $3 ORDER BY m.id DESC LIMIT 51', [shopId, productId, before]);
   return { data: rows.slice(0, 50), has_more: rows.length > 50 };
 });
+
+exports.image = handle(req => transaction(async client => {
+  const productId = id(req.params.id), shopId = shopScope(req.user, req.body.shop_id);
+  const { rows } = await client.query('SELECT * FROM inventory_products WHERE id=$1 AND shop_id=$2 FOR UPDATE', [productId, shopId]);
+  if (!rows.length) fail('Product not found', 404);
+  let imageUrl = rows[0].image_url || null;
+  if (req.file) {
+    if (imageUrl) await deleteFromR2(imageUrl);
+    imageUrl = getFileUrl(req.file);
+    if (!imageUrl) fail('Image upload failed');
+  } else if (String(req.body.remove || '').toLowerCase() === 'true') {
+    if (imageUrl) await deleteFromR2(imageUrl);
+    imageUrl = null;
+  } else {
+    fail('Choose an image to upload');
+  }
+  const updated = await client.query('UPDATE inventory_products SET image_url=$1, version=version+1, updated_at=NOW() WHERE id=$2 RETURNING *', [imageUrl, productId]);
+  return { data: updated.rows[0] };
+}));
