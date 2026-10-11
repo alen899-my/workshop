@@ -33,10 +33,9 @@ interface RepairCardProps {
   repair: Repair;
   onPress?: (repair: Repair) => void;
   onDelete?: (repair: Repair) => void;
-  onParts?: (repair: Repair) => void;
 }
 
-export default function RepairCard({ repair, onPress, onDelete, onParts }: RepairCardProps) {
+export default function RepairCard({ repair, onPress, onDelete }: RepairCardProps) {
   const theme = useTheme();
   const styles = useStyles(theme);
 
@@ -179,10 +178,6 @@ export default function RepairCard({ repair, onPress, onDelete, onParts }: Repai
           <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
         )}
       </View>
-      {onParts && <Pressable accessibilityLabel="Manage repair parts and inventory" onPress={(event) => { event.stopPropagation(); onParts(repair); }} style={{ flexDirection: 'row', gap: 8, paddingTop: 14, alignItems: 'center' }}>
-        <Ionicons name="cube-outline" size={18} color={theme.primary} />
-        <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Parts & inventory</ThemedText>
-      </Pressable>}
     </Pressable>
   );
 }

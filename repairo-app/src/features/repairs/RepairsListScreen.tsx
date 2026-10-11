@@ -461,7 +461,6 @@ export default function RepairsListScreen() {
           <QuickRepairCard
             repair={item}
             onPress={handleCardPress}
-          onParts={can('edit:repair') && can('view:inventory') ? handleGenerateBill : undefined}
 
             onDelete={can('delete:repair') ? handleDeleteRepair : undefined}
           />
@@ -471,12 +470,11 @@ export default function RepairsListScreen() {
         <RepairCard
           repair={item}
           onPress={handleCardPress}
-          onParts={can('edit:repair') && can('view:inventory') ? handleGenerateBill : undefined}
           onDelete={can('delete:repair') ? handleDeleteRepair : undefined}
         />
       );
     },
-    [handleCardPress, handleDeleteRepair, handleGenerateBill, can],
+    [handleCardPress, handleDeleteRepair, can],
   );
 
   const ListHeader = useMemo(() => (
