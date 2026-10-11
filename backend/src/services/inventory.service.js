@@ -72,6 +72,7 @@ async function reconcileBillStock(client, repair, previousItems, items, actorId)
       item.name = product.name;
       item.sku = product.sku;
       item.unit = product.unit;
+      item.image_url = product.image_url || null;
     }
     if (!delta) continue;
     await client.query('UPDATE inventory_products SET stock = $1, version = version + 1, updated_at = NOW() WHERE id = $2', [balance, productId]);

@@ -1,6 +1,7 @@
 import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
 import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill.service';
@@ -170,6 +171,8 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
       fontWeight: '500',
     },
     nameField: { fontSize: 15 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    itemThumb: { width: 52, height: 52, borderRadius: 12, backgroundColor: theme.divider },
     centerField: { textAlign: 'center' },
     rightField: { textAlign: 'right' },
     inlineAddBtn: {
@@ -335,8 +338,8 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   const addInventory = (product: Product) => {
     const next = items.map(item => ({ ...item, ...(item.id ? liveValues[item.id] : undefined) }));
     const existing = next.find(item => item.product_id === product.id);
-    if (existing) existing.qty = Number(existing.qty) + 1;
-    else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: 1, cost: Number(product.selling_price) });
+    if (existing) { existing.qty = Number(existing.qty) + 1; if (product.image_url) existing.image_url = product.image_url; }
+    else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: 1, cost: Number(product.selling_price), image_url: product.image_url || null });
     setLiveValues({}); onChange(next); setInventoryOpen(false);
   };
 
@@ -479,17 +482,20 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
           </View>
         </View>
 
-        <TextInput
-          style={[styles.field, styles.nameField]}
-          value={name}
-          onChangeText={setName}
-          onBlur={commit}
-          onEndEditing={commit}
-          placeholder={editable ? 'Part / service name...' : ''}
-          placeholderTextColor={theme.tabIconDefault}
-          returnKeyType="next"
-          editable={editable && !item.product_id}
-        />
+        <View style={styles.nameRow}>
+          {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.itemThumb} contentFit="cover" /> : null}
+          <TextInput
+            style={[styles.field, styles.nameField, { flex: 1 }]}
+            value={name}
+            onChangeText={setName}
+            onBlur={commit}
+            onEndEditing={commit}
+            placeholder={editable ? 'Part / service name...' : ''}
+            placeholderTextColor={theme.tabIconDefault}
+            returnKeyType="next"
+            editable={editable && !item.product_id}
+          />
+        </View>
 
         <View style={styles.itemRow}>
           <View style={styles.halfCol}>

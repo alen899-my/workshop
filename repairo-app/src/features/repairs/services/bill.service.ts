@@ -7,6 +7,7 @@ export interface BillItem {
   product_id?: number;
   sku?: string;
   unit?: string;
+  image_url?: string | null;
   id?: string;
   name: string;
   qty: number;

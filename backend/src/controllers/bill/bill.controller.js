@@ -45,6 +45,7 @@ exports.saveBill = async (req, res) => {
         qty: number(item.qty, 'Quantity', 3, 0.001),
         cost: number(item.cost, 'Unit price', 2),
         ...(item.product_id != null ? { product_id: id(item.product_id, 'Product') } : {}),
+        ...(typeof item.image_url === 'string' && item.image_url ? { image_url: text(item.image_url, 'Image URL', 1000) } : {}),
       }));
       const usesInventory = [...previousItems, ...items].some(item => item.product_id != null);
       const revision = Number(existing?.inventory_revision || 0);
