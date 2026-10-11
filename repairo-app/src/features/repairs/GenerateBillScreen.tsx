@@ -22,6 +22,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { Repair } from '@/features/repairs/services/repair.service';
 import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill.service';
 import { billService } from '@/features/repairs/services/bill.service';
+import { shopService } from '@/services/shop.service';
 import type { Tax } from '@/features/repairs/services/tax.service';
 import { taxService } from '@/features/repairs/services/tax.service';
 import BillItemEditor, { BillItemEditorHandle } from './components/BillItemEditor';
@@ -60,6 +61,18 @@ export default function GenerateBillScreen({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [hasExistingBill, setHasExistingBill] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [shopCurrency, setShopCurrency] = useState<string | null>(null);
+
+  // Bill money in the repair workshop's currency, not the viewer's own shop currency.
+  const billCurrency = shopCurrency || getCurrentUser()?.shopCurrency || 'INR';
+
+  useEffect(() => {
+    let alive = true;
+    shopService.getById(repair.shop_id).then(res => {
+      if (alive && res.success && res.data?.currency) setShopCurrency(res.data.currency);
+    });
+    return () => { alive = false; };
+  }, [repair.shop_id]);
 
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -94,7 +107,7 @@ export default function GenerateBillScreen({
   const generatePDFBase64 = async () => {
     const user = getCurrentUser();
     const shopName = user?.shopName || repair.shop_name || 'Garage';
-    const currencyCode = user?.shopCurrency || 'INR';
+    const currencyCode = billCurrency;
     const currency = getCurrencySymbol(currencyCode);
 
     const serviceBlocks = (() => {
@@ -452,6 +465,7 @@ export default function GenerateBillScreen({
             {/* Billing Editor */}
             <BillItemEditor
               shopId={repair.shop_id}
+              currencyCode={billCurrency}
               ref={editorRef}
               items={billItems}
               onChange={setBillItems}

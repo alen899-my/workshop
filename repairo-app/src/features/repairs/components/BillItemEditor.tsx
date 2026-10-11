@@ -15,6 +15,7 @@ import type { Product } from '@/features/inventory/inventory.service';
 
 interface BillItemEditorProps {
   shopId?: number;
+  currencyCode?: string;
   items: BillItem[];
   onChange: (items: BillItem[]) => void;
   serviceCharge: number;
@@ -34,15 +35,16 @@ export interface BillItemEditorHandle {
 }
 
 export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function BillItemEditor({
-  shopId, items, onChange, serviceCharge, onServiceChargeChange,
+  shopId, currencyCode, items, onChange, serviceCharge, onServiceChargeChange,
   paymentStatus, onPaymentStatusChange,
   paymentMethod, onPaymentMethodChange,
   taxes, taxSnapshot, onTaxChange,
   editable = true,
 }: BillItemEditorProps, ref) {
   const theme = useTheme();
-  const { can } = useRBAC();
+  const { can, user } = useRBAC();
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const canUseInventory = editable && !!shopId && can('view:inventory');
   const styles = useMemo(() => StyleSheet.create({
     wrapper: { gap: 14, paddingBottom: 16 },
 
@@ -187,6 +189,21 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
       borderColor: theme.primary + '50',
     },
     inlineAddBtnText: { fontSize: 13, fontWeight: '600', color: theme.primary },
+    addRow: { flexDirection: 'row', gap: 10 },
+    emptyChoice: { flexDirection: 'row', gap: 10 },
+    emptyChoiceBtn: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 18,
+      paddingHorizontal: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.primary + '50',
+    },
+    emptyChoiceTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
+    emptyChoiceHint: { fontSize: 11, fontWeight: '500', color: theme.textSecondary, textAlign: 'center' },
 
     chargeRow: {
       flexDirection: 'row',
@@ -314,7 +331,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     segmentTextActive: { color: theme.primaryForeground },
   }), [theme]);
 
-  const { symbol, format } = useCurrency();
+  const { symbol, format } = useCurrency(currencyCode ? { shopCurrency: currencyCode } : undefined);
   const [localCharge, setLocalCharge] = useState(String(serviceCharge || ''));
   const [liveValues, setLiveValues] = useState<Record<string, { qty: number; cost: number }>>({});
   const itemsKeyRef = useRef('');
@@ -536,12 +553,8 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   return (
     <View style={styles.wrapper}>
       <Modal visible={inventoryOpen} animationType="slide" onRequestClose={() => setInventoryOpen(false)}>
-        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} />}
+        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} allowShopSwitch={user?.role === 'super-admin'} />}
       </Modal>
-      {editable && !!shopId && can('view:inventory') && <Pressable style={styles.inlineAddBtn} onPress={() => setInventoryOpen(true)}>
-        <Ionicons name="cube-outline" size={20} color={theme.primary} />
-        <ThemedText style={styles.inlineAddBtnText}>Add from inventory</ThemedText>
-      </Pressable>}
       {items.some(item => item.product_id != null) && <ThemedText style={styles.noItemsText}>Stock updates when you save. Removing a saved inventory item returns its quantity to stock.</ThemedText>}
 
       <View style={styles.section}>
@@ -551,10 +564,18 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
         </View>
 
         {items.length === 0 && editable ? (
-          <Pressable style={styles.emptyCard} onPress={addItem}>
-            <Ionicons name="receipt-outline" size={32} color={theme.primary + '60'} />
-            <ThemedText style={styles.emptyText}>Tap to add parts or services</ThemedText>
-          </Pressable>
+          <View style={styles.emptyChoice}>
+            {canUseInventory && <Pressable style={styles.emptyChoiceBtn} onPress={() => setInventoryOpen(true)}>
+              <Ionicons name="cube-outline" size={26} color={theme.primary} />
+              <ThemedText style={styles.emptyChoiceTitle}>Inventory part</ThemedText>
+              <ThemedText style={styles.emptyChoiceHint}>Deducts stock on save</ThemedText>
+            </Pressable>}
+            <Pressable style={styles.emptyChoiceBtn} onPress={addItem}>
+              <Ionicons name="receipt-outline" size={26} color={theme.primary} />
+              <ThemedText style={styles.emptyChoiceTitle}>Manual / service</ThemedText>
+              <ThemedText style={styles.emptyChoiceHint}>Custom entry, no stock</ThemedText>
+            </Pressable>
+          </View>
         ) : items.length === 0 ? (
           <ThemedText style={styles.noItemsText}>No items added yet.</ThemedText>
         ) : (
@@ -571,10 +592,16 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
               />
             ))}
             {editable && (
-              <Pressable style={styles.inlineAddBtn} onPress={addItem}>
-                <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
-                <ThemedText style={styles.inlineAddBtnText}>Add another item</ThemedText>
-              </Pressable>
+              <View style={styles.addRow}>
+                {canUseInventory && <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} onPress={() => setInventoryOpen(true)}>
+                  <Ionicons name="cube-outline" size={18} color={theme.primary} />
+                  <ThemedText style={styles.inlineAddBtnText}>Inventory</ThemedText>
+                </Pressable>}
+                <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} onPress={addItem}>
+                  <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
+                  <ThemedText style={styles.inlineAddBtnText}>Manual</ThemedText>
+                </Pressable>
+              </View>
             )}
           </View>
         )}
@@ -608,6 +635,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
         subtotal={subtotal}
         serviceCharge={serviceCharge}
         editable={editable}
+        currencyCode={currencyCode}
       />
 
       <View style={styles.summaryCard}>

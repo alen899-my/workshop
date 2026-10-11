@@ -15,6 +15,7 @@ interface TaxSelectorProps {
   subtotal: number;
   serviceCharge: number;
   editable?: boolean;
+  currencyCode?: string;
 }
 
 const APPLIES_TO_LABELS: Record<string, string> = {
@@ -23,7 +24,7 @@ const APPLIES_TO_LABELS: Record<string, string> = {
   service: 'Labor',
 };
 
-export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge, editable = true }: TaxSelectorProps) {
+export default function TaxSelector({ taxes, selected, onChange, subtotal, serviceCharge, editable = true, currencyCode }: TaxSelectorProps) {
   const theme = useTheme();
   const styles = useMemo(() => StyleSheet.create({
     card: {
@@ -47,7 +48,7 @@ export default function TaxSelector({ taxes, selected, onChange, subtotal, servi
     taxAmountWrap: { backgroundColor: theme.primary + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     taxAmount: { fontSize: 13, fontWeight: '700', color: theme.primary },
   }), [theme]);
-  const { format } = useCurrency();
+  const { format } = useCurrency(currencyCode ? { shopCurrency: currencyCode } : undefined);
 
   const toggleTax = useCallback((tax: Tax) => {
     const exists = selected.find((t) => t.id === tax.id);

@@ -13,10 +13,10 @@ import { useRBAC } from '@/hooks/use-rbac';
 import { inventoryService, type Product, type InventoryShop } from './inventory.service';
 import ProductDetail from './ProductDetail';
 
-interface Props { onClose?: () => void; shopId?: number; onSelect?: (product: Product) => void }
+interface Props { onClose?: () => void; shopId?: number; onSelect?: (product: Product) => void; allowShopSwitch?: boolean }
 const blank = { name: '', sku: '', category: '', unit: 'piece', location: '', cost_price: '0', selling_price: '0', reorder_level: '0', opening_stock: '0' };
 
-export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }: Props) {
+export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect, allowShopSwitch }: Props) {
   const theme = useTheme(), insets = useSafeAreaInsets();
   const { can, user } = useRBAC();
   const [shopId, setShopId] = useState(fixedShop || user?.shopId);
@@ -31,6 +31,11 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
   const [photoRemoved, setPhotoRemoved] = useState(false), [pickerOpen, setPickerOpen] = useState(false);
   const request = useRef(0), savingRef = useRef(false);
   const currentShop = shops.find(s => s.id === shopId);
+  const billShop = shops.find(s => s.id === fixedShop);
+  const canSwitchShop = !fixedShop || !!allowShopSwitch;
+  // Stock is deducted from the repair's workshop, so picks are limited to it — browsing is open.
+  const mustStayInBillShop = !!onSelect && fixedShop != null;
+  const isBillShop = shopId === fixedShop;
   const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: currentShop?.currency || 'INR' }).format(Number(value));
 
   useEffect(() => {
@@ -144,15 +149,17 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
         <PrimaryButton title={saving ? 'Saving…' : 'Save product'} disabled={saving} onPress={save} />
         <ImagePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} onCamera={() => { void takePhoto(); }} onGallery={() => { void pickFromGallery(); }} />
       </> : <>
-        {!fixedShop && shops.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        {canSwitchShop && shops.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {shops.map(shop => <Pressable key={shop.id} onPress={() => setShopId(shop.id)} style={[styles.chip, { backgroundColor: shop.id === shopId ? theme.accent : theme.card }]}><Text>{shop.name}</Text></Pressable>)}
         </ScrollView>}
         <Text themeColor="textSecondary">{currentShop?.name || 'Select a workshop'} · Parts, fluids and accessories</Text>
         <TextInput accessibilityLabel="Search inventory" placeholder="Search name, SKU or category" placeholderTextColor={theme.textSecondary} value={search} onChangeText={setSearch} style={[styles.search, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]} />
         <View style={styles.row}>{(onSelect ? ['active', 'low'] : ['active', 'low', 'archived']).map(value => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.chip, { backgroundColor: filter === value ? theme.accent : theme.card }]}><Text>{value === 'active' ? 'All products' : value === 'low' ? 'Low stock' : 'Archived'}</Text></Pressable>)}</View>
         {!onSelect && can('manage:inventory') && <PrimaryButton title="New product" icon="add" onPress={() => edit('new')} disabled={!shopId} />}
-        {onSelect && <Text themeColor="textSecondary">Items are added to the bill. Stock is deducted when you save billing details.</Text>}
-        {products.map(product => <Pressable key={product.id} disabled={!!onSelect && Number(product.stock) <= 0} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: onSelect && Number(product.stock) <= 0 ? 0.55 : 1 }]}>
+        {onSelect && (isBillShop || !mustStayInBillShop
+          ? <Text themeColor="textSecondary">Items are added to the bill. Stock is deducted when you save billing details.</Text>
+          : <Text themeColor="textSecondary">Browsing {currentShop?.name}. Switch back to {billShop?.name || 'the repair workshop'} to add items — stock is deducted from the repair workshop.</Text>)}
+        {products.map(product => <Pressable key={product.id} disabled={!!onSelect && (Number(product.stock) <= 0 || (mustStayInBillShop && product.shop_id !== fixedShop))} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: onSelect && (Number(product.stock) <= 0 || (mustStayInBillShop && product.shop_id !== fixedShop)) ? 0.55 : 1 }]}>
           <View style={styles.between}>
             {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.thumb} contentFit="cover" /> : null}
             <Text style={styles.product}>{product.name}</Text><Ionicons name={onSelect ? 'add-circle-outline' : 'chevron-forward'} size={22} color={theme.primary} />
