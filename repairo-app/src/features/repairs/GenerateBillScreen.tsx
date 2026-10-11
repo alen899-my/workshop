@@ -51,6 +51,10 @@ export default function GenerateBillScreen({
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [taxSnapshot, setTaxSnapshot] = useState<TaxSnapshotItem[]>([]);
 
+  const [billError, setBillError] = useState('');
+  const revisionRef = useRef(0);
+  const loadedRef = useRef(false);
+  const savingRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -62,11 +66,14 @@ export default function GenerateBillScreen({
   const editorRef = useRef<BillItemEditorHandle>(null);
 
   const handleSaveSilent = async (): Promise<boolean> => {
+    if (!loadedRef.current || savingRef.current) return false;
+    savingRef.current = true;
     try {
       const snapshot = editorRef.current?.getSnapshot();
       const items = snapshot?.items || billItems;
       const sc = snapshot?.serviceCharge ?? serviceCharge;
       const res = await billService.saveBill(repair.id, {
+        inventory_revision: revisionRef.current,
         items,
         service_charge: sc,
         tax_snapshot: taxSnapshot,
@@ -75,11 +82,13 @@ export default function GenerateBillScreen({
         payment_status: paymentStatus,
         payment_method: paymentStatus === 'Paid' ? paymentMethod : null,
       });
+      if (res.success && res.data) revisionRef.current = res.data.inventory_revision;
+      else setBillError(res.error || 'Could not save bill');
       return res.success;
     } catch (err) {
       console.error('Failed to save bill silently:', err);
       return false;
-    }
+    } finally { savingRef.current = false; }
   };
 
   const generatePDFBase64 = async () => {
@@ -269,7 +278,7 @@ export default function GenerateBillScreen({
           const active = taxRes.data.filter((t) => t.is_active);
           setTaxes(active);
 
-          if (!(billRes.success && billRes.data)) {
+          if (billRes.success && !billRes.data?.id) {
             setTaxSnapshot(active.map((t) => ({
               id: t.id,
               name: t.name,
@@ -281,15 +290,19 @@ export default function GenerateBillScreen({
           }
         }
 
+        if (!billRes.success) setBillError(billRes.error || 'Could not load billing details');
         if (billRes.success && billRes.data) {
+          loadedRef.current = true;
+          revisionRef.current = billRes.data.inventory_revision || 0;
           setBillItems(billRes.data.items || []);
           setServiceCharge(billRes.data.service_charge || 0);
-          setTaxSnapshot(billRes.data.tax_snapshot || []);
+          if (billRes.data.id) setTaxSnapshot(billRes.data.tax_snapshot || []);
           setPaymentStatus(billRes.data.payment_status || 'Unpaid');
           setPaymentMethod(billRes.data.payment_method || null);
-          setHasExistingBill(true);
+          setHasExistingBill(!!billRes.data.id);
         }
       } catch (err) {
+        setBillError('Could not load billing details. Close and reopen billing before saving.');
         console.error('Failed to load billing details:', err);
       } finally {
         setLoading(false);
@@ -299,12 +312,16 @@ export default function GenerateBillScreen({
   }, [repair.id]);
 
   const handleSave = async () => {
+    if (!loadedRef.current || savingRef.current) return;
+    savingRef.current = true;
+    setBillError('');
     setSubmitting(true);
     try {
       const snapshot = editorRef.current?.getSnapshot();
       const items = snapshot?.items || billItems;
       const sc = snapshot?.serviceCharge ?? serviceCharge;
       const res = await billService.saveBill(repair.id, {
+        inventory_revision: revisionRef.current,
         items,
         service_charge: sc,
         tax_snapshot: taxSnapshot,
@@ -313,13 +330,19 @@ export default function GenerateBillScreen({
         payment_method: paymentStatus === 'Paid' ? paymentMethod : null,
       });
 
-      if (res.success) {
+      if (res.success && res.data) {
+        revisionRef.current = res.data.inventory_revision;
+        setBillItems(res.data.items);
+        setTaxSnapshot(res.data.tax_snapshot);
         setHasExistingBill(true);
         setIsEditing(false);
-      }
+        onSuccess();
+      } else setBillError(res.error || 'Could not save bill');
     } catch (err) {
+      setBillError('Could not save bill. Please try again.');
       console.error('Failed to save bill:', err);
     } finally {
+      savingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -425,8 +448,10 @@ export default function GenerateBillScreen({
               )}
             </View>
 
+            {!!billError && <ThemedText style={{ color: theme.destructive, padding: 16 }}>{billError}</ThemedText>}
             {/* Billing Editor */}
             <BillItemEditor
+              shopId={repair.shop_id}
               ref={editorRef}
               items={billItems}
               onChange={setBillItems}

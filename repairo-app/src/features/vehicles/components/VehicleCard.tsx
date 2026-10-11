@@ -86,7 +86,7 @@ export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
       </View>
 
       {/* footer: owner name + owner phone 2-col */}
-      {(vehicle.owner_name || vehicle.owner_phone) && (
+      {Boolean(vehicle.owner_name?.trim() || vehicle.owner_phone?.trim()) && (
         <View style={styles.footer}>
           <View style={styles.footerCol}>
             <ThemedText style={styles.footerLabel}>Owner</ThemedText>
@@ -101,9 +101,9 @@ export default function VehicleCard({ vehicle, onPress }: VehicleCardProps) {
               <ThemedText style={styles.footerValue} numberOfLines={1}>
                 {formatPhoneForDisplay(vehicle.owner_phone || '') || '—'}
               </ThemedText>
-              {ownerPhone && (
+              {Boolean(ownerPhone?.trim()) && (
                 <Pressable
-                  onPress={() => Linking.openURL(`tel:${ownerPhone.replace(/\s/g, '')}`)}
+                  onPress={() => Linking.openURL(`tel:${(ownerPhone || '').replace(/\s/g, '')}`)}
                   hitSlop={8}
                 >
                   <Ionicons name="call" size={14} color={theme.primary} />

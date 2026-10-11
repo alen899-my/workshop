@@ -4,6 +4,9 @@ import { getStoredToken } from '@/services/api';
 const API_URL = `${ENV.API_URL}/bills`;
 
 export interface BillItem {
+  product_id?: number;
+  sku?: string;
+  unit?: string;
   id?: string;
   name: string;
   qty: number;
@@ -72,7 +75,7 @@ export const billService = {
     }
   },
 
-  async getByRepairId(repairId: number): Promise<{ success: boolean; data?: { id: number; items: BillItem[]; service_charge: number; tax_snapshot: TaxSnapshotItem[]; tax_total: number; payment_status: string; payment_method?: string; total: number }; error?: string }> {
+  async getByRepairId(repairId: number): Promise<{ success: boolean; data?: { id: number; inventory_revision?: number; items: BillItem[]; service_charge: number; tax_snapshot: TaxSnapshotItem[]; tax_total: number; payment_status: string; payment_method?: string; total: number }; error?: string }> {
     try {
       const token = await getStoredToken();
       const res = await fetch(`${API_URL}/repair/${repairId}`, {
@@ -85,13 +88,14 @@ export const billService = {
   },
 
   async saveBill(repairId: number, data: {
+    inventory_revision?: number;
     items: BillItem[];
     service_charge: number;
     tax_snapshot: TaxSnapshotItem[];
     tax_total: number;
     payment_status: string;
     payment_method?: string | null;
-  }): Promise<{ success: boolean; data?: { id: number }; error?: string }> {
+  }): Promise<{ success: boolean; data?: { id: number; inventory_revision: number; items: BillItem[]; tax_snapshot: TaxSnapshotItem[] }; error?: string }> {
     try {
       const token = await getStoredToken();
       const res = await fetch(`${API_URL}/repair/${repairId}`, {

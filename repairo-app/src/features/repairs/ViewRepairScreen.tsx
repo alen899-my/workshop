@@ -1,3 +1,4 @@
+import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { UI } from '@/constants/theme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -25,6 +26,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import StatusBadge from '@/components/StatusBadge';
+import {
+  PrimaryButton,
+  ServiceChecklist,
+  ServiceInfoCard,
+  TechnicianCard,
+  VehicleImage,
+} from '@/components/design-system';
 import { getCurrentUser } from '@/services/auth.service';
 import type { Repair } from '@/features/repairs/services/repair.service';
 import GenerateBillScreen from '@/features/repairs/GenerateBillScreen';
@@ -205,6 +213,8 @@ export default function ViewRepairScreen({
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [reasonText, setReasonText] = useState('');
   const [activeReasonTask, setActiveReasonTask] = useState<{ bi: number; ti: number } | null>(null);
+  const [showOverflow, setShowOverflow] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
 
   const handleToggleFailed = (bi: number, ti: number) => {
     const task = localComplaints[bi].tasks[ti];
@@ -285,6 +295,88 @@ export default function ViewRepairScreen({
   const vehicleImg = repair.vehicle_image || (repair.images && repair.images[0]);
   const vehicleIcon = VEHICLE_ICONS[repair.vehicle_type || 'Car'] || 'car-outline';
 
+  const nextStatus = repair.status === 'Pending' ? 'Started' : repair.status === 'Started' ? 'Completed' : null;
+  const primaryActionLabel = !repair.bill_id && repair.status === 'Completed'
+    ? 'Create invoice'
+    : nextStatus === 'Started'
+      ? 'Start repair'
+      : nextStatus === 'Completed'
+        ? 'Mark completed'
+        : 'Manage invoice';
+
+  const handlePrimaryAction = async () => {
+    if (!repair.bill_id && repair.status === 'Completed') {
+      setBillModalVisible(true);
+      return;
+    }
+    if (!nextStatus) {
+      setBillModalVisible(true);
+      return;
+    }
+    setAdvancing(true);
+    try {
+      const fd = new FormData();
+      fd.append('vehicle_number', String(repair.vehicle_number || ''));
+      fd.append('vehicle_type', String(repair.vehicle_type || 'Car'));
+      fd.append('brand', String(repair.brand || ''));
+      fd.append('model_name', String(repair.model_name || ''));
+      fd.append('owner_name', String(repair.owner_name || ''));
+      fd.append('phone_number', String(repair.phone_number || ''));
+      if (repair.whatsapp_number) fd.append('whatsapp_number', String(repair.whatsapp_number));
+      fd.append('km_reading', String(repair.km_reading || ''));
+      fd.append('priority', String(repair.priority || 'Medium'));
+      fd.append('status', nextStatus);
+      fd.append('service_type', String(repair.service_type || 'Repair'));
+      fd.append('complaints', JSON.stringify(localComplaints));
+      if (repair.repair_date) fd.append('repair_date', String(repair.repair_date));
+      if (repair.attending_worker_id) fd.append('attending_worker_id', String(repair.attending_worker_id));
+      if (repair.expected_completion) fd.append('expected_completion', String(repair.expected_completion));
+      const res = await repairService.update(repair.id, fd);
+      if (res.success && res.data && onUpdateRepair) onUpdateRepair(res.data);
+    } catch (e) {
+      console.error('Failed to advance repair status:', e);
+    } finally {
+      setAdvancing(false);
+    }
+  };
+
+  const assignedWorker = (() => {
+    if (repair.attending_worker_id) {
+      const w = workers.find((item) => String(item.id) === String(repair.attending_worker_id));
+      if (w) return w;
+    }
+    return repair.attending_worker_name ? { id: 0, name: repair.attending_worker_name, role: 'Technician' } : null;
+  })();
+
+  const checklistItems = useMemo(() => {
+    const items: { id: string; title: string; detail?: string; checked: boolean; failed?: boolean; busy?: boolean }[] = [];
+    localComplaints.forEach((block: any, bi: number) => {
+      (block.tasks || []).filter((t: any) => t.text?.trim()).forEach((task: any, ti: number) => {
+        const key = `${bi}-${ti}`;
+        items.push({
+          id: key,
+          title: block.type && block.tasks.length > 1 ? `${task.text}` : task.text,
+          detail: task.failed && task.reason ? `Not completed — ${task.reason}` : undefined,
+          checked: !!task.fixed,
+          failed: !!task.failed,
+          busy: updatingTask === key,
+        });
+      });
+    });
+    return items;
+  }, [localComplaints, updatingTask]);
+
+  const handleChecklistToggle = (id: string) => {
+    const [bi, ti] = id.split('-').map(Number);
+    const task = localComplaints[bi]?.tasks?.[ti];
+    if (!task || updatingTask !== null) return;
+    if (task.failed) {
+      handleToggleFailed(bi, ti);
+      return;
+    }
+    saveTaskStatusChange(bi, ti, { fixed: !task.fixed, failed: false, reason: '' });
+  };
+
   const showCustomerToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setCustomerToast({ visible: true, message, type });
   }, []);
@@ -361,59 +453,94 @@ export default function ViewRepairScreen({
 
   return (
     <ThemedView style={styles.container}>
+      <WorkshopBackdrop />
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-        <Pressable style={styles.headerBack} onPress={onClose}>
+        <Pressable style={styles.headerBack} onPress={onClose} accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </Pressable>
-        <ThemedText style={styles.headerTitle}>Job Card</ThemedText>
-        <Pressable style={styles.headerEdit} onPress={onEdit}>
-          <Ionicons name="create-outline" size={18} color={theme.primaryForeground} />
-        </Pressable>
+        <ThemedText style={styles.headerTitle}>Repair overview</ThemedText>
+        <View>
+          <Pressable style={styles.headerBack} onPress={() => setShowOverflow((v) => !v)} accessibilityLabel="More options">
+            <Ionicons name="ellipsis-horizontal" size={20} color={theme.text} />
+          </Pressable>
+          {showOverflow && (
+            <View style={styles.overflowMenu}>
+              <Pressable
+                style={({ pressed }) => [styles.overflowItem, pressed && { opacity: 0.6 }]}
+                onPress={() => { setShowOverflow(false); onEdit(); }}
+              >
+                <Ionicons name="create-outline" size={15} color={theme.text} />
+                <ThemedText style={styles.overflowText}>Edit details</ThemedText>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.overflowItem, pressed && { opacity: 0.6 }]}
+                onPress={() => { setShowOverflow(false); handleCustomerPress(); }}
+              >
+                <Ionicons name="person-outline" size={15} color={theme.text} />
+                <ThemedText style={styles.overflowText}>View customer</ThemedText>
+              </Pressable>
+              {Boolean(repair.phone_number?.trim()) && (
+                <Pressable
+                  style={({ pressed }) => [styles.overflowItem, pressed && { opacity: 0.6 }]}
+                  onPress={() => { setShowOverflow(false); handleCall(); }}
+                >
+                  <Ionicons name="call-outline" size={15} color={theme.text} />
+                  <ThemedText style={styles.overflowText}>Call customer</ThemedText>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Vehicle Info Card */}
-        <View style={styles.vehicleCard}>
-          <Pressable
-            style={styles.vehicleImageWrap}
-            onPress={() => {
-              if (allImages.length > 0) {
-                setImageViewerIndex(0);
-                setImageViewerVisible(true);
-              }
-            }}
-          >
-            {vehicleImg ? (
-              <Image source={{ uri: vehicleImg }} style={styles.vehicleImage} contentFit="cover" />
-            ) : (
-              <View style={[styles.vehicleImage, styles.vehicleImagePlaceholder]}>
-                <Ionicons name={vehicleIcon} size={32} color={theme.primary} />
-              </View>
-            )}
-          </Pressable>
-          <View style={styles.vehicleInfo}>
-            <View style={styles.plate}>
-              <View style={styles.plateBadge}>
-                <ThemedText style={styles.plateBadgeText}>{getCurrentUser()?.shopCountry || 'IND'}</ThemedText>
-              </View>
-              <ThemedText style={styles.plateNumber} numberOfLines={1}>{repair.vehicle_number}</ThemedText>
-            </View>
-            <ThemedText style={styles.vehicleModel} numberOfLines={1}>
-              {repair.brand || repair.model_name ? `${repair.brand || ''} ${repair.model_name || ''}`.trim() : 'Unspecified Model'}
-            </ThemedText>
-            <View style={styles.badgeRow}>
-              <StatusBadge status={repair.status} size="sm" dot />
-              {repair.priority && (() => {
-                const pri = getPriorityStyle(repair.priority);
-                return (
-                  <View style={[styles.priBadge, pri.bg]}>
-                    <ThemedText style={[styles.priBadgeText, pri.text]}>{repair.priority}</ThemedText>
-                  </View>
-                );
-              })()}
-            </View>
+        {/* Vehicle hero */}
+        <Pressable
+          onPress={() => {
+            if (allImages.length > 0) {
+              setImageViewerIndex(0);
+              setImageViewerVisible(true);
+            }
+          }}
+        >
+          <VehicleImage uri={vehicleImg} icon={vehicleIcon} />
+        </Pressable>
+        <View style={styles.vehicleInfoBlock}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <ThemedText style={styles.vehicleModel} numberOfLines={1}>{[repair.brand, repair.model_name].filter(Boolean).join(' ') || repair.vehicle_type || 'Vehicle'}</ThemedText>
+            <ThemedText style={styles.plateNumber}>{repair.vehicle_number}</ThemedText>
           </View>
+          <StatusBadge status={repair.status} size="md" dot />
         </View>
+        {/* Service information */}
+        <View style={styles.infoPair}>
+          <ServiceInfoCard icon="construct-outline" label="Service" value={repair.service_type || 'Repair'} />
+          <ServiceInfoCard
+            icon="calendar-outline"
+            label="Due"
+            value={formatUTCToLocal(repair.expected_completion) || 'Not set'}
+          />
+        </View>
+
+        {/* Service checklist — charcoal, interactive, persisted via API */}
+        <ServiceChecklist items={checklistItems} onToggle={handleChecklistToggle} />
+        <Pressable
+          style={styles.addComplaintBtn}
+          onPress={() => setShowAddModal(true)}
+        >
+          <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
+          <ThemedText style={styles.addComplaintBtnText}>Add Additional Complaint</ThemedText>
+        </Pressable>
+
+        {can('edit:repair') && can('view:inventory') && (
+          <PrimaryButton title="Parts & inventory" icon="cube-outline" variant="outline" onPress={() => setBillModalVisible(true)} />
+        )}
+
+        {/* Assigned technician */}
+        <TechnicianCard
+          name={assignedWorker?.name || 'Unassigned'}
+          role={assignedWorker ? (assignedWorker.role || 'Technician') : 'No technician assigned yet'}
+        />
 
         {/* Customer Contact */}
         <View style={styles.card}>
@@ -427,12 +554,12 @@ export default function ViewRepairScreen({
               </View>
             </Pressable>
             <View style={styles.customerActions}>
-              {repair.phone_number && (
+              {Boolean(repair.phone_number?.trim()) && (
                 <Pressable style={styles.circleBtn} onPress={handleCall}>
                   <Ionicons name="call" size={15} color={theme.primary} />
                 </Pressable>
               )}
-              {(repair.phone_number || repair.whatsapp_number) && (
+              {Boolean(repair.phone_number?.trim() || repair.whatsapp_number?.trim()) && (
                 <Pressable style={[styles.circleBtn, { backgroundColor: '#25D366' + '15' }]} onPress={handleWhatsApp}>
                   <Ionicons name="logo-whatsapp" size={15} color="#25D366" />
                 </Pressable>
@@ -444,108 +571,9 @@ export default function ViewRepairScreen({
         {/* Job Details */}
         <View style={styles.card}>
           <ThemedText style={styles.cardTitle}>Details</ThemedText>
-          <DetailRow styles={styles} theme={theme}
-            label="Worker"
-            value={(() => {
-              if (repair.attending_worker_id) {
-                const w = workers.find((item) => String(item.id) === String(repair.attending_worker_id));
-                if (w) return w.name;
-              }
-              return repair.attending_worker_name || 'Unassigned';
-            })()}
-            icon="person-outline"
-          />
           <DetailRow styles={styles} theme={theme} label="Registered" value={formatUTCToLocal(repair.repair_date)} icon="calendar-outline" />
-          <DetailRow styles={styles} theme={theme} label="Completion" value={formatUTCToLocal(repair.expected_completion) || 'Not set'} icon="calendar-outline" />
           <DetailRow styles={styles} theme={theme} label="KM" value={repair.km_reading ? `${repair.km_reading} KM` : 'Not recorded'} icon="speedometer-outline" />
         </View>
-
-        {/* Services & Complaints */}
-        <View style={styles.card}>
-          <ThemedText style={styles.cardTitle}>Services & Complaints</ThemedText>
-            {localComplaints.length > 0 ? (
-              localComplaints.map((block: any, bi: number) => (
-                <View key={bi} style={[styles.serviceBlock, bi > 0 && styles.serviceDivider]}>
-                  <ThemedText style={styles.serviceBlockType}>{block.type}</ThemedText>
-                  {block.tasks && block.tasks.filter((t: any) => t.text?.trim()).map((task: any, ti: number) => {
-                    const isCompleted = !!task.fixed;
-                    const isFailed = !!task.failed;
-                    const taskKey = `${bi}-${ti}`;
-                    const isLoading = updatingTask === taskKey;
-
-                    return (
-                      <View key={ti} style={styles.interactiveTaskRow}>
-                        <View style={{ flex: 1, marginRight: 12 }}>
-                          <ThemedText style={[
-                            styles.taskText,
-                            isCompleted && styles.taskTextCompleted,
-                            isFailed && styles.taskTextFailed
-                          ]}>
-                            {task.text}
-                          </ThemedText>
-                          {isFailed && task.reason && (
-                            <ThemedText style={styles.taskReasonText}>
-                              ↳ Reason: {task.reason}
-                            </ThemedText>
-                          )}
-                        </View>
-
-                        <View style={styles.taskActions}>
-                          {isLoading ? (
-                            <ActivityIndicator size="small" color={theme.primary} />
-                          ) : (
-                            <>
-                              <Pressable 
-                                style={[
-                                  styles.actionBtnIcon, 
-                                  isCompleted && styles.actionBtnCompleted
-                                ]} 
-                                onPress={() => saveTaskStatusChange(bi, ti, { fixed: !task.fixed, failed: false, reason: '' })}
-                                disabled={updatingTask !== null}
-                              >
-                                <Ionicons 
-                                  name={isCompleted ? "checkmark" : "checkmark-outline"} 
-                                  size={16} 
-                                  color={isCompleted ? "#FFFFFF" : theme.primary} 
-                                />
-                              </Pressable>
-
-                              <Pressable 
-                                style={[
-                                  styles.actionBtnIcon, 
-                                  isFailed && styles.actionBtnFailed
-                                ]} 
-                                onPress={() => handleToggleFailed(bi, ti)}
-                                disabled={updatingTask !== null}
-                              >
-                                <Ionicons 
-                                  name={isFailed ? "close" : "close-outline"} 
-                                  size={16} 
-                                  color={isFailed ? "#FFFFFF" : theme.destructive} 
-                                />
-                              </Pressable>
-                            </>
-                          )}
-                        </View>
-                      </View>
-                    );
-                  })}
-                  {(!block.tasks || block.tasks.filter((t: any) => t.text?.trim()).length === 0) && (
-                    <ThemedText style={styles.noTasks}>No issues listed</ThemedText>
-                  )}
-                </View>
-              ))
-            ) : (
-              <ThemedText style={styles.noTasks}>No services recorded</ThemedText>
-            )}
-            <Pressable 
-              style={styles.addComplaintBtn}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
-              <ThemedText style={styles.addComplaintBtnText}>Add Additional Complaint</ThemedText>
-            </Pressable>
-          </View>
 
           {/* Additional Photos Card */}
           {repair.images && repair.images.length > 1 && (
@@ -579,7 +607,7 @@ export default function ViewRepairScreen({
                     : 'No invoice yet'}
                 </ThemedText>
               </View>
-              {repair.bill_id && (
+              {Boolean(repair.bill_id) && (
                 <View style={[styles.statusBadgeSmall, {
                   backgroundColor: repair.payment_status === 'Paid' ? '#DCFCE7' : '#FEF9C3'
                 }]}>
@@ -599,6 +627,29 @@ export default function ViewRepairScreen({
             </Pressable>
           </View>
       </ScrollView>
+
+      {/* Bottom action area — safe-area aware */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={styles.footerTextWrap}>
+          <ThemedText style={styles.footerLabel}>
+            {repair.bill_id ? 'Payment status' : 'Invoice'}
+          </ThemedText>
+          <ThemedText style={styles.footerValue} numberOfLines={1}>
+            {repair.bill_id
+              ? repair.payment_status === 'Paid'
+                ? 'Payment received'
+                : 'Pending payment'
+              : 'No invoice yet'}
+          </ThemedText>
+        </View>
+        <View style={styles.footerBtn}>
+          <PrimaryButton
+            title={advancing ? 'Updating…' : primaryActionLabel}
+            onPress={advancing ? undefined : handlePrimaryAction}
+            icon="arrow-forward"
+          />
+        </View>
+      </View>
 
       {/* Add Additional Complaint Modal Sheet */}
       <Modal
@@ -805,11 +856,11 @@ export default function ViewRepairScreen({
 
       {/* Billing Screen Modal */}
       <Modal visible={billModalVisible} animationType="slide" onRequestClose={handleBillClose}>
-        <GenerateBillScreen
+        {billModalVisible && <GenerateBillScreen
           repair={repair}
           onClose={handleBillClose}
           onSuccess={handleBillSuccess}
-        />
+        />}
       </Modal>
 
       {/* Customer modals */}
@@ -877,12 +928,12 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.backgroundElement,
+    backgroundColor: theme.background,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
-    gap: 12,
+    paddingBottom: 16,
+    gap: 10,
   },
 
   // ── Header ──
@@ -891,45 +942,64 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 8,
-    backgroundColor: theme.background,
-    borderBottomWidth: 1,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
     borderBottomColor: theme.border,
+    zIndex: 10,
   },
   headerBack: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.backgroundElement,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '400',
+    color: theme.text,
+    letterSpacing: -0.2,
+  },
+  overflowMenu: {
+    position: 'absolute',
+    top: 44,
+    right: 0,
+    width: 200,
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  overflowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  overflowText: {
+    fontSize: 14,
+    fontWeight: '500',
     color: theme.text,
   },
-  headerEdit: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.primary,
-  },
 
-  // ── Vehicle card ──
+  // ── Vehicle hero ──
+  vehicleInfoBlock: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: theme.card, borderRadius: 20 },
+
+  // ── Vehicle hero (styles kept flat; hero image comes from VehicleImage) ──
   vehicleCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.card,
-    borderRadius: UI.card.borderRadius,
-    padding: 12,
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0,
-    shadowRadius: 8,
-    elevation: 0,
+    backgroundColor: 'transparent',
   },
   vehicleImageWrap: {
     width: 80,
@@ -953,41 +1023,36 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
   },
   plate: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    borderRadius: 6,
+    alignItems: 'center',
+    borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: theme.backgroundSelected,
-    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
   plateBadge: {
-    backgroundColor: theme.text,
+    backgroundColor: theme.dark,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   plateBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
-    color: theme.background,
+    color: theme.panelText,
     letterSpacing: 0.5,
   },
-  plateNumber: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: theme.text,
-    letterSpacing: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
+  plateNumber: { fontSize: 13, fontWeight: '400', color: theme.textSecondary },
   vehicleModel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: theme.textSecondary,
+    fontSize: 24,
+    fontWeight: '400',
+    color: theme.text,
+    letterSpacing: -0.3,
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 2,
   },
   priBadge: {
@@ -999,27 +1064,59 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     fontSize: 10,
     fontWeight: '700',
   },
-  priorityLow: { backgroundColor: '#F0FFF4' },
-  priorityMedium: { backgroundColor: '#FEFCBF' },
-  priorityHigh: { backgroundColor: '#FEEBC8' },
-  priorityUrgent: { backgroundColor: '#FED7D7' },
-  priorityTextLow: { color: '#38A169' },
-  priorityTextMedium: { color: '#B7791F' },
-  priorityTextHigh: { color: '#DD6B20' },
-  priorityTextUrgent: { color: '#E53E3E' },
+  priorityLow: { backgroundColor: theme.successTint },
+  priorityMedium: { backgroundColor: theme.backgroundSelected },
+  priorityHigh: { backgroundColor: '#F6E3C8' },
+  priorityUrgent: { backgroundColor: '#F6D9D4' },
+  priorityTextLow: { color: theme.success },
+  priorityTextMedium: { color: theme.warning },
+  priorityTextHigh: { color: '#B35A1B' },
+  priorityTextUrgent: { color: theme.error },
 
   // ── Cards ──
   card: {
     backgroundColor: theme.card,
     borderRadius: UI.card.borderRadius,
+    borderWidth: 1,
+    borderColor: theme.border,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1,
   },
-  cardTitle: { fontSize: 17, fontWeight: '600', color: theme.text, marginBottom: 16 },
+  cardTitle: { fontSize: 17, fontWeight: '600', color: theme.text, marginBottom: 12 },
+  infoPair: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  // ── Bottom action area ──
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: theme.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  footerTextWrap: { flex: 1, gap: 1 },
+  footerLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  footerValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  footerBtn: { flex: 1.4 },
 
   // ── Customer ──
   customerRow: {
@@ -1201,14 +1298,14 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     gap: 8,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: theme.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    backgroundColor: theme.primary + '0A',
-    marginTop: 14,
+    borderColor: theme.accent,
+    borderRadius: 16,
+    paddingVertical: 13,
+    backgroundColor: theme.backgroundSelected,
+    marginTop: 4,
   },
   addComplaintBtnText: {
-    color: theme.primary,
+    color: theme.text,
     fontSize: 14,
     fontWeight: '700',
   },

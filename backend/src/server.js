@@ -37,6 +37,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/repairs', repairRoutes);
 app.use('/api/bills', billRoutes);
+app.use('/api/inventory', require('./routes/inventory/inventory.routes'));
 app.use('/api/taxes', taxRoutes);
 app.use('/api/contact', contactRoutes);
 

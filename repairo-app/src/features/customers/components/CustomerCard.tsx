@@ -32,7 +32,7 @@ export default function CustomerCard({ customer, onPress }: CustomerCardProps) {
           {customer.name || 'Unknown'}
         </ThemedText>
         <View style={styles.phoneRow}>
-          {customer.phone && (
+          {!!customer.phone && (
             <Pressable
               onPress={() => Linking.openURL(`tel:${customer.phone!.replace(/\s/g, '')}`)}
               hitSlop={8}

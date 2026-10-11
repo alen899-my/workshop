@@ -33,9 +33,10 @@ interface RepairCardProps {
   repair: Repair;
   onPress?: (repair: Repair) => void;
   onDelete?: (repair: Repair) => void;
+  onParts?: (repair: Repair) => void;
 }
 
-export default function RepairCard({ repair, onPress, onDelete }: RepairCardProps) {
+export default function RepairCard({ repair, onPress, onDelete, onParts }: RepairCardProps) {
   const theme = useTheme();
   const styles = useStyles(theme);
 
@@ -112,14 +113,14 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
           <ThemedText style={styles.infoText} numberOfLines={1}>
             {repair.owner_name || '-'}
           </ThemedText>
-          {repair.phone_number && (
+          {!!repair.phone_number && (
             <Pressable onPress={() => handleCall(repair.phone_number)} style={styles.callBtn}>
               <Ionicons name="call" size={11} color={theme.successForeground} />
             </Pressable>
           )}
         </View>
 
-        {repair.service_type && (
+        {!!repair.service_type && (
           <View style={styles.infoItem}>
             <Ionicons name="build-outline" size={13} color={theme.textSecondary} />
             <ThemedText style={styles.infoText} numberOfLines={1}>
@@ -147,7 +148,7 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
       </View>
 
       {/* Assigned worker */}
-      {repair.attending_worker_name && (
+      {!!repair.attending_worker_name && (
         <View style={styles.infoRow}>
           <View style={styles.infoItem}>
             <Ionicons name="person-circle-outline" size={13} color={theme.textSecondary} />
@@ -178,6 +179,10 @@ export default function RepairCard({ repair, onPress, onDelete }: RepairCardProp
           <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
         )}
       </View>
+      {onParts && <Pressable accessibilityLabel="Manage repair parts and inventory" onPress={(event) => { event.stopPropagation(); onParts(repair); }} style={{ flexDirection: 'row', gap: 8, paddingTop: 14, alignItems: 'center' }}>
+        <Ionicons name="cube-outline" size={18} color={theme.primary} />
+        <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Parts & inventory</ThemedText>
+      </Pressable>}
     </Pressable>
   );
 }

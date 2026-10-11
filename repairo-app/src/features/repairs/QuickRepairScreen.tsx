@@ -65,6 +65,7 @@ export default function QuickRepairScreen({ mode = 'create', initialRepair, onCl
   const registryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const repairIdRef = useRef<number | null>(null);
+  const [hasInventoryBill, setHasInventoryBill] = useState(false);
   const [hasExistingBill, setHasExistingBill] = useState(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -89,7 +90,8 @@ export default function QuickRepairScreen({ mode = 'create', initialRepair, onCl
     if (!isEdit || !initialRepair?.id) return;
     billService.getByRepairId(initialRepair.id).then((res) => {
       if (res.success && res.data) {
-        const items = (res.data as any).items;
+        const items = res.data.items;
+        setHasInventoryBill(items.some(item => item.product_id != null));
         if (items && items.length > 0) {
           setBillAmount(String(items[0].cost || ''));
           setHasExistingBill(true);
@@ -221,15 +223,16 @@ export default function QuickRepairScreen({ mode = 'create', initialRepair, onCl
 
       const rid = repairIdRef.current;
       if (!rid) { showToast('Repair ID not found', 'error'); return; }
-      if (billAmount.trim() && parseFloat(billAmount) > 0) {
-        await billService.saveBill(rid, {
+      if (!hasInventoryBill && billAmount.trim() && parseFloat(billAmount) > 0) {
+        const billResult = await billService.saveBill(rid, {
           items: [{ name: 'Quick Repair Service', qty: 1, cost: parseFloat(billAmount) }],
           service_charge: 0,
           tax_snapshot: [],
           tax_total: 0,
           payment_status: 'Unpaid',
         });
-      } else if (hasExistingBill) {
+        if (!billResult.success) { showToast(billResult.error || 'Repair saved, but billing could not be saved. Open full billing to update inventory items.', 'error'); return; }
+      } else if (!hasInventoryBill && hasExistingBill) {
         await billService.saveBill(rid, {
           items: [],
           service_charge: 0,
@@ -245,7 +248,7 @@ export default function QuickRepairScreen({ mode = 'create', initialRepair, onCl
     } finally {
       setSubmitting(false);
     }
-  }, [vehicleNumber, complaint, billAmount, hasExistingBill, buildFormData, showToast]);
+  }, [vehicleNumber, complaint, billAmount, hasExistingBill, hasInventoryBill, buildFormData, showToast]);
 
   const handleSuccessClose = useCallback(() => {
     setShowSuccess(false);
@@ -344,7 +347,8 @@ export default function QuickRepairScreen({ mode = 'create', initialRepair, onCl
           <View style={styles.card}>
             <InputField
               label="Estimated Amount"
-              value={billAmount}
+              editable={!hasInventoryBill}
+                  value={billAmount}
               onChangeText={setBillAmount}
               placeholder="e.g. 5000"
               icon="currency-usd"

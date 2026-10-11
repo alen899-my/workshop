@@ -1,14 +1,12 @@
 import WorkshopBackdrop from '@/components/WorkshopBackdrop';
-import { useState, useMemo } from 'react';
-import { StyleSheet, View, Switch, Pressable, ScrollView } from 'react-native';
+import { StyleSheet, View, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useTheme, useThemePreference } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
-import ShopAppearanceScreen from '@/features/settings/shop/ShopAppearanceScreen';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -69,16 +67,6 @@ function SettingsRow({
 export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const { top, bottom } = useSafeAreaInsets();
   const theme = useTheme();
-  const { theme: currentTheme, setTheme, isDark } = useThemePreference();
-  const [showShopAppearance, setShowShopAppearance] = useState(false);
-
-  const isDarkMode = isDark;
-  const isSystem = currentTheme === 'system';
-
-  if (showShopAppearance) {
-    return <ShopAppearanceScreen onClose={() => setShowShopAppearance(false)} />;
-  }
-
   return (
     <ThemedView style={styles.container}>
       <WorkshopBackdrop />
@@ -94,52 +82,6 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
         contentContainerStyle={{ paddingBottom: Math.max(bottom, 16) + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Appearance */}
-        <View style={styles.section}>
-          <ThemedText themeColor="textSecondary" style={styles.sectionTitle}>
-            APPEARANCE
-          </ThemedText>
-
-          <SettingsRow
-            icon="moon-outline"
-            label="Dark Mode"
-            description="Switch between light and dark theme"
-            isFirst
-            right={
-              <Switch
-                value={isDarkMode}
-                onValueChange={(val) => setTheme(val ? 'dark' : 'light')}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={isDarkMode ? theme.card : '#f4f3f4'}
-                ios_backgroundColor={theme.border}
-              />
-            }
-          />
-
-          <SettingsRow
-            icon="phone-portrait-outline"
-            label="Follow System"
-            description="Automatically match your device theme"
-            right={
-              <Switch
-                value={isSystem}
-                onValueChange={(val) => setTheme(val ? 'system' : (isDark ? 'dark' : 'light'))}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={isSystem ? theme.card : '#f4f3f4'}
-                ios_backgroundColor={theme.border}
-              />
-            }
-          />
-
-          <SettingsRow
-            icon="color-palette-outline"
-            label="Shop Appearance"
-            description="Customise your shop's theme color"
-            isLast
-            onPress={() => setShowShopAppearance(true)}
-          />
-        </View>
-
         {/* Preview */}
         <View style={styles.section}>
           <ThemedText themeColor="textSecondary" style={styles.sectionTitle}>
@@ -161,7 +103,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
             </View>
           </View>
           <ThemedText themeColor="textSecondary" style={styles.previewHint}>
-            {isDark ? 'Dark theme active' : isSystem ? 'Following system theme' : 'Light theme active'}
+            Light theme
           </ThemedText>
         </View>
 

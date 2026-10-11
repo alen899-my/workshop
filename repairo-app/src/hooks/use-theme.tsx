@@ -1,90 +1,54 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { Appearance, Platform } from 'react-native';
-import * as Storage from '@/services/storage';
 
-import { Colors, DarkColors, type ThemeColors } from '@/constants/theme';
+import { Colors, type ThemeColors } from '@/constants/theme';
 import { getCurrentUser } from '@/services/auth.service';
 
-const THEME_STORAGE_KEY = 'repairo_theme_preference';
-
-type ThemePreference = 'light' | 'dark' | 'system';
-type ResolvedTheme = 'light' | 'dark';
+type ThemePreference = 'light';
+type ResolvedTheme = 'light';
 
 interface ThemeContextType {
   theme: ThemePreference;
   resolvedTheme: ResolvedTheme;
-  setTheme: (theme: ThemePreference) => void;
   isDark: boolean;
   shopPrimaryColor: string | null;
   setShopPrimaryColor: (color: string | null) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
+  theme: 'light',
   resolvedTheme: 'light',
-  setTheme: () => {},
   isDark: false,
   shopPrimaryColor: null,
   setShopPrimaryColor: () => {},
 });
 
-function getSystemTheme(): ResolvedTheme {
-  const scheme = Appearance.getColorScheme();
-  return scheme === 'dark' ? 'dark' : 'light';
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+  const theme = 'light' as const;
+  const resolvedTheme = 'light' as const;
   const [shopPrimaryColor, setShopPrimaryColorState] = useState<string | null>(null);
 
-  // Load stored preference and primary color on mount
+  // Preserve the workshop color while always using light mode.
   useEffect(() => {
-    Storage.getItemAsync(THEME_STORAGE_KEY).then((stored) => {
-      if (stored === 'light' || stored === 'dark' || stored === 'system') {
-        setThemeState(stored);
-      }
-    }).catch(() => {});
     const user = getCurrentUser();
     if (user?.shopPrimaryColor) {
       setShopPrimaryColorState(user.shopPrimaryColor);
     }
   }, []);
 
-  // Recompute resolved theme when preference or system theme changes
-  const computeResolved = useCallback((pref: ThemePreference) => {
-    return pref === 'system' ? getSystemTheme() : pref;
+  useEffect(() => {
+    if (Platform.OS !== 'web') Appearance.setColorScheme('light');
   }, []);
-
-  useEffect(() => {
-    setResolvedTheme(computeResolved(theme));
-  }, [theme, computeResolved]);
-
-  // Listen for system theme changes
-  useEffect(() => {
-    const listener = Appearance.addChangeListener(({ colorScheme }) => {
-      if (theme === 'system') {
-        setResolvedTheme(colorScheme === 'dark' ? 'dark' : 'light');
-      }
-    });
-    return () => listener.remove();
-  }, [theme]);
 
   // Match browser-native controls and CSS to the app selection, not only the OS.
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const palette = resolvedTheme === 'dark' ? DarkColors : Colors;
+    const palette = Colors;
     const root = document.documentElement;
     root.style.colorScheme = resolvedTheme;
     const css = { background: palette.background, foreground: palette.text, primary: palette.primary, card: palette.card, border: palette.border, muted: palette.textSecondary };
     Object.entries(css).forEach(([key, value]) => root.style.setProperty('--color-' + key, value));
   }, [resolvedTheme]);
-
-  const setTheme = useCallback((pref: ThemePreference) => {
-    setThemeState(pref);
-    setResolvedTheme(computeResolved(pref));
-    Storage.setItemAsync(THEME_STORAGE_KEY, pref).catch(() => {});
-  }, [computeResolved]);
 
   const setShopPrimaryColor = useCallback((color: string | null) => {
     setShopPrimaryColorState(color);
@@ -93,11 +57,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const contextValue = useMemo(() => ({
     theme,
     resolvedTheme,
-    setTheme,
-    isDark: resolvedTheme === 'dark',
+    isDark: false,
     shopPrimaryColor,
     setShopPrimaryColor,
-  }), [theme, resolvedTheme, setTheme, shopPrimaryColor, setShopPrimaryColor]);
+  }), [theme, resolvedTheme, shopPrimaryColor, setShopPrimaryColor]);
 
   return (
     <ThemeContext.Provider value={contextValue}>
@@ -148,8 +111,8 @@ export function getContrastColor(background: string): string {
 }
 
 export function useTheme(): ThemeColors {
-  const { resolvedTheme, shopPrimaryColor } = useContext(ThemeContext);
-  const base = resolvedTheme === 'dark' ? DarkColors : Colors;
+  const { shopPrimaryColor } = useContext(ThemeContext);
+  const base = Colors;
 
   return useMemo(() => {
     if (!shopPrimaryColor || !/^#[0-9a-f]{6}$/i.test(shopPrimaryColor)) return base;
@@ -157,12 +120,12 @@ export function useTheme(): ThemeColors {
     let primary = shopPrimaryColor;
     // The accent also serves as text and icons on surfaces.
     for (let step = 0; step < 20 && Math.min(contrast(primary, base.background), contrast(primary, base.card), contrast(primary, base.backgroundElement)) < 4.5; step++) {
-      primary = resolvedTheme === 'dark' ? lighten(primary, 0.12) : darken(primary, 0.12);
+      primary = darken(primary, 0.12);
     }
-    const primaryLight = resolvedTheme === 'dark' ? darken(primary, 0.75) : lighten(primary, 0.9);
+    const primaryLight = lighten(primary, 0.9);
     const primaryForeground = getContrastColor(primary);
     const tealMid = primary;
-    const tealDeep = resolvedTheme === 'dark' ? primary : darken(primary, 0.15);
+    const tealDeep = darken(primary, 0.15);
     const tealAccent = primary;
     const tabIconSelected = primary;
 
@@ -177,7 +140,7 @@ export function useTheme(): ThemeColors {
       tealAccent,
       tabIconSelected,
     };
-  }, [base, shopPrimaryColor, resolvedTheme]) as ThemeColors;
+  }, [base, shopPrimaryColor]) as ThemeColors;
 }
 
 export function useThemePreference() {

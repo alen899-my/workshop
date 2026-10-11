@@ -1,3 +1,4 @@
+import InventoryScreen from '@/features/inventory/InventoryScreen';
 import WorkshopBackdrop from '@/components/WorkshopBackdrop';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -56,9 +57,11 @@ export default function ProfileScreen() {
   const [taxesModalVisible, setTaxesModalVisible] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [invoicesModalVisible, setInvoicesModalVisible] = useState(false);
+  const [inventoryVisible, setInventoryVisible] = useState(false);
   const [shopsModalVisible, setShopsModalVisible] = useState(false);
 
   const menuItems: MenuItem[] = useMemo(() => [
+    { icon: 'cube-outline', label: 'Inventory', description: 'Products, stock and movement history', permission: 'view:inventory', action: 'modal' },
     {
       icon: 'settings-outline',
       label: 'Settings',
@@ -125,7 +128,8 @@ export default function ProfileScreen() {
 
   const handleMenuPress = useCallback((item: MenuItem) => {
     if (item.action === 'modal') {
-      if (item.label === 'Settings') setSettingsModalVisible(true);
+      if (item.label === 'Inventory') setInventoryVisible(true);
+      else if (item.label === 'Settings') setSettingsModalVisible(true);
       else if (item.label === 'Tax Settings') setTaxesModalVisible(true);
       else if (item.label === 'Currency') setCurrencyModalVisible(true);
       else if (item.label === 'Invoices') setInvoicesModalVisible(true);
@@ -285,6 +289,10 @@ export default function ProfileScreen() {
       {/* Invoices Modal */}
       <Modal visible={invoicesModalVisible} animationType="slide" onRequestClose={() => setInvoicesModalVisible(false)}>
         <InvoicesListScreen />
+      </Modal>
+
+      <Modal visible={inventoryVisible} animationType="slide" onRequestClose={() => setInventoryVisible(false)}>
+        {inventoryVisible && <InventoryScreen onClose={() => setInventoryVisible(false)} />}
       </Modal>
 
       {/* Shops Modal */}

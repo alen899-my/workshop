@@ -1,5 +1,5 @@
 import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -8,8 +8,12 @@ import type { Tax } from '@/features/repairs/services/tax.service';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTheme } from '@/hooks/use-theme';
 import TaxSelector from './TaxSelector';
+import InventoryScreen from '@/features/inventory/InventoryScreen';
+import { useRBAC } from '@/hooks/use-rbac';
+import type { Product } from '@/features/inventory/inventory.service';
 
 interface BillItemEditorProps {
+  shopId?: number;
   items: BillItem[];
   onChange: (items: BillItem[]) => void;
   serviceCharge: number;
@@ -29,13 +33,15 @@ export interface BillItemEditorHandle {
 }
 
 export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function BillItemEditor({
-  items, onChange, serviceCharge, onServiceChargeChange,
+  shopId, items, onChange, serviceCharge, onServiceChargeChange,
   paymentStatus, onPaymentStatusChange,
   paymentMethod, onPaymentMethodChange,
   taxes, taxSnapshot, onTaxChange,
   editable = true,
 }: BillItemEditorProps, ref) {
   const theme = useTheme();
+  const { can } = useRBAC();
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const styles = useMemo(() => StyleSheet.create({
     wrapper: { gap: 14, paddingBottom: 16 },
 
@@ -326,6 +332,14 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     }
   }, [items]);
 
+  const addInventory = (product: Product) => {
+    const next = items.map(item => ({ ...item, ...(item.id ? liveValues[item.id] : undefined) }));
+    const existing = next.find(item => item.product_id === product.id);
+    if (existing) existing.qty = Number(existing.qty) + 1;
+    else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: 1, cost: Number(product.selling_price) });
+    setLiveValues({}); onChange(next); setInventoryOpen(false);
+  };
+
   const addItem = useCallback(() => {
     const newItem: BillItem = { id: Date.now().toString(), name: '', qty: 1, cost: 0 };
     onChange([...items, newItem]);
@@ -418,7 +432,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     editable: boolean;
   }) {
     const normalizedCost = (v: unknown) => String(Number(v) || 0);
-    const normalizedQty = (v: unknown) => String(Math.max(Number(v) || 1, 1));
+    const normalizedQty = (v: unknown) => String(Number(v) > 0 ? Number(v) : 1);
 
     const [name, setName] = useState(item.name);
     const [qty, setQty] = useState(normalizedQty(item.qty));
@@ -451,7 +465,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
       <View style={styles.itemCard}>
         <View style={styles.itemCardHeader}>
           <View style={styles.itemBadge}>
-            <ThemedText style={styles.itemBadgeText}>Item {index + 1}</ThemedText>
+            <ThemedText style={styles.itemBadgeText}>{item.product_id ? (item.sku || 'Inventory item') : 'Item ' + (index + 1)}</ThemedText>
           </View>
           <View style={styles.itemCardHeaderRight}>
             <ThemedText style={styles.lineTotalLabel}>
@@ -474,12 +488,12 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
           placeholder={editable ? 'Part / service name...' : ''}
           placeholderTextColor={theme.tabIconDefault}
           returnKeyType="next"
-          editable={editable}
+          editable={editable && !item.product_id}
         />
 
         <View style={styles.itemRow}>
           <View style={styles.halfCol}>
-            <ThemedText style={styles.fieldLabel}>Quantity</ThemedText>
+            <ThemedText style={styles.fieldLabel}>Quantity{item.unit ? ' (' + item.unit + ')' : ''}</ThemedText>
             <TextInput
               style={[styles.field, styles.centerField]}
               value={qty}
@@ -515,6 +529,14 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
 
   return (
     <View style={styles.wrapper}>
+      <Modal visible={inventoryOpen} animationType="slide" onRequestClose={() => setInventoryOpen(false)}>
+        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} />}
+      </Modal>
+      {editable && !!shopId && can('view:inventory') && <Pressable style={styles.inlineAddBtn} onPress={() => setInventoryOpen(true)}>
+        <Ionicons name="cube-outline" size={20} color={theme.primary} />
+        <ThemedText style={styles.inlineAddBtnText}>Add from inventory</ThemedText>
+      </Pressable>}
+      {items.some(item => item.product_id != null) && <ThemedText style={styles.noItemsText}>Stock updates when you save. Removing a saved inventory item returns its quantity to stock.</ThemedText>}
 
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>

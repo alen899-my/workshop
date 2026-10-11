@@ -18,6 +18,7 @@ const TABS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap;
   { name: 'repairs', label: 'Repairs', icon: 'build-outline', permission: 'view:repairs' },
   { name: 'vehicles', label: 'Vehicles', icon: 'car-outline', permission: 'view:vehicles' },
   { name: 'customers', label: 'Customers', icon: 'people-outline', permission: 'view:customers' },
+  { name: 'inventory', label: 'Inventory', icon: 'cube-outline', permission: 'view:inventory' },
   { name: 'settings', label: 'Profile', icon: 'person-outline' },
 ];
 
@@ -25,14 +26,10 @@ function AnimatedTab({
   tab,
   focused,
   onPress,
-  tabIconSelected,
-  tabIconDefault,
 }: {
   tab: (typeof TABS)[number];
   focused: boolean;
   onPress: () => void;
-  tabIconSelected: string;
-  tabIconDefault: string;
 }) {
   const theme = useTheme();
   const scale = useSharedValue(focused ? 1 : 0);
@@ -42,31 +39,25 @@ function AnimatedTab({
       duration: 250,
       easing: Easing.out(Easing.cubic),
     });
-  }, [focused]);
+  }, [focused, scale]);
 
   const iconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + scale.value * 0.04 }],
   }));
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    opacity: scale.value,
-    transform: [{ scaleX: scale.value }],
-  }));
-
   return (
-    <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={tab.label} style={[styles.item, { backgroundColor: focused ? theme.primary : 'transparent', borderRadius: 24 }]} onPress={onPress}>
+    <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={tab.label} style={[styles.item, { backgroundColor: 'transparent', borderRadius: 20 }]} onPress={onPress}>
       <Animated.View style={iconStyle}>
         <Ionicons
-          name={tab.icon}
+          name={focused && tab.name === 'index' ? 'home' : tab.icon}
           size={22}
-          color={focused ? tabIconSelected : tabIconDefault}
+          color={focused ? theme.accent : theme.tabIconDefault}
         />
       </Animated.View>
-      <Animated.View style={[styles.indicator, { backgroundColor: tabIconSelected }, indicatorStyle]} />
       <Animated.Text
         style={[
           styles.label,
-          { color: focused ? tabIconSelected : tabIconDefault },
+          { color: focused ? theme.accent : theme.tabIconDefault },
         ]}
       >
         {tab.label}
@@ -85,12 +76,10 @@ export default function FloatingTabBar({ state, navigation }: any) {
     : TABS.filter((tab) => !tab.permission || can(tab.permission));
 
   const barBg = theme.floatingBar;
-  const barBorder = theme.border;
-  const barShadow = theme.text;
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(bottom, 16) }]}>
-      <View style={[styles.bar, { shadowColor: barShadow, backgroundColor: barBg, borderColor: barBorder }]}>  
+      <View style={[styles.bar, { shadowColor: '#000000', backgroundColor: barBg, borderColor: barBg }]}>
         {visibleTabs.map((tab) => {
           const routeIndex = state.routes.findIndex((r: any) => r.name === tab.name);
           const focused = state.index === routeIndex;
@@ -101,8 +90,6 @@ export default function FloatingTabBar({ state, navigation }: any) {
               tab={tab}
               focused={focused}
               onPress={() => navigation.navigate(tab.name)}
-              tabIconSelected={theme.primaryForeground}
-              tabIconDefault={theme.tabIconDefault}
             />
           );
         })}

@@ -82,7 +82,7 @@ export default function VehicleTypePicker({ value, onChange }: VehicleTypePicker
         </Pressable>
       </View>
 
-      {!isMain && value && selected && (
+      {!isMain && !!value && !!selected && (
         <View style={styles.selectedChip}>
           <Ionicons name={selected.icon} size={16} color={theme.primary} />
           <ThemedText style={styles.selectedLabel}>{selected.label}</ThemedText>

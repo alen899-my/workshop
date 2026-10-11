@@ -6,6 +6,7 @@ import InputField from '@/components/ui/InputField';
 import Toast from '@/components/ui/Toast';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import GenerateBillScreen from '../GenerateBillScreen';
 import { billService } from '@/features/repairs/services/bill.service';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
@@ -20,6 +21,7 @@ export default function EditBillModal({ visible, repair, onClose, onSuccess }: E
   const theme = useTheme();
   const styles = useStyles(theme);
 
+  const [hasInventory, setHasInventory] = useState(false);
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' | 'info' });
@@ -32,10 +34,12 @@ export default function EditBillModal({ visible, repair, onClose, onSuccess }: E
   useEffect(() => {
     if (visible && repair?.id) {
       setAmount('');
+      setHasInventory(false);
       setHasExistingBill(false);
       billService.getByRepairId(repair.id).then((res) => {
         if (res.success && res.data) {
-          const items = (res.data as any).items;
+          const items = res.data.items;
+          setHasInventory(items.some(item => item.product_id != null));
           if (items && items.length > 0) {
             setAmount(String(items[0].cost || ''));
             setHasExistingBill(true);
@@ -72,6 +76,10 @@ export default function EditBillModal({ visible, repair, onClose, onSuccess }: E
       setSubmitting(false);
     }
   }, [repair?.id, amount, onSuccess, showToast]);
+
+  if (hasInventory && repair) return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    {visible && <GenerateBillScreen repair={repair} onClose={onClose} onSuccess={onSuccess} />}
+  </Modal>;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
