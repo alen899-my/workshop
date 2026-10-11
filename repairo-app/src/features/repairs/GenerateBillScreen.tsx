@@ -381,6 +381,7 @@ export default function GenerateBillScreen({
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Number Plate */}
             <View style={styles.vehicleCard}>

@@ -183,6 +183,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 10,
+      minHeight: 48,
       borderRadius: 10,
       borderWidth: 1,
       borderStyle: 'dashed',
@@ -194,9 +195,11 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     emptyChoiceBtn: {
       flex: 1,
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 6,
       paddingVertical: 18,
       paddingHorizontal: 10,
+      minHeight: 110,
       borderRadius: 14,
       borderWidth: 1,
       borderStyle: 'dashed',
@@ -521,7 +524,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
 
         <View style={styles.itemRow}>
           <View style={styles.halfCol}>
-            <ThemedText style={styles.fieldLabel}>Quantity{item.unit ? ' (' + item.unit + ')' : ''}</ThemedText>
+            <ThemedText style={styles.fieldLabel}>Quantity{item.unit?.trim() ? ' (' + item.unit.trim() + ')' : ''}</ThemedText>
             <TextInput
               style={[styles.field, styles.centerField]}
               value={qty}
@@ -570,12 +573,12 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
 
         {items.length === 0 && editable ? (
           <View style={styles.emptyChoice}>
-            {canUseInventory && <Pressable style={styles.emptyChoiceBtn} onPress={() => setInventoryOpen(true)}>
+            {canUseInventory && <Pressable style={styles.emptyChoiceBtn} hitSlop={8} onPress={() => setInventoryOpen(true)}>
               <Ionicons name="cube-outline" size={26} color={theme.primary} />
               <ThemedText style={styles.emptyChoiceTitle}>Inventory part</ThemedText>
               <ThemedText style={styles.emptyChoiceHint}>Deducts stock on save</ThemedText>
             </Pressable>}
-            <Pressable style={styles.emptyChoiceBtn} onPress={addItem}>
+            <Pressable style={styles.emptyChoiceBtn} hitSlop={8} onPress={addItem}>
               <Ionicons name="receipt-outline" size={26} color={theme.primary} />
               <ThemedText style={styles.emptyChoiceTitle}>Manual / service</ThemedText>
               <ThemedText style={styles.emptyChoiceHint}>Custom entry, no stock</ThemedText>
@@ -598,11 +601,11 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
             ))}
             {editable && (
               <View style={styles.addRow}>
-                {canUseInventory && <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} onPress={() => setInventoryOpen(true)}>
+                {canUseInventory && <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} hitSlop={8} onPress={() => setInventoryOpen(true)}>
                   <Ionicons name="cube-outline" size={18} color={theme.primary} />
                   <ThemedText style={styles.inlineAddBtnText}>Inventory</ThemedText>
                 </Pressable>}
-                <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} onPress={addItem}>
+                <Pressable style={[styles.inlineAddBtn, { flex: 1 }]} hitSlop={8} onPress={addItem}>
                   <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
                   <ThemedText style={styles.inlineAddBtnText}>Manual</ThemedText>
                 </Pressable>
