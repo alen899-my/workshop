@@ -159,15 +159,24 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect, 
         {onSelect && (isBillShop || !mustStayInBillShop
           ? <Text themeColor="textSecondary">Items are added to the bill. Stock is deducted when you save billing details.</Text>
           : <Text themeColor="textSecondary">Browsing {currentShop?.name}. Switch back to {billShop?.name || 'the repair workshop'} to add items — stock is deducted from the repair workshop.</Text>)}
-        {products.map(product => <Pressable key={product.id} disabled={!!onSelect && (Number(product.stock) <= 0 || (mustStayInBillShop && product.shop_id !== fixedShop))} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: onSelect && (Number(product.stock) <= 0 || (mustStayInBillShop && product.shop_id !== fixedShop)) ? 0.55 : 1 }]}>
+        {products.map(product => {
+          const outOfStock = Number(product.stock) <= 0;
+          const wrongShop = mustStayInBillShop && product.shop_id !== fixedShop;
+          const unpickable = !!onSelect && (outOfStock || wrongShop);
+          return <Pressable key={product.id} disabled={unpickable} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: unpickable ? 0.55 : 1 }]}>
           <View style={styles.between}>
             {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.thumb} contentFit="cover" /> : null}
-            <Text style={styles.product}>{product.name}</Text><Ionicons name={onSelect ? 'add-circle-outline' : 'chevron-forward'} size={22} color={theme.primary} />
+            <Text style={styles.product}>{product.name}</Text>
+            {onSelect
+              ? <Pressable accessibilityLabel={'Add ' + product.name + ' to bill'} disabled={unpickable} onPress={() => onSelect(product)} style={[styles.addBtn, { backgroundColor: unpickable ? theme.backgroundElement : theme.accent }]}>
+                  <Text style={[styles.addBtnText, { color: unpickable ? theme.textSecondary : theme.accentForeground }]}>{outOfStock ? 'No stock' : wrongShop ? 'Other shop' : 'Add'}</Text>
+                </Pressable>
+              : <Ionicons name="chevron-forward" size={22} color={theme.primary} />}
           </View>
           <Text themeColor="textSecondary">{product.sku}{product.category ? ' · ' + product.category : ''}</Text>
           <View style={styles.between}><Text>{Number(product.stock)} {product.unit} available</Text><Text>{money(product.selling_price)}</Text></View>
           {Number(product.stock) <= Number(product.reorder_level) && <Text style={{ color: theme.destructive }}>{Number(product.stock) === 0 ? 'Out of stock' : 'Low stock'}</Text>}
-        </Pressable>)}
+        </Pressable>;})}
         {loading ? <LoadingState message="Loading inventory…" /> : !error && !products.length ? <Text themeColor="textSecondary">No products found. {onSelect ? 'Ask your inventory manager to add or receive stock.' : 'Add your first product or change the filters.'}</Text> : null}
         {more && <PrimaryButton title="Load more" variant="outline" disabled={loading} onPress={() => { void load(products.length); }} />}
       </>}
@@ -181,4 +190,6 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20 }, search: { padding: 16, borderWidth: 1, borderRadius: 16, fontSize: 15 },
   card: { padding: 18, borderRadius: 24, borderWidth: 1, gap: 10 }, product: { fontSize: 18, fontWeight: '600', flex: 1 },
   thumb: { width: 46, height: 46, borderRadius: 12 }, photo: { width: '100%', height: 200, borderRadius: 16 },
+  addBtn: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 16 },
+  addBtnText: { fontSize: 14, fontWeight: '700' },
 });
