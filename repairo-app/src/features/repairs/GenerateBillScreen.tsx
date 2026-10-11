@@ -29,6 +29,7 @@ import BillItemEditor, { BillItemEditorHandle } from './components/BillItemEdito
 import { getCurrentUser } from '@/services/auth.service';
 import { formatCurrency, getCurrencySymbol, useCurrency } from '@/hooks/use-currency';
 import { buildInvoiceHtml } from './utils/invoice-html';
+import { toJobList } from './utils/jobs';
 
 interface GenerateBillScreenProps {
   repair: Repair;
@@ -266,17 +267,7 @@ export default function GenerateBillScreen({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  // Parse complaints array
-  const serviceBlocks = (() => {
-    if (!repair.complaints) return [];
-    try {
-      return typeof repair.complaints === 'string'
-        ? JSON.parse(repair.complaints)
-        : repair.complaints;
-    } catch {
-      return [];
-    }
-  })();
+  // Bill job list renders via toJobList inline below.
 
   // Load existing bill and taxes concurrently to optimize screen load speed
   useEffect(() => {
@@ -404,61 +395,48 @@ export default function GenerateBillScreen({
               </ThemedText>
             </View>
 
-            {/* Services Checklist */}
+            {/* Jobs to Do */}
             <View style={styles.card}>
-              <ThemedText style={styles.cardTitle}>Services</ThemedText>
-              {serviceBlocks.length > 0 ? (
-                serviceBlocks.map((block: any, bi: number) => (
-                  <View key={bi} style={[styles.serviceBlock, bi > 0 && styles.serviceDivider]}>
-                    <ThemedText style={styles.serviceBlockType}>{block.type}</ThemedText>
-                    {block.tasks &&
-                      block.tasks
-                        .filter((t: any) => t.text?.trim())
-                        .map((task: any, ti: number) => {
-                          const isCompleted = !!task.fixed;
-                          const isFailed = !!task.failed;
-
-                          return (
-                            <View key={ti} style={styles.taskItem}>
-                              {isCompleted ? (
-                                <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
-                              ) : isFailed ? (
-                                <Ionicons name="close-circle" size={16} color={theme.destructive} />
-                              ) : (
-                                <Ionicons
-                                  name="checkmark-circle-outline"
-                                  size={16}
-                                  color={theme.textSecondary}
-                                />
-                              )}
-                              <View style={styles.taskTextWrapper}>
-                                <ThemedText
-                                  style={[
-                                    styles.taskText,
-                                    isCompleted && styles.taskTextCompleted,
-                                    isFailed && styles.taskTextFailed,
-                                  ]}
-                                >
-                                  {task.text}
-                                </ThemedText>
-                                {isFailed && task.reason && (
-                                  <ThemedText style={styles.taskReasonText}>
-                                    ↳ Reason: {task.reason}
-                                  </ThemedText>
-                                )}
-                              </View>
-                            </View>
-                          );
-                        })}
-                    {(!block.tasks ||
-                      block.tasks.filter((t: any) => t.text?.trim()).length === 0) && (
-                      <ThemedText style={styles.noTasks}>No issues listed</ThemedText>
-                    )}
-                  </View>
-                ))
-              ) : (
-                <ThemedText style={styles.noTasks}>No services recorded</ThemedText>
-              )}
+              <ThemedText style={styles.cardTitle}>Jobs to Do</ThemedText>
+              {(() => {
+                const filled = toJobList(repair.complaints).tasks.filter((t) => t.text?.trim());
+                if (!filled.length) return <ThemedText style={styles.noTasks}>No services recorded</ThemedText>;
+                return filled.map((task, ti) => {
+                  const isCompleted = !!task.fixed;
+                  const isFailed = !!task.failed;
+                  return (
+                    <View key={ti} style={styles.taskItem}>
+                      {isCompleted ? (
+                        <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
+                      ) : isFailed ? (
+                        <Ionicons name="close-circle" size={16} color={theme.destructive} />
+                      ) : (
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={16}
+                          color={theme.textSecondary}
+                        />
+                      )}
+                      <View style={styles.taskTextWrapper}>
+                        <ThemedText
+                          style={[
+                            styles.taskText,
+                            isCompleted && styles.taskTextCompleted,
+                            isFailed && styles.taskTextFailed,
+                          ]}
+                        >
+                          {task.text}
+                        </ThemedText>
+                        {isFailed && task.reason && (
+                          <ThemedText style={styles.taskReasonText}>
+                            ↳ Reason: {task.reason}
+                          </ThemedText>
+                        )}
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
             </View>
 
             {!!billError && <ThemedText style={{ color: theme.destructive, padding: 16 }}>{billError}</ThemedText>}

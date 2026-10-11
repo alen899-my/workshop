@@ -83,17 +83,16 @@ function parseComplaints(raw) {
 }
 
 function normalizeComplaintGroups(raw) {
-  return parseComplaints(raw).map((entry) => {
+  // One flat Jobs-to-do list: merge every stored block preserving task order.
+  const tasks = parseComplaints(raw).flatMap((entry) => {
     if (entry && typeof entry === 'object' && Array.isArray(entry.tasks)) {
-      return {
-        title: String(entry.type || 'Job').trim() || 'Job',
-        tasks: entry.tasks.map((t) => ({ text: String(t?.text || '').trim(), fixed: Boolean(t?.fixed) })).filter((t) => t.text),
-      };
+      return entry.tasks.map((t) => ({ text: String(t?.text || '').trim(), fixed: Boolean(t?.fixed) })).filter((t) => t.text);
     }
-    if (typeof entry === 'string' && entry.trim()) return { title: 'Notes', tasks: [{ text: entry.trim(), fixed: false }] };
-    if (entry && typeof entry === 'object' && String(entry.text || '').trim()) return { title: 'Notes', tasks: [{ text: String(entry.text).trim(), fixed: Boolean(entry.fixed) }] };
-    return null;
-  }).filter((g) => g && g.tasks.length > 0);
+    if (typeof entry === 'string' && entry.trim()) return [{ text: entry.trim(), fixed: false }];
+    if (entry && typeof entry === 'object' && String(entry.text || '').trim()) return [{ text: String(entry.text).trim(), fixed: Boolean(entry.fixed) }];
+    return [];
+  });
+  return tasks.length ? [{ title: 'Jobs to do', tasks }] : [];
 }
 
 function textOrDash(value) { const t = String(value ?? '').trim(); return t || '-'; }

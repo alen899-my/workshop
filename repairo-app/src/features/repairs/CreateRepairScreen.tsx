@@ -18,8 +18,9 @@ import { taxService } from '@/features/repairs/services/tax.service';
 import { vehicleService } from '@/features/repairs/services/vehicle.service';
 
 import BillItemEditor from './components/BillItemEditor';
-import ServiceBlockEditor from './components/ServiceBlockEditor';
+import ServiceBlockEditor, { JOB_CATEGORIES } from './components/ServiceBlockEditor';
 import type { ServiceBlock } from './components/ServiceBlockEditor';
+import { toBlocks, toJobList } from './utils/jobs';
 import VehicleTypePicker from './components/VehicleTypePicker';
 import WorkerSelect from './components/WorkerSelect';
 import { formatUTCToLocal, convertLocalToUTC } from '@/utils/date';
@@ -155,11 +156,16 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const [serviceBlocks, setServiceBlocks] = useState<ServiceBlock[]>(
-    initialRepair?.complaints
-      ? (typeof initialRepair.complaints === 'string' ? JSON.parse(initialRepair.complaints) : initialRepair.complaints)
-      : [{ type: 'Repair', tasks: [] }],
-  );
+  const [serviceBlocks, setServiceBlocks] = useState<ServiceBlock[]>(() => {
+    const jobs = toJobList(initialRepair?.complaints);
+    return toBlocks(jobs.type, jobs.tasks);
+  });
+
+  // One category for the whole job — stored as the single block type and service_type.
+  const jobType = serviceBlocks[0]?.type || 'Repair';
+  const setJobType = useCallback((type: string) => {
+    setServiceBlocks((prev) => toBlocks(type, toJobList(prev).tasks));
+  }, []);
 
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [serviceCharge, setServiceCharge] = useState(0);
@@ -317,7 +323,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     fd.append('whatsapp_number', `${whatsappCC || ''}${form.whatsappNumber || ''}`);
     fd.append('km_reading', String(form.kmReading || ''));
     fd.append('complaints', JSON.stringify(serviceBlocks));
-    fd.append('service_type', serviceBlocks.map((b) => b.type).join(', '));
+    fd.append('service_type', String(serviceBlocks[0]?.type || 'Repair'));
     fd.append('repair_date', String(convertLocalToUTC(form.repairDate) || ''));
     fd.append('attending_worker_id', String(form.workerId || ''));
     fd.append('priority', String(form.priority || 'Medium'));
@@ -471,6 +477,31 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     );
   };
 
+  const renderJobTypeChips = () => {
+    if (isView) {
+      return <InputField label="Job Category" value={jobType} onChangeText={() => {}} editable={false} />;
+    }
+    return (
+      <View>
+        <ThemedText style={styles.fieldLabel}>Job Category</ThemedText>
+        <View style={styles.chipRow}>
+          {JOB_CATEGORIES.map((c) => {
+            const active = jobType === c.id;
+            return (
+              <Pressable
+                key={c.id}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setJobType(c.id)}
+              >
+                <ThemedText style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
   const renderTab = () => {
     switch (activeTab) {
       case 'vehicle':
@@ -599,6 +630,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
       case 'service':
         return (
           <View style={styles.tabContent}>
+            {renderJobTypeChips()}
             <ServiceBlockEditor blocks={serviceBlocks} onChange={setServiceBlocks} />
 
             <Card title="Assignment" styles={styles}>
@@ -669,24 +701,25 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               />
             </Card>
 
-            <Card title="Complaints & Service Categories" styles={styles}>
-              {serviceBlocks.map((block, bi) => (
-                <View key={bi} style={{ marginBottom: bi === serviceBlocks.length - 1 ? 0 : 12, borderBottomWidth: bi === serviceBlocks.length - 1 ? 0 : 1, borderBottomColor: '#F0ECE3', paddingBottom: bi === serviceBlocks.length - 1 ? 0 : 8 }}>
-                  <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary, marginBottom: 4 }}>
-                    {block.type}
-                  </ThemedText>
-                  {block.tasks.filter((t) => t.text.trim()).map((task, ti) => (
-                    <ThemedText key={ti} style={{ fontSize: 13, color: theme.textSecondary, marginLeft: 8, marginTop: 2 }}>
-                      • {task.text}
-                    </ThemedText>
-                  ))}
-                  {block.tasks.filter((t) => t.text.trim()).length === 0 && (
+            <Card title="Jobs to Do" styles={styles}>
+              <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary, marginBottom: 4 }}>
+                {jobType}
+              </ThemedText>
+              {(() => {
+                const filled = toJobList(serviceBlocks).tasks.filter((t) => t.text.trim());
+                if (!filled.length) {
+                  return (
                     <ThemedText style={{ fontSize: 12, color: theme.textSecondary, fontStyle: 'italic', marginLeft: 8 }}>
                       No items specified
                     </ThemedText>
-                  )}
-                </View>
-              ))}
+                  );
+                }
+                return filled.map((task, ti) => (
+                  <ThemedText key={ti} style={{ fontSize: 13, color: theme.textSecondary, marginLeft: 8, marginTop: 2 }}>
+                    • {task.text}
+                  </ThemedText>
+                ));
+              })()}
             </Card>
 
             {(imageFiles.length > 0 || !!vehicleImage || !!initialRepair?.images?.length) && (

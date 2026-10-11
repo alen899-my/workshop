@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, TextInput, View, ScrollView } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { toBlocks, toJobList } from '../utils/jobs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+// Storage shape is unchanged (single block); old multi-block repairs are
+// flattened into one Jobs-to-do list everywhere.
 
 export interface ServiceBlock {
   type: string;
@@ -17,9 +20,9 @@ interface ServiceBlockEditorProps {
   onChange: (blocks: ServiceBlock[]) => void;
 }
 
-// ─── Category config ─────────────────────────────────────────────────────────
+// ─── Job-level category config (one picker per job, rendered by the parent) ─
 
-const CATEGORIES: {
+export const JOB_CATEGORIES: {
   id: string;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -69,210 +72,111 @@ const CATEGORIES: {
   },
 ];
 
-// ─── Single block ─────────────────────────────────────────────────────────────
-
-interface BlockProps {
-  block: ServiceBlock;
-  index: number;
-  total: number;
-  onTypeChange: (type: string) => void;
-  onAddTask: () => void;
-  onUpdateTaskText: (ti: number, text: string) => void;
-  onToggleTask: (ti: number) => void;
-  onRemoveTask: (ti: number) => void;
-  onRemoveBlock: () => void;
+export function jobCategoryConfig(type?: string) {
+  return JOB_CATEGORIES.find((c) => c.id === type) || JOB_CATEGORIES[0];
 }
 
-function ServiceBlockCard({
-  block, index, total,
-  onTypeChange, onAddTask, onUpdateTaskText, onToggleTask, onRemoveTask, onRemoveBlock,
-}: BlockProps) {
-  const theme = useTheme();
-  const styles = useStyles(theme);
-  const cfg = CATEGORIES.find((c) => c.id === block.type) || CATEGORIES[0];
-
-  return (
-    <View style={[styles.block, { borderColor: cfg.color + '28' }]}>
-      {/* Header */}
-      <View style={styles.blockHeader}>
-        <View style={[styles.blockIconWrap, { backgroundColor: cfg.bg }]}>
-          <Ionicons name={cfg.icon} size={18} color={cfg.color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <ThemedText style={[styles.blockCategoryLabel, { color: cfg.color }]}>
-            {cfg.label}
-          </ThemedText>
-          <ThemedText style={styles.blockSubLabel}>
-            {block.tasks.length} {block.tasks.length === 1 ? 'item' : 'items'}
-          </ThemedText>
-        </View>
-        {total > 1 && (
-          <Pressable onPress={onRemoveBlock} hitSlop={10} style={styles.deleteBtn}>
-            <Ionicons name="trash-outline" size={15} color={theme.error} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Category picker pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
-      >
-        {CATEGORIES.map((cat) => {
-          const active = block.type === cat.id;
-          return (
-            <Pressable
-              key={cat.id}
-              style={[
-                styles.categoryChip,
-                active && { backgroundColor: cat.color, borderColor: cat.color },
-              ]}
-              onPress={() => onTypeChange(cat.id)}
-            >
-              <Ionicons
-                name={cat.icon}
-                size={13}
-                color={active ? '#FFFFFF' : theme.textSecondary}
-              />
-              <ThemedText style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>
-                {cat.label}
-              </ThemedText>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Inputs List */}
-      <View style={styles.issueList}>
-        {block.tasks.map((task, ti) => (
-          <View key={ti} style={styles.issueRow}>
-            <TextInput
-              style={styles.issueInput}
-              value={task.text}
-              onChangeText={(t) => onUpdateTaskText(ti, t)}
-              placeholder={cfg.placeholder}
-              placeholderTextColor={theme.tabIconDefault}
-              multiline={false}
-            />
-            <Pressable
-              onPress={() => onRemoveTask(ti)}
-              hitSlop={8}
-              style={styles.issueRemove}
-            >
-              <Ionicons name="trash-outline" size={16} color={theme.error} />
-            </Pressable>
-          </View>
-        ))}
-      </View>
-
-      {/* Add Task Button inside card */}
-      <Pressable style={[styles.addTaskCardBtn, { backgroundColor: cfg.bg }]} onPress={onAddTask}>
-        <Ionicons name="add-circle-outline" size={16} color={cfg.color} />
-        <ThemedText style={[styles.addTaskCardText, { color: cfg.color }]}>
-          Add Item
-        </ThemedText>
-      </Pressable>
-    </View>
-  );
-}
-
-// ─── Main editor ─────────────────────────────────────────────────────────────
+// ─── Single Jobs-to-do editor ────────────────────────────────────────────────
 
 export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEditorProps) {
-  // Ensure every category block always has at least one task input row
+  const job = useMemo(() => toJobList(blocks), [blocks]);
+  const cfg = jobCategoryConfig(job.type);
+
+  // Normalize legacy multi-block data to one list, and always keep one empty row.
   useEffect(() => {
-    let changed = false;
-    const updated = blocks.map((b) => {
-      if (b.tasks.length === 0) {
-        changed = true;
-        return { ...b, tasks: [{ text: '', fixed: false }] };
-      }
-      return b;
-    });
-    if (changed) {
-      onChange(updated);
+    const flat = toJobList(blocks);
+    if (blocks.length !== 1) {
+      onChange(toBlocks(flat.type, flat.tasks.length ? flat.tasks : [{ text: '', fixed: false }]));
+      return;
+    }
+    const onlyRow = blocks[0]?.tasks?.length === 1 ? blocks[0].tasks[0] : null;
+    if (flat.tasks.length === 0 && !(onlyRow && !String(onlyRow.text || '').trim())) {
+      onChange(toBlocks(flat.type, [{ text: '', fixed: false }]));
     }
   }, [blocks, onChange]);
 
-  const addBlock = useCallback(() => {
-    onChange([...blocks, { type: 'Repair', tasks: [{ text: '', fixed: false }] }]);
-  }, [blocks, onChange]);
+  const setTasks = (tasks: { text: string; fixed: boolean }[]) => {
+    onChange(toBlocks(job.type, tasks));
+  };
 
-  const removeBlock = useCallback((i: number) => {
-    if (blocks.length <= 1) return;
-    onChange(blocks.filter((_, idx) => idx !== i));
-  }, [blocks, onChange]);
+  const addTask = () => {
+    setTasks([...job.tasks, { text: '', fixed: false }]);
+  };
 
-  const updateBlockType = useCallback((i: number, type: string) => {
-    const u = [...blocks];
-    u[i] = { ...u[i], type };
-    onChange(u);
-  }, [blocks, onChange]);
+  const updateTaskText = (ti: number, text: string) => {
+    setTasks(job.tasks.map((t, i) => (i === ti ? { ...t, text } : t)));
+  };
 
-  const addTask = useCallback((bi: number) => {
-    const u = [...blocks];
-    u[bi] = { ...u[bi], tasks: [...u[bi].tasks, { text: '', fixed: false }] };
-    onChange(u);
-  }, [blocks, onChange]);
-
-  const updateTaskText = useCallback((bi: number, ti: number, text: string) => {
-    const u = [...blocks];
-    u[bi].tasks[ti] = { ...u[bi].tasks[ti], text };
-    onChange(u);
-  }, [blocks, onChange]);
-
-  const toggleTask = useCallback((bi: number, ti: number) => {
-    const u = [...blocks];
-    u[bi].tasks[ti] = { ...u[bi].tasks[ti], fixed: !u[bi].tasks[ti].fixed };
-    onChange(u);
-  }, [blocks, onChange]);
-
-  const removeTask = useCallback((bi: number, ti: number) => {
-    const u = [...blocks];
-    if (u[bi].tasks.length <= 1) {
+  const removeTask = (ti: number) => {
+    if (job.tasks.length <= 1) {
       // If only one remains, clear the text instead of deleting the input row
-      u[bi].tasks[0] = { text: '', fixed: false };
+      setTasks([{ text: '', fixed: false }]);
     } else {
-      u[bi].tasks = u[bi].tasks.filter((_, idx) => idx !== ti);
+      setTasks(job.tasks.filter((_, i) => i !== ti));
     }
-    onChange(u);
-  }, [blocks, onChange]);
+  };
 
   const theme = useTheme();
   const styles = useStyles(theme);
+  const filled = job.tasks.filter((t) => t.text.trim()).length;
 
   return (
     <View style={styles.root}>
-      {blocks.map((block, bi) => (
-        <ServiceBlockCard
-          key={bi}
-          block={block}
-          index={bi}
-          total={blocks.length}
-          onTypeChange={(t) => updateBlockType(bi, t)}
-          onAddTask={() => addTask(bi)}
-          onUpdateTaskText={(ti, t) => updateTaskText(bi, ti, t)}
-          onToggleTask={(ti) => toggleTask(bi, ti)}
-          onRemoveTask={(ti) => removeTask(bi, ti)}
-          onRemoveBlock={() => removeBlock(bi)}
-        />
-      ))}
-
-      <Pressable style={styles.addBlockBtn} onPress={addBlock}>
-        <View style={styles.addBlockIcon}>
-          <Ionicons name="add" size={16} color={theme.primary} />
+      <View style={styles.block}>
+        {/* Header */}
+        <View style={styles.blockHeader}>
+          <View style={[styles.blockIconWrap, { backgroundColor: cfg.bg }]}>
+            <Ionicons name="clipboard-outline" size={18} color={cfg.color} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText style={[styles.blockCategoryLabel, { color: cfg.color }]}>
+              Jobs to do
+            </ThemedText>
+            <ThemedText style={styles.blockSubLabel}>
+              {filled} {filled === 1 ? 'item' : 'items'}
+            </ThemedText>
+          </View>
         </View>
-        <ThemedText style={styles.addBlockText}>Add Service Category</ThemedText>
-      </Pressable>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* Inputs List */}
+        <View style={styles.issueList}>
+          {job.tasks.map((task, ti) => (
+            <View key={ti} style={styles.issueRow}>
+              <TextInput
+                style={styles.issueInput}
+                value={task.text}
+                onChangeText={(t) => updateTaskText(ti, t)}
+                placeholder={cfg.placeholder}
+                placeholderTextColor={theme.tabIconDefault}
+                multiline={false}
+              />
+              <Pressable
+                onPress={() => removeTask(ti)}
+                hitSlop={8}
+                style={styles.issueRemove}
+              >
+                <Ionicons name="trash-outline" size={16} color={theme.error} />
+              </Pressable>
+            </View>
+          ))}
+        </View>
+
+        {/* Add Item Button */}
+        <Pressable style={[styles.addTaskCardBtn, { backgroundColor: cfg.bg }]} onPress={addTask}>
+          <Ionicons name="add-circle-outline" size={16} color={cfg.color} />
+          <ThemedText style={[styles.addTaskCardText, { color: cfg.color }]}>
+            Add Item
+          </ThemedText>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const useStyles = (theme: ReturnType<typeof useTheme>) => {
   const styles = useMemo(() => StyleSheet.create({
@@ -283,6 +187,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       backgroundColor: theme.card,
       borderRadius: 16,
       borderWidth: 1.5,
+      borderColor: theme.border,
       overflow: 'hidden',
     },
     blockHeader: {
@@ -299,30 +204,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     },
     blockCategoryLabel: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
     blockSubLabel: { fontSize: 11, color: theme.textSecondary, fontWeight: '500', marginTop: 1 },
-    deleteBtn: {
-      width: 30, height: 30, borderRadius: 8,
-      backgroundColor: '#FFF0F0',
-      alignItems: 'center', justifyContent: 'center',
-    },
-
-    // Category Selector row
-    categoryScroll: {
-      paddingHorizontal: 14,
-      paddingBottom: 12,
-      gap: 6,
-      flexDirection: 'row',
-    },
-    categoryChip: {
-      flexDirection: 'row', alignItems: 'center', gap: 5,
-      paddingHorizontal: 10, paddingVertical: 6,
-      borderRadius: 20, borderWidth: 1.5,
-      borderColor: theme.border,
-      backgroundColor: theme.background,
-    },
-    categoryChipText: {
-      fontSize: 12, fontWeight: '700', color: theme.textSecondary,
-    },
-    categoryChipTextActive: { color: theme.primaryForeground },
 
     divider: { height: 1, backgroundColor: theme.border, marginHorizontal: 0 },
 
@@ -376,33 +257,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
     addTaskCardText: {
       fontSize: 13,
       fontWeight: '800',
-    },
-
-    // Bottom Add Category Button
-    addBlockBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 14,
-      borderRadius: 14,
-      borderWidth: 1.5,
-      borderStyle: 'dashed',
-      borderColor: theme.primary + '60',
-      backgroundColor: theme.primary + '05',
-    },
-    addBlockIcon: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: theme.primary + '15',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    addBlockText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: theme.primary,
     },
   }), [theme]);
   return styles;

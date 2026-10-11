@@ -50,6 +50,7 @@ import PastVisitsScreen from '@/features/customers/PastVisitsScreen';
 import CustomerVehiclesScreen from '@/features/customers/CustomerVehiclesScreen';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Toast from '@/components/ui/Toast';
+import { toJobList } from './utils/jobs';
 
 interface ViewRepairScreenProps {
   repair: Repair;
@@ -109,21 +110,13 @@ export default function ViewRepairScreen({
   };
 
   const [localComplaints, setLocalComplaints] = useState<any[]>(() => {
-    if (!repair.complaints) return [];
-    try {
-      return typeof repair.complaints === 'string'
-        ? JSON.parse(repair.complaints)
-        : repair.complaints;
-    } catch {
-      return [];
-    }
+    const jobs = toJobList(repair.complaints, repair.service_type || 'Repair');
+    return [{ type: jobs.type, tasks: jobs.tasks }];
   });
   const [updatingTask, setUpdatingTask] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newCategory, setNewCategory] = useState('Repair');
   const [newComplaintText, setNewComplaintText] = useState('');
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   const [imageViewerIndex, setImageViewerIndex] = useState(0);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -157,31 +150,15 @@ export default function ViewRepairScreen({
   }, [onUpdateRepair, repair]);
 
   const handleAddComplaint = async () => {
-    const categoryName = newCategory.trim() || 'General';
     const complaintDesc = newComplaintText.trim();
     if (!complaintDesc) return;
 
-    let categoryExists = false;
-    const updatedBlocks = localComplaints.map((block) => {
-      if (block.type.toLowerCase() === categoryName.toLowerCase()) {
-        categoryExists = true;
-        return {
-          ...block,
-          tasks: [...(block.tasks || []), { text: complaintDesc, fixed: false, failed: false }]
-        };
-      }
-      return block;
-    });
-
-    const finalBlocks = categoryExists 
-      ? updatedBlocks 
-      : [...updatedBlocks, { type: categoryName, tasks: [{ text: complaintDesc, fixed: false, failed: false }] }];
+    const current = toJobList(localComplaints, repair.service_type || 'Repair');
+    const finalBlocks = [{ type: current.type, tasks: [...current.tasks, { text: complaintDesc, fixed: false, failed: false }] }];
 
     setLocalComplaints(finalBlocks);
     setShowAddModal(false);
     setNewComplaintText('');
-    setNewCategory('Repair');
-    setIsCustomCategory(false);
 
     try {
       const fd = new FormData();
@@ -660,62 +637,10 @@ export default function ViewRepairScreen({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <ThemedText style={styles.modalTitle}>Add Additional Complaint</ThemedText>
-            
-            {/* Category selection */}
-            <ThemedText style={styles.modalLabel}>Category</ThemedText>
-            <View style={styles.categoryPickerRow}>
-              {['Repair', 'Servicing', 'Inspection'].map((cat) => (
-                <Pressable
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    newCategory === cat && styles.categoryChipSelected
-                  ]}
-                  onPress={() => {
-                    setNewCategory(cat);
-                    setIsCustomCategory(false);
-                  }}
-                >
-                  <ThemedText style={[
-                    styles.categoryChipText,
-                    newCategory === cat && styles.categoryChipTextSelected
-                  ]}>
-                    {cat}
-                  </ThemedText>
-                </Pressable>
-              ))}
-              <Pressable
-                style={[
-                  styles.categoryChip,
-                  isCustomCategory && styles.categoryChipSelected
-                ]}
-                onPress={() => {
-                  setIsCustomCategory(true);
-                  setNewCategory('');
-                }}
-              >
-                <ThemedText style={[
-                  styles.categoryChipText,
-                  isCustomCategory && styles.categoryChipTextSelected
-                ]}>
-                  + Other
-                </ThemedText>
-              </Pressable>
-            </View>
+            <ThemedText style={styles.modalTitle}>Add Job Item</ThemedText>
 
-            {isCustomCategory && (
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter custom category (e.g., Electrical)"
-                placeholderTextColor={theme.textSecondary}
-                value={newCategory}
-                onChangeText={setNewCategory}
-              />
-            )}
-
-            {/* Complaint Text */}
-            <ThemedText style={styles.modalLabel}>Complaint Details</ThemedText>
+            {/* Job Details */}
+            <ThemedText style={styles.modalLabel}>Job Details</ThemedText>
             <TextInput
               style={[styles.modalInput, styles.modalTextArea]}
               multiline
@@ -733,8 +658,6 @@ export default function ViewRepairScreen({
                 onPress={() => {
                   setShowAddModal(false);
                   setNewComplaintText('');
-                  setNewCategory('Repair');
-                  setIsCustomCategory(false);
                 }}
               >
                 <ThemedText style={styles.modalCancelBtnText}>Cancel</ThemedText>

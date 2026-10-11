@@ -1,4 +1,5 @@
 import type { BillItem, TaxSnapshotItem } from '@/features/repairs/services/bill.service';
+import { toJobList } from './jobs';
 
 function fmtDate(value: string | undefined | null): string {
   if (!value) return '-';
@@ -184,37 +185,34 @@ export function buildInvoiceHtml(params: {
     ? `<div class="vehicle-image-wrap"><img src="${vehicleImageSrc}" class="vehicle-image" /></div>`
     : '';
 
-  const serviceHtml = serviceBlocks && serviceBlocks.length > 0
+  const jobs = toJobList(serviceBlocks);
+  const completedTasks = jobs.tasks.filter(t => t.text?.trim() && t.fixed && !t.failed);
+  const failedTasks = jobs.tasks.filter(t => t.text?.trim() && t.failed);
+  const otherTasks = jobs.tasks.filter(t => t.text?.trim() && !t.fixed && !t.failed);
+  const serviceHtml = (completedTasks.length > 0 || failedTasks.length > 0 || otherTasks.length > 0)
     ? `<div class="section-card">
-      <div class="section-title">Services Performed</div>
-      ${serviceBlocks.map(block => {
-        const completedTasks = (block.tasks || []).filter(t => t.text?.trim() && t.fixed && !t.failed);
-        const failedTasks = (block.tasks || []).filter(t => t.text?.trim() && t.failed);
-        const otherTasks = (block.tasks || []).filter(t => t.text?.trim() && !t.fixed && !t.failed);
-        if (completedTasks.length === 0 && failedTasks.length === 0 && otherTasks.length === 0) return '';
-        return `<div class="service-block">
-          <div class="service-block-type">${block.type}</div>
-          ${completedTasks.map(t => `
-            <div class="task-row">
-              <span class="task-icon task-icon-done">&#10003;</span>
-              <span class="task-text">${t.text}</span>
-              <span class="task-badge task-badge-done">Done</span>
-            </div>`).join('')}
-          ${failedTasks.map(t => `
-            <div class="task-row">
-              <span class="task-icon task-icon-failed">&#10007;</span>
-              <span class="task-text task-text-failed">${t.text}</span>
-              <span class="task-badge task-badge-failed">Failed</span>
-            </div>
-            ${t.reason ? `<div class="task-reason">&#8627; ${t.reason}</div>` : ''}`).join('')}
-          ${otherTasks.map(t => `
-            <div class="task-row">
-              <span class="task-icon task-icon-pending">&#9679;</span>
-              <span class="task-text">${t.text}</span>
-              <span class="task-badge task-badge-pending">Pending</span>
-            </div>`).join('')}
-        </div>`;
-      }).filter(Boolean).join('')}
+      <div class="section-title">Jobs to Do</div>
+      <div class="service-block">
+        ${completedTasks.map(t => `
+          <div class="task-row">
+            <span class="task-icon task-icon-done">&#10003;</span>
+            <span class="task-text">${t.text}</span>
+            <span class="task-badge task-badge-done">Done</span>
+          </div>`).join('')}
+        ${failedTasks.map(t => `
+          <div class="task-row">
+            <span class="task-icon task-icon-failed">&#10007;</span>
+            <span class="task-text task-text-failed">${t.text}</span>
+            <span class="task-badge task-badge-failed">Failed</span>
+          </div>
+          ${t.reason ? `<div class="task-reason">&#8627; ${t.reason}</div>` : ''}`).join('')}
+        ${otherTasks.map(t => `
+          <div class="task-row">
+            <span class="task-icon task-icon-pending">&#9679;</span>
+            <span class="task-text">${t.text}</span>
+            <span class="task-badge task-badge-pending">Pending</span>
+          </div>`).join('')}
+      </div>
     </div>`
     : '';
 
