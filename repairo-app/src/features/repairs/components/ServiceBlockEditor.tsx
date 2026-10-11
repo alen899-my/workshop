@@ -108,7 +108,7 @@ export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEdi
         </View>
 
         {/* Add Item Button */}
-        <Pressable style={[styles.addTaskCardBtn, { backgroundColor: theme.primary + '12' }]} onPress={addTask}>
+        <Pressable style={[styles.addTaskCardBtn, { backgroundColor: theme.primary + '12' }]} hitSlop={8} onPress={addTask}>
           <Ionicons name="add-circle-outline" size={16} color={theme.primary} />
           <ThemedText style={[styles.addTaskCardText, { color: theme.primary }]}>
             Add Item
@@ -192,6 +192,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) => {
       justifyContent: 'center',
       gap: 6,
       height: 44,
+      minHeight: 48,
       borderRadius: 12,
       marginHorizontal: 14,
       marginBottom: 14,
