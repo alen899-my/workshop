@@ -114,7 +114,11 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect, 
         else setError(up.error || 'Product saved, but the photo could not be removed.');
       }
       setImageAsset(null); setPhotoRemoved(false);
-      setEditing(null); setSelected(saved); void load();
+      setEditing(null);
+      // Created mid-billing with stock on hand: drop it straight onto the bill.
+      if (onSelect && (!fixedShop || saved.shop_id === fixedShop) && Number(saved.stock) > 0) onSelect(saved);
+      else setSelected(saved);
+      void load();
     }
     else setError(res.error || 'Could not save product');
   };
@@ -177,7 +181,10 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect, 
           <View style={styles.between}><Text>{Number(product.stock)} {product.unit} available</Text><Text>{money(product.selling_price)}</Text></View>
           {Number(product.stock) <= Number(product.reorder_level) && <Text style={{ color: theme.destructive }}>{Number(product.stock) === 0 ? 'Out of stock' : 'Low stock'}</Text>}
         </Pressable>;})}
-        {loading ? <LoadingState message="Loading inventory…" /> : !error && !products.length ? <Text themeColor="textSecondary">No products found. {onSelect ? 'Ask your inventory manager to add or receive stock.' : 'Add your first product or change the filters.'}</Text> : null}
+        {loading ? <LoadingState message="Loading inventory…" /> : !error && !products.length ? <>
+          <Text themeColor="textSecondary">No products found. {onSelect ? (isBillShop || !mustStayInBillShop ? 'Create the part below to add it straight to this bill.' : 'Switch back to the repair workshop.') : 'Add your first product or change the filters.'}</Text>
+          {onSelect && (isBillShop || !mustStayInBillShop) && can('manage:inventory') && <PrimaryButton title="New product" icon="add" onPress={() => edit('new')} disabled={!shopId} />}
+        </> : null}
         {more && <PrimaryButton title="Load more" variant="outline" disabled={loading} onPress={() => { void load(products.length); }} />}
       </>}
     </ScrollView>
