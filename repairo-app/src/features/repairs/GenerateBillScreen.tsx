@@ -283,7 +283,7 @@ export default function GenerateBillScreen({
     const loadData = async () => {
       try {
         const [taxRes, billRes] = await Promise.all([
-          taxService.getAll(),
+          taxService.getAll(undefined, repair.shop_id),
           billService.getByRepairId(repair.id)
         ]);
 
@@ -322,7 +322,7 @@ export default function GenerateBillScreen({
       }
     };
     loadData();
-  }, [repair.id]);
+  }, [repair.id, repair.shop_id]);
 
   const handleSave = async () => {
     if (!loadedRef.current || savingRef.current) return;

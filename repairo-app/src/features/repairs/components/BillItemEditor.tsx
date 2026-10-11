@@ -357,6 +357,11 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     const existing = next.find(item => item.product_id === product.id);
     if (existing) { existing.qty = Number(existing.qty) + 1; if (product.image_url) existing.image_url = product.image_url; }
     else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: 1, cost: Number(product.selling_price), image_url: product.image_url || null });
+    // A linked parts tax rides onto the bill automatically — amounts recompute from the new subtotal.
+    if (product.tax_id && !taxSnapshot.some(t => t.id === product.tax_id)) {
+      const master = taxes.find(t => t.id === product.tax_id && t.is_active && t.applies_to !== 'service');
+      if (master) onTaxChange([...taxSnapshot, { id: master.id, name: master.name, rate: Number(master.rate), amount: 0, is_inclusive: master.is_inclusive, applies_to: master.applies_to }]);
+    }
     setLiveValues({}); onChange(next); setInventoryOpen(false);
   };
 

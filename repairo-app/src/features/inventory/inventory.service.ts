@@ -7,6 +7,7 @@ export interface Product {
   id: number; shop_id: number; sku: string; name: string; category: string; unit: string; location: string;
   cost_price: number; selling_price: number; stock: number; reorder_level: number; is_active: boolean; version: number;
   image_url?: string | null;
+  tax_id?: number | null; tax_name?: string | null; tax_rate?: number | null; tax_inclusive?: boolean | null;
 }
 export interface Movement {
   id: string; quantity: number; balance_after: number; kind: string; reason: string;

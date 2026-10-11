@@ -92,6 +92,9 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
         {can('manage:inventory') && <Text>Purchase cost: {money(product.cost_price)}</Text>}
         {!!product.category && <Text>Category: {product.category}</Text>}
         {!!product.location && <Text>Location: {product.location}</Text>}
+        {product.tax_rate != null
+          ? <Text>Tax: {product.tax_name} {Number(product.tax_rate)}% ({product.tax_inclusive ? 'inclusive' : 'exclusive'}) — applied on the bill</Text>
+          : <Text themeColor="textSecondary">No tax linked{can('manage:inventory') ? ' — edit product to add one' : ''}</Text>}
         {can('manage:inventory') && <PrimaryButton title="Edit product" variant="outline" onPress={onEdit} disabled={busy} />}
         {can('manage:inventory') && (product.image_url
           ? <View style={styles.row}>

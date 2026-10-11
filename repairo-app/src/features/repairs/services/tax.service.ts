@@ -23,10 +23,14 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 export const taxService = {
-  async getAll(status?: string): Promise<{ success: boolean; data: Tax[]; error?: string }> {
+  async getAll(status?: string, shopId?: number): Promise<{ success: boolean; data: Tax[]; error?: string }> {
     try {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (shopId) params.set('shop_id', String(shopId));
+      const qs = params.toString();
       let url = API_URL;
-      if (status) url += `?status=${status}`;
+      if (qs) url += `?${qs}`;
       const headers = await getAuthHeaders();
       const res = await fetch(url, { headers });
       return await res.json();

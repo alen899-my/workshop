@@ -11,10 +11,11 @@ import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import { useTheme } from '@/hooks/use-theme';
 import { useRBAC } from '@/hooks/use-rbac';
 import { inventoryService, type Product, type InventoryShop } from './inventory.service';
+import { taxService, type Tax } from '@/features/repairs/services/tax.service';
 import ProductDetail from './ProductDetail';
 
 interface Props { onClose?: () => void; shopId?: number; onSelect?: (product: Product) => void }
-const blank = { name: '', sku: '', category: '', unit: 'piece', location: '', cost_price: '0', selling_price: '0', reorder_level: '0', opening_stock: '0' };
+const blank = { name: '', sku: '', category: '', unit: 'piece', location: '', cost_price: '0', selling_price: '0', reorder_level: '0', opening_stock: '0', tax_id: '' };
 
 export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }: Props) {
   const theme = useTheme(), insets = useSafeAreaInsets();
@@ -29,6 +30,7 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
   const [form, setForm] = useState(blank), [saving, setSaving] = useState(false);
   const [imageAsset, setImageAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [photoRemoved, setPhotoRemoved] = useState(false), [pickerOpen, setPickerOpen] = useState(false);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
   const request = useRef(0), savingRef = useRef(false);
   const currentShop = shops.find(s => s.id === shopId);
   const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: currentShop?.currency || 'INR' }).format(Number(value));
@@ -70,8 +72,19 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
     setForm(product === 'new' ? blank : {
       name: product.name, sku: product.sku, category: product.category, unit: product.unit, location: product.location,
       cost_price: String(product.cost_price), selling_price: String(product.selling_price), reorder_level: String(product.reorder_level), opening_stock: '0',
+      tax_id: product.tax_id ? String(product.tax_id) : '',
     });
   };
+  // Taxes applicable to parts, for this workshop — picked per product, applied on the bill.
+  useEffect(() => {
+    if (!editing || !shopId) return;
+    let alive = true;
+    taxService.getAll(undefined, shopId).then(res => {
+      if (!alive) return;
+      if (res.success) setTaxes((res.data || []).filter(t => t.is_active && (t.applies_to === 'parts' || t.applies_to === 'all')));
+    });
+    return () => { alive = false; };
+  }, [editing, shopId]);
   const pickFromGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { setError('Photo library permission is needed to add a product photo.'); return; }
@@ -93,7 +106,7 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       if (!form[field].trim() || !Number.isFinite(Number(form[field])) || Number(form[field]) < 0) { setError('Enter valid non-negative prices and quantities.'); return; }
     }
     savingRef.current = true; setSaving(true); setError('');
-    const res = await inventoryService.save({ ...form, shop_id: shopId,
+    const res = await inventoryService.save({ ...form, shop_id: shopId, tax_id: form.tax_id ? Number(form.tax_id) : null,
       ...(editing !== 'new' ? { version: editing.version, is_active: editing.is_active } : {}),
     }, editing === 'new' ? undefined : editing.id);
     savingRef.current = false; setSaving(false);
@@ -109,6 +122,11 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
         else setError(up.error || 'Product saved, but the photo could not be removed.');
       }
       setImageAsset(null); setPhotoRemoved(false);
+      // The save response has no joined tax columns — carry the picked tax for display.
+      const pickedTax = form.tax_id ? taxes.find(t => String(t.id) === form.tax_id) : undefined;
+      saved = { ...saved, tax_id: pickedTax ? pickedTax.id : null,
+        tax_name: pickedTax?.name ?? null, tax_rate: pickedTax != null ? Number(pickedTax.rate) : null,
+        tax_inclusive: pickedTax?.is_inclusive ?? null };
       setEditing(null);
       // Created mid-billing with stock on hand: drop it straight onto the bill.
       if (onSelect && Number(saved.stock) > 0) onSelect(saved);
@@ -133,10 +151,16 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       {!!error && <View style={[styles.card, { backgroundColor: theme.card }]}><Text style={{ color: theme.destructive }}>{error}</Text>{!editing && <PrimaryButton title="Retry" variant="outline" onPress={() => { void load(); }} />}</View>}
       {editing ? <>
         <Text themeColor="textSecondary">{currentShop?.name} · Prices in {currentShop?.currency || 'INR'}</Text>
-        {(Object.keys(blank) as (keyof typeof blank)[]).filter(key => editing === 'new' || key !== 'opening_stock').map(key => <InputField key={key}
-          label={({ name: 'Product name', sku: 'SKU / part number', category: 'Category', unit: 'Unit (piece, litre, set)', location: 'Bin / shelf location', cost_price: 'Purchase cost', selling_price: 'Selling price', reorder_level: 'Low-stock threshold', opening_stock: 'Opening stock' })[key]}
+        {(Object.keys(blank) as (keyof typeof blank)[]).filter(key => key !== 'tax_id' && (editing === 'new' || key !== 'opening_stock')).map(key => <InputField key={key}
+          label={({ name: 'Product name', sku: 'SKU / part number', category: 'Category', unit: 'Unit (piece, litre, set)', location: 'Bin / shelf location', cost_price: 'Purchase cost', selling_price: 'Selling price', reorder_level: 'Low-stock threshold', opening_stock: 'Opening stock', tax_id: 'Tax' })[key]}
           value={form[key]} onChangeText={value => setForm(previous => ({ ...previous, [key]: value }))}
           editable={!saving && !(key === 'unit' && editing !== 'new')} />)}
+        <Text themeColor="textSecondary">Tax (optional) — applied automatically when this part is billed</Text>
+        <View style={styles.row}>
+          <Pressable disabled={saving} onPress={() => setForm(previous => ({ ...previous, tax_id: '' }))} style={[styles.chip, { backgroundColor: !form.tax_id ? theme.accent : theme.card }]}><Text>No tax</Text></Pressable>
+          {taxes.map(tax => <Pressable key={tax.id} disabled={saving} onPress={() => setForm(previous => ({ ...previous, tax_id: String(tax.id) }))} style={[styles.chip, { backgroundColor: form.tax_id === String(tax.id) ? theme.accent : theme.card }]}><Text>{tax.name} {Number(tax.rate)}% ({tax.is_inclusive ? 'incl.' : 'excl.'})</Text></Pressable>)}
+        </View>
+        {!taxes.length && <Text themeColor="textSecondary">No parts taxes in settings — add GST in Settings to pick one here.</Text>}
         <Text themeColor="textSecondary">Photo (optional)</Text>
         {previewUri ? <>
           <Image source={{ uri: previewUri }} style={styles.photo} contentFit="cover" />
@@ -170,6 +194,7 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
               : <Ionicons name="chevron-forward" size={22} color={theme.primary} />}
           </View>
           <Text themeColor="textSecondary">{product.sku}{product.category ? ' · ' + product.category : ''}</Text>
+          {product.tax_rate != null && <Text themeColor="textSecondary">Tax: {product.tax_name} {Number(product.tax_rate)}% ({product.tax_inclusive ? 'incl.' : 'excl.'})</Text>}
           <View style={styles.between}><Text>{Number(product.stock)} {product.unit} available</Text><Text>{money(product.selling_price)}</Text></View>
           {Number(product.stock) <= Number(product.reorder_level) && <Text style={{ color: theme.destructive }}>{Number(product.stock) === 0 ? 'Out of stock' : 'Low stock'}</Text>}
         </Pressable>;})}
