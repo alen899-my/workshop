@@ -108,8 +108,8 @@ export default function ProductDetail({ product, currency, onClose, onEdit, onUp
       {can('manage:inventory') && product.is_active && <View style={[styles.card, { backgroundColor: theme.card }]}>
         <Text style={styles.heading}>Update stock</Text>
         <View style={styles.row}>{(['receipt', 'adjustment'] as const).map(value => <Pressable key={value} disabled={busy} onPress={() => setKind(value)} style={[styles.chip, { backgroundColor: kind === value ? theme.accent : theme.backgroundElement }]}><Text>{value === 'receipt' ? 'Receive stock' : 'Adjustment'}</Text></Pressable>)}</View>
-        <InputField label={kind === 'receipt' ? 'Quantity received' : 'Quantity change (+ / −)'} value={quantity} onChangeText={setQuantity} editable={!busy} />
-        <InputField label="Reason / supplier reference" value={reason} onChangeText={setReason} editable={!busy} />
+        <InputField icon="package-variant" label={kind === 'receipt' ? 'Quantity received' : 'Quantity change (+ / −)'} value={quantity} onChangeText={setQuantity} editable={!busy} />
+        <InputField icon="text-box-outline" label="Reason / supplier reference" value={reason} onChangeText={setReason} editable={!busy} />
         <Text themeColor="textSecondary">{kind === 'receipt' ? 'Record deliveries received into this workshop.' : 'Use a negative quantity for damage or shortages. Every change is recorded.'}</Text>
         <PrimaryButton title={busy ? 'Saving…' : 'Save stock movement'} disabled={busy} onPress={saveStock} />
       </View>}

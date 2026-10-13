@@ -2,6 +2,7 @@ import { Linking, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { toTelUri } from '@/utils/phone';
 import { getCurrentUser } from '@/services/auth.service';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
@@ -18,7 +19,8 @@ interface QuickRepairActionsModalProps {
 
 function handleCall(phone?: string) {
   if (!phone) return;
-  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  const uri = toTelUri(phone);
+  if (uri) Linking.openURL(uri);
 }
 
 export default function QuickRepairActionsModal({

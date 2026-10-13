@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getCurrentUser } from '@/services/auth.service';
+import { toTelUri } from '@/utils/phone';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
 interface RepairActionsModalProps {
@@ -51,7 +52,8 @@ function getTransitionInfo(status: string | undefined, theme: ReturnType<typeof 
 
 function handleCall(phone?: string) {
   if (!phone) return;
-  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  const uri = toTelUri(phone);
+  if (uri) Linking.openURL(uri);
 }
 
 export default function RepairActionsModal({

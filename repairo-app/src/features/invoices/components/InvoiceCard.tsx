@@ -9,6 +9,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatCurrency } from '@/hooks/use-currency';
 import { getCurrentUser } from '@/services/auth.service';
+import { toTelUri } from '@/utils/phone';
 import type { BillListItem } from '@/features/repairs/services/bill.service';
 
 function getImageUrl(image?: string): string | null {
@@ -19,7 +20,8 @@ function getImageUrl(image?: string): string | null {
 
 function handleCall(phone?: string) {
   if (!phone) return;
-  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  const uri = toTelUri(phone);
+  if (uri) Linking.openURL(uri);
 }
 
 function fmtDate(dateStr?: string): string {

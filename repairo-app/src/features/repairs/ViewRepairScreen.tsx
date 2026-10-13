@@ -50,6 +50,7 @@ import PastVisitsScreen from '@/features/customers/PastVisitsScreen';
 import CustomerVehiclesScreen from '@/features/customers/CustomerVehiclesScreen';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import Toast from '@/components/ui/Toast';
+import { formatPhoneForDisplay, toTelUri, toWhatsAppDigits } from '@/utils/phone';
 import { toJobList } from './utils/jobs';
 
 interface ViewRepairScreenProps {
@@ -97,15 +98,16 @@ export default function ViewRepairScreen({
 
   const handleCall = () => {
     if (repair.phone_number) {
-      Linking.openURL(`tel:${repair.phone_number.replace(/\s/g, '')}`);
+      const uri = toTelUri(repair.phone_number);
+      if (uri) Linking.openURL(uri);
     }
   };
 
   const handleWhatsApp = () => {
     const num = repair.whatsapp_number || repair.phone_number;
     if (num) {
-      const cleanNum = num.replace(/\D/g, '');
-      Linking.openURL(`whatsapp://send?phone=${cleanNum}&text=Hello, this is regarding your vehicle repair job.`);
+      const cleanNum = toWhatsAppDigits(num);
+      if (cleanNum) Linking.openURL(`whatsapp://send?phone=${cleanNum}&text=Hello, this is regarding your vehicle repair job.`);
     }
   };
 
@@ -328,7 +330,8 @@ export default function ViewRepairScreen({
   const checklistItems = useMemo(() => {
     const items: { id: string; title: string; detail?: string; checked: boolean; failed?: boolean; busy?: boolean }[] = [];
     localComplaints.forEach((block: any, bi: number) => {
-      (block.tasks || []).filter((t: any) => t.text?.trim()).forEach((task: any, ti: number) => {
+      (block.tasks || []).forEach((task: any, ti: number) => {
+        if (!task.text?.trim()) return;
         const key = `${bi}-${ti}`;
         items.push({
           id: key,
@@ -336,7 +339,7 @@ export default function ViewRepairScreen({
           detail: task.failed && task.reason ? `Not completed — ${task.reason}` : undefined,
           checked: !!task.fixed,
           failed: !!task.failed,
-          busy: updatingTask === key,
+          busy: updatingTask !== null,
         });
       });
     });
@@ -347,11 +350,13 @@ export default function ViewRepairScreen({
     const [bi, ti] = id.split('-').map(Number);
     const task = localComplaints[bi]?.tasks?.[ti];
     if (!task || updatingTask !== null) return;
-    if (task.failed) {
-      handleToggleFailed(bi, ti);
-      return;
-    }
     saveTaskStatusChange(bi, ti, { fixed: !task.fixed, failed: false, reason: '' });
+  };
+
+  const handleChecklistFail = (id: string) => {
+    const [bi, ti] = id.split('-').map(Number);
+    if (!localComplaints[bi]?.tasks?.[ti] || updatingTask !== null) return;
+    handleToggleFailed(bi, ti);
   };
 
   const showCustomerToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -500,7 +505,7 @@ export default function ViewRepairScreen({
         </View>
 
         {/* Service checklist — charcoal, interactive, persisted via API */}
-        <ServiceChecklist items={checklistItems} onToggle={handleChecklistToggle} />
+        <ServiceChecklist items={checklistItems} onToggle={handleChecklistToggle} onFail={handleChecklistFail} />
         <Pressable
           style={styles.addComplaintBtn}
           onPress={() => setShowAddModal(true)}
@@ -527,7 +532,7 @@ export default function ViewRepairScreen({
               <Ionicons name="person-outline" size={16} color={theme.primary} />
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.customerName}>{repair.owner_name || 'Walk-in Customer'}</ThemedText>
-                <ThemedText style={styles.customerPhone}>{repair.phone_number || 'No phone'}</ThemedText>
+                <ThemedText style={styles.customerPhone}>{repair.phone_number ? formatPhoneForDisplay(repair.phone_number) : 'No phone'}</ThemedText>
               </View>
             </Pressable>
             <View style={styles.customerActions}>

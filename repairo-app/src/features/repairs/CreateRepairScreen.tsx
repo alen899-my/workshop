@@ -31,30 +31,32 @@ import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import type { Worker } from '@/features/repairs/services/worker.service';
 import { workerService } from '@/features/repairs/services/worker.service';
 import { getCurrentUser } from '@/services/auth.service';
-import { getCallingCode, countriesCache } from '@/utils/preload-countries';
+import { getCallingCode } from '@/utils/preload-countries';
+import { buildFullPhone, formatPhoneForDisplay, stripCallingCode } from '@/utils/phone';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const PRIORITY_COLORS: Record<string, string> = {
   Low: '#38A169', Medium: '#D69E2E', High: '#DD6B20', Urgent: '#E53E3E',
 };
 
-function stripCallingCode(fullNumber: string, defaultCC: string): { cc: string; number: string } {
+function parseSavedPhone(fullNumber: string, defaultCC: string): { cc: string; number: string } {
   if (!fullNumber) return { cc: defaultCC, number: '' };
-  const trimmed = fullNumber.trim();
-  if (!trimmed.startsWith('+')) return { cc: defaultCC, number: trimmed };
-  if (countriesCache) {
-    const entries = Object.entries(countriesCache) as any[];
-    const sorted = entries
-      .filter(([_, c]: any) => c.callingCode?.[0])
-      .sort(([_, a]: any, [__, b]: any) => (b.callingCode[0].length) - (a.callingCode[0].length));
-    for (const [_, country] of sorted) {
-      const code = `+${country.callingCode[0]}`;
-      if (trimmed.startsWith(code)) {
-        return { cc: code, number: trimmed.slice(code.length) };
-      }
-    }
+  const parsed = stripCallingCode(fullNumber);
+  if (parsed.code) {
+    const national = parsed.localNumber.startsWith('+')
+      ? parsed.localNumber.slice(1).replace(/\D/g, '')
+      : parsed.localNumber;
+    return { cc: parsed.code, number: national };
   }
-  return { cc: defaultCC, number: trimmed };
+  // No '+' prefix: may be national digits or "919876543210" without plus.
+  const digits = fullNumber.trim().replace(/\D/g, '');
+  if (digits.startsWith('+')) return { cc: defaultCC, number: digits };
+  if (digits) {
+    const reparsed = stripCallingCode(`+${digits}`);
+    if (reparsed.code) return { cc: reparsed.code, number: reparsed.localNumber };
+    return { cc: defaultCC, number: digits };
+  }
+  return { cc: defaultCC, number: fullNumber.trim() };
 }
 
 interface RepairForm {
@@ -179,12 +181,12 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   // On edit, strip calling code from existing phone numbers so they don't get double-coded
   useEffect(() => {
     if (initialRepair?.phone_number) {
-      const parsed = stripCallingCode(initialRepair.phone_number, shopCallingCode);
+      const parsed = parseSavedPhone(initialRepair.phone_number, shopCallingCode);
       setPhoneCC(parsed.cc);
       update('phoneNumber', parsed.number);
     }
     if (initialRepair?.whatsapp_number) {
-      const parsed = stripCallingCode(initialRepair.whatsapp_number, shopCallingCode);
+      const parsed = parseSavedPhone(initialRepair.whatsapp_number, shopCallingCode);
       setWhatsappCC(parsed.cc);
       update('whatsappNumber', parsed.number);
     }
@@ -292,19 +294,34 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
   }, []);
 
   const selectSuggestion = useCallback((v: any) => {
-    setForm((prev) => ({
-      ...prev,
-      vehicleNumber: v.vehicle_number,
-      ownerName: v.owner_name || prev.ownerName,
-      phoneNumber: v.owner_phone || prev.phoneNumber,
-      modelName: v.model_name || prev.modelName,
-      vehicleType: v.vehicle_type || prev.vehicleType,
-      brand: v.brand || prev.brand,
-    }));
+    if (v.owner_phone) {
+      const parsed = parseSavedPhone(v.owner_phone, phoneCC || shopCallingCode);
+      setPhoneCC(parsed.cc);
+      if (whatsappSame) setWhatsappCC(parsed.cc);
+      setForm((prev) => ({
+        ...prev,
+        vehicleNumber: v.vehicle_number,
+        ownerName: v.owner_name || prev.ownerName,
+        phoneNumber: parsed.number,
+        whatsappNumber: whatsappSame ? parsed.number : prev.whatsappNumber,
+        modelName: v.model_name || prev.modelName,
+        vehicleType: v.vehicle_type || prev.vehicleType,
+        brand: v.brand || prev.brand,
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        vehicleNumber: v.vehicle_number,
+        ownerName: v.owner_name || prev.ownerName,
+        modelName: v.model_name || prev.modelName,
+        vehicleType: v.vehicle_type || prev.vehicleType,
+        brand: v.brand || prev.brand,
+      }));
+    }
     if (v.vehicle_image) setVehicleImage(v.vehicle_image);
     setSuggestions([]);
     setShowSuggestions(false);
-  }, []);
+  }, [phoneCC, shopCallingCode, whatsappSame]);
 
   const buildFormData = useCallback(async () => {
     const fd = new FormData();
@@ -313,8 +330,8 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
     fd.append('brand', String(form.brand || ''));
     fd.append('model_name', String(form.modelName || ''));
     fd.append('owner_name', String(form.ownerName || ''));
-    fd.append('phone_number', `${phoneCC || ''}${form.phoneNumber || ''}`);
-    fd.append('whatsapp_number', `${whatsappCC || ''}${form.whatsappNumber || ''}`);
+    fd.append('phone_number', buildFullPhone(phoneCC, form.phoneNumber || ''));
+    fd.append('whatsapp_number', buildFullPhone(whatsappCC, form.whatsappNumber || ''));
     fd.append('km_reading', String(form.kmReading || ''));
     fd.append('complaints', JSON.stringify(serviceBlocks));
     fd.append('service_type', String(serviceBlocks[0]?.type || 'Repair'));
@@ -512,6 +529,7 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
               {!isView ? (
                 <PhoneInputWithCode
                   countryCode={shopCountry}
+                  callingCode={phoneCC}
                   label="Phone Number"
                   phone={form.phoneNumber}
                   onCountryChange={(c) => {
@@ -522,19 +540,20 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
                   error={errors.phone_number}
                 />
               ) : (
-                <InputField label="Phone Number" value={form.phoneNumber} onChangeText={() => {}}
+                <InputField label="Phone Number" value={formatPhoneForDisplay(buildFullPhone(phoneCC, form.phoneNumber))} onChangeText={() => {}}
                   icon="phone" editable={false} />
               )}
               {!isView ? (
                 <PhoneInputWithCode
                   countryCode={shopCountry}
+                  callingCode={whatsappCC}
                   label="WhatsApp Number"
                   phone={form.whatsappNumber}
                   onCountryChange={(c) => setWhatsappCC(c.callingCode)}
                   onPhoneChange={(v) => update('whatsappNumber', v)}
                 />
               ) : (
-                <InputField label="WhatsApp Number" value={form.whatsappNumber} onChangeText={() => {}}
+                <InputField label="WhatsApp Number" value={formatPhoneForDisplay(buildFullPhone(whatsappCC, form.whatsappNumber))} onChangeText={() => {}}
                   icon="whatsapp" editable={false} />
               )}
               {!isView && (
@@ -646,8 +665,8 @@ export default function CreateRepairScreen({ mode, initialRepair, onClose, onSuc
 
             <Card title="Customer Details" styles={styles}>
               <SummaryRow theme={theme} label="Owner Name" value={form.ownerName} />
-              <SummaryRow theme={theme} label="Phone Number" value={form.phoneNumber} />
-              <SummaryRow theme={theme} label="WhatsApp Number" value={form.whatsappNumber} />
+              <SummaryRow theme={theme} label="Phone Number" value={formatPhoneForDisplay(buildFullPhone(phoneCC, form.phoneNumber))} />
+              <SummaryRow theme={theme} label="WhatsApp Number" value={formatPhoneForDisplay(buildFullPhone(whatsappCC, form.whatsappNumber))} />
             </Card>
 
             <Card title="Service Details" styles={styles}>

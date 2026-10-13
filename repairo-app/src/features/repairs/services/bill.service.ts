@@ -1,3 +1,4 @@
+import { inventoryService } from '@/features/inventory/inventory.service';
 import ENV from '@/config/env';
 import { getStoredToken } from '@/services/api';
 
@@ -104,7 +105,9 @@ export const billService = {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      return await res.json();
+      const result = await res.json();
+      if (result.success) inventoryService.invalidate();
+      return result;
     } catch {
       return { success: false, error: 'Connection failed' };
     }
@@ -114,7 +117,9 @@ export const billService = {
     try {
       const token = await getStoredToken();
       const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      return await res.json();
+      const result = await res.json();
+      if (result.success) inventoryService.invalidate();
+      return result;
     } catch {
       return { success: false, error: 'Connection failed' };
     }

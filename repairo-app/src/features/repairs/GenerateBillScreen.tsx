@@ -29,6 +29,7 @@ import BillItemEditor, { BillItemEditorHandle } from './components/BillItemEdito
 import { getCurrentUser } from '@/services/auth.service';
 import { formatCurrency, getCurrencySymbol, useCurrency } from '@/hooks/use-currency';
 import { buildInvoiceHtml } from './utils/invoice-html';
+import { formatPhoneForDisplay, toWhatsAppDigits } from '@/utils/phone';
 import { toJobList } from './utils/jobs';
 
 interface GenerateBillScreenProps {
@@ -156,7 +157,7 @@ export default function GenerateBillScreen({
       ownerName: repair.owner_name || '',
       vehicleNumber: repair.vehicle_number,
       vehicleModel: repair.model_name,
-      customerPhone: repair.phone_number || repair.whatsapp_number,
+      customerPhone: formatPhoneForDisplay(repair.phone_number || repair.whatsapp_number || ''),
       technician: repair.attending_worker_name,
       kmReading: repair.km_reading,
       vehicleImageSrc,
@@ -222,7 +223,7 @@ export default function GenerateBillScreen({
         `\n\n*Grand Total:* ${formatCurrency(grandTotal, user?.shopCurrency)}` +
         `\n\nFor detailed invoice, view here: ${data.url}`
       );
-      await Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+      await Linking.openURL(`https://wa.me/${toWhatsAppDigits(phone)}?text=${message}`);
     } catch (err) {
       console.error('Failed to share invoice:', err);
       alert('Could not share invoice. Please try again.');
@@ -298,7 +299,7 @@ export default function GenerateBillScreen({
         if (billRes.success && billRes.data) {
           loadedRef.current = true;
           revisionRef.current = billRes.data.inventory_revision || 0;
-          setBillItems(billRes.data.items || []);
+          setBillItems((billRes.data.items || []).map((item, index) => ({ ...item, id: item.id || 'saved-' + index })));
           setServiceCharge(billRes.data.service_charge || 0);
           if (billRes.data.id) setTaxSnapshot(billRes.data.tax_snapshot || []);
           setPaymentStatus(billRes.data.payment_status || 'Unpaid');
@@ -336,7 +337,7 @@ export default function GenerateBillScreen({
 
       if (res.success && res.data) {
         revisionRef.current = res.data.inventory_revision;
-        setBillItems(res.data.items);
+        setBillItems(res.data.items.map((item, index) => ({ ...item, id: item.id || 'saved-' + index })));
         setTaxSnapshot(res.data.tax_snapshot);
         setHasExistingBill(true);
         setIsEditing(false);

@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import TaxSelector from './TaxSelector';
 import InventoryScreen from '@/features/inventory/InventoryScreen';
 import { useRBAC } from '@/hooks/use-rbac';
-import type { Product } from '@/features/inventory/inventory.service';
+import { inventoryService, type Product } from '@/features/inventory/inventory.service';
 
 interface BillItemEditorProps {
   shopId?: number;
@@ -45,6 +45,9 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   const { can } = useRBAC();
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const canUseInventory = editable && !!shopId && can('view:inventory');
+  useEffect(() => {
+    if (canUseInventory && shopId) void inventoryService.list(shopId);
+  }, [canUseInventory, shopId]);
   const styles = useMemo(() => StyleSheet.create({
     wrapper: { gap: 14, paddingBottom: 16 },
 
@@ -336,7 +339,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
 
   const { symbol, format } = useCurrency(currencyCode ? { shopCurrency: currencyCode } : undefined);
   const [localCharge, setLocalCharge] = useState(String(serviceCharge || ''));
-  const [liveValues, setLiveValues] = useState<Record<string, { qty: number; cost: number }>>({});
+  const [liveValues, setLiveValues] = useState<Record<string, { qty: number; cost: number; name?: string }>>({});
   const itemsKeyRef = useRef('');
 
   useEffect(() => {
@@ -359,7 +362,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     const next = items.map(item => ({ ...item, ...(item.id ? liveValues[item.id] : undefined) }));
     const existing = next.find(item => item.product_id === product.id);
     if (existing) { existing.qty = Number(existing.qty) + 1; if (product.image_url) existing.image_url = product.image_url; }
-    else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: 1, cost: Number(product.selling_price), image_url: product.image_url || null });
+    else next.push({ id: 'inventory-' + product.id, product_id: product.id, sku: product.sku, unit: product.unit, name: product.name, qty: Math.min(1, Number(product.stock)), cost: Number(product.selling_price), image_url: product.image_url || null });
     // A linked parts tax rides onto the bill automatically — amounts recompute from the new subtotal.
     if (product.tax_id && !taxSnapshot.some(t => t.id === product.tax_id)) {
       const master = taxes.find(t => t.id === product.tax_id && t.is_active && t.applies_to !== 'service');
@@ -383,9 +386,9 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     onChange(items.filter((_, i) => i !== index));
   }, [items, onChange]);
 
-  const handleLiveUpdate = useCallback((id: string | undefined, qty: number, cost: number) => {
+  const handleLiveUpdate = useCallback((id: string | undefined, qty: number, cost: number, name?: string) => {
     if (!id) return;
-    setLiveValues(prev => ({ ...prev, [id]: { qty, cost } }));
+    setLiveValues(prev => ({ ...prev, [id]: { ...prev[id], qty, cost, ...(name !== undefined ? { name } : {}) } }));
   }, []);
 
   const subtotal = items.reduce((s, it) => s + (Number(it.cost) || 0) * (Number(it.qty) || 0), 0);
@@ -425,7 +428,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
       items: items.map(it => {
         const live = liveValues[it.id || ''];
         if (!live) return it;
-        return { ...it, qty: live.qty, cost: live.cost };
+        return { ...it, ...live };
       }),
       serviceCharge: liveServiceCharge,
     }),
@@ -456,7 +459,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
     index: number;
     onUpdate: (item: BillItem) => void;
     onRemove: () => void;
-    onLiveUpdate: (id: string | undefined, qty: number, cost: number) => void;
+    onLiveUpdate: (id: string | undefined, qty: number, cost: number, name?: string) => void;
     editable: boolean;
   }) {
     const normalizedCost = (v: unknown) => String(Number(v) || 0);
@@ -479,13 +482,13 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
 
     const handleQtyChange = useCallback((val: string) => {
       setQty(val);
-      onLiveUpdate(item.id, Number(val) || 0, Number(cost) || 0);
-    }, [item.id, cost, onLiveUpdate]);
+      onLiveUpdate(item.id, Number(val), Number(cost), name);
+    }, [item.id, cost, name, onLiveUpdate]);
 
     const handleCostChange = useCallback((val: string) => {
       setCost(val);
-      onLiveUpdate(item.id, Number(qty) || 0, Number(val) || 0);
-    }, [item.id, qty, onLiveUpdate]);
+      onLiveUpdate(item.id, Number(qty), Number(val), name);
+    }, [item.id, qty, name, onLiveUpdate]);
 
     const lineTotal = (Number(qty) || 0) * (Number(cost) || 0);
 
@@ -512,7 +515,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
           <TextInput
             style={[styles.field, styles.nameField, { flex: 1 }]}
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) => { setName(value); onLiveUpdate(item.id, Number(qty), Number(cost), value); }}
             onBlur={commit}
             onEndEditing={commit}
             placeholder={editable ? 'Part / service name...' : ''}
@@ -561,7 +564,7 @@ export default forwardRef<BillItemEditorHandle, BillItemEditorProps>(function Bi
   return (
     <View style={styles.wrapper}>
       <Modal visible={inventoryOpen} animationType="slide" onRequestClose={() => setInventoryOpen(false)}>
-        {inventoryOpen && <InventoryScreen shopId={shopId} onClose={() => setInventoryOpen(false)} onSelect={addInventory} />}
+        {inventoryOpen && <InventoryScreen shopId={shopId} currencyCode={currencyCode} onClose={() => setInventoryOpen(false)} onSelect={addInventory} />}
       </Modal>
       {items.some(item => item.product_id != null) && <ThemedText style={styles.noItemsText}>Stock updates when you save. Removing a saved inventory item returns its quantity to stock.</ThemedText>}
 

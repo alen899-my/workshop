@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { toBlocks, toJobList } from '../utils/jobs';
+import { toJobList } from '../utils/jobs';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Storage shape is unchanged (single block); old multi-block repairs are
@@ -23,23 +23,22 @@ interface ServiceBlockEditorProps {
 // ─── Single Jobs-to-do editor ────────────────────────────────────────────────
 
 export default function ServiceBlockEditor({ blocks, onChange }: ServiceBlockEditorProps) {
-  const job = useMemo(() => toJobList(blocks), [blocks]);
+  const job = useMemo(() => {
+    const normalized = toJobList(blocks);
+    // The display helper removes blank tasks and trims text. Draft inputs must
+    // retain both, otherwise Add Item vanishes and spaces disappear while typing.
+    const tasks = blocks.flatMap(block => block.tasks || []);
+    return { type: normalized.type, tasks: tasks.length ? tasks : [{ text: '', fixed: false }] };
+  }, [blocks]);
 
-  // Normalize legacy multi-block data to one list, and always keep one empty row.
   useEffect(() => {
-    const flat = toJobList(blocks);
-    if (blocks.length !== 1) {
-      onChange(toBlocks(flat.type, flat.tasks.length ? flat.tasks : [{ text: '', fixed: false }]));
-      return;
+    if (blocks.length !== 1 || !blocks[0]?.tasks?.length) {
+      onChange([{ type: job.type, tasks: job.tasks }]);
     }
-    const onlyRow = blocks[0]?.tasks?.length === 1 ? blocks[0].tasks[0] : null;
-    if (flat.tasks.length === 0 && !(onlyRow && !String(onlyRow.text || '').trim())) {
-      onChange(toBlocks(flat.type, [{ text: '', fixed: false }]));
-    }
-  }, [blocks, onChange]);
+  }, [blocks, job, onChange]);
 
-  const setTasks = (tasks: { text: string; fixed: boolean }[]) => {
-    onChange(toBlocks(job.type, tasks));
+  const setTasks = (tasks: ServiceBlock['tasks']) => {
+    onChange([{ type: job.type, tasks }]);
   };
 
   const addTask = () => {

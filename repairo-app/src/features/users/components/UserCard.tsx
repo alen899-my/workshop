@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { formatPhoneForDisplay } from '@/utils/phone';
 import type { User } from '@/features/users/services/user.service';
 
 interface UserCardProps {
@@ -79,7 +80,7 @@ export default function UserCard({ user, onPress, onDelete }: UserCardProps) {
           </View>
           <Ionicons name="call-outline" size={11} color={theme.textSecondary} />
           <ThemedText style={styles.phone} numberOfLines={1}>
-            {user.phone || '—'}
+            {user.phone ? formatPhoneForDisplay(user.phone) : '—'}
           </ThemedText>
         </View>
         {user.shop_name ? (

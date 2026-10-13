@@ -52,8 +52,21 @@ export default function PhoneInputWithCode({
   const displayedCode = controlledCallingCode || getCallingCode(countryCode) || '';
 
   const stripCode = (num: string): string => {
-    if (displayedCode && num.startsWith(displayedCode)) return num.slice(displayedCode.length).trimStart();
-    return num;
+    if (!num) return '';
+    if (!displayedCode) return num;
+    let s = (num || '').trim().replace(/^00/, '+');
+    // Collapse malformed "+91+919..." so prefix can be stripped repeatedly.
+    if (s.includes('+')) s = s.startsWith('+') ? '+' + s.slice(1).replace(/\+/g, '') : s.replace(/\+/g, '');
+    let guard = 0;
+    while (displayedCode && s.startsWith(displayedCode) && guard < 5) {
+      s = s.slice(displayedCode.length).trimStart();
+      // "+91 +919..." -> after first strip we get "+919..."; keep stripping.
+      if (s.startsWith('+') && displayedCode.startsWith('+') && s !== displayedCode) {
+        // continue loop to strip again
+      }
+      guard += 1;
+    }
+    return s;
   };
 
   const localNumber = valueFormat === 'national' ? phone : stripCode(phone);
@@ -74,7 +87,21 @@ export default function PhoneInputWithCode({
         return;
       }
       const cleaned = text.replace(/[^0-9]/g, '');
-      onPhoneChange(valueFormat === 'national' || !cleaned ? cleaned : displayedCode + cleaned);
+      if (valueFormat === 'national' || !cleaned) {
+        onPhoneChange(cleaned);
+        return;
+      }
+      // Avoid doubling when the user types/pastes the dial code again
+      // (e.g. types "919876543210" while +91 is already selected).
+      const codeDigits = (displayedCode || '').replace(/\D/g, '');
+      if (codeDigits && cleaned.startsWith(codeDigits) && cleaned.length >= codeDigits.length + 7) {
+        const asIs = parsePhoneNumberFromString(`+${cleaned}`, { extract: false });
+        if (asIs?.isValid()) {
+          onPhoneChange(asIs.number);
+          return;
+        }
+      }
+      onPhoneChange(displayedCode + cleaned);
     },
     [displayedCode, onPhoneChange, onCountryChange, valueFormat],
   );
@@ -93,7 +120,25 @@ export default function PhoneInputWithCode({
     (country: any) => {
       const code = country.callingCode?.[0] ? `+${country.callingCode[0]}` : '';
       onCountryChange({ cca2: country.cca2, callingCode: code, currency: country.currency?.[0] ?? 'USD' });
-      if (valueFormat === 'international' && localNumber) onPhoneChange(code + localNumber);
+      if (valueFormat === 'international' && localNumber) {
+        let national = (localNumber || '').trim();
+        // localNumber may still be a full international number from another
+        // country (e.g. "+44..." while switching to +1). Keep only national.
+        if (national.startsWith('+') || national.startsWith('00')) {
+          const norm = national.replace(/^00/, '+');
+          const parsed = parsePhoneNumberFromString(norm, { extract: false });
+          if (parsed?.isValid()) national = parsed.nationalNumber;
+          else {
+            national = norm.replace(/\+/g, '').replace(/[\s\-.()]/g, '');
+            const newDigits = code.replace(/\D/g, '');
+            if (newDigits && national.startsWith(newDigits) && national.length >= newDigits.length + 7) {
+              national = national.slice(newDigits.length);
+            }
+          }
+        }
+        national = national.replace(/\D/g, '');
+        onPhoneChange(code + national);
+      }
       Keyboard.dismiss();
       setOpen(false);
       setSearch('');

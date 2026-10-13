@@ -19,6 +19,7 @@ import ModalSheet from '@/components/ui/ModalSheet';
 import Toast from '@/components/ui/Toast';
 import { useTheme } from '@/hooks/use-theme';
 import { getCallingCode, getCountryName } from '@/utils/preload-countries';
+import { buildFullPhone, formatPhoneForDisplay, stripCallingCode } from '@/utils/phone';
 import { getCurrentUser, updateCurrentUser } from '@/services/auth.service';
 import { shopService } from '@/services/shop.service';
 import type { Shop } from '@/types';
@@ -283,12 +284,14 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
   }, [updateForm]);
 
   const handleCountryChange = useCallback((c: { cca2: string; callingCode: string; currency: string }) => {
-    const oldCode = getCallingCode(form.country || user?.shopCountry || 'IN') || '';
     const newCode = c.callingCode || '';
     const rawPhone = form.phone || '';
-    const cleanPhone = rawPhone.startsWith(oldCode) ? rawPhone.slice(oldCode.length).trimStart() : rawPhone;
+    // Extract national part robustly (handles "+91+919..." doubles) then re-prefix.
+    const { localNumber } = stripCallingCode(rawPhone);
+    const national = localNumber.startsWith('+') ? localNumber.slice(1).replace(/\D/g, '') : localNumber.replace(/\D/g, '');
+    const cleaned = national || rawPhone.replace(/\D/g, '').replace(/^0+/, '');
     updateForm('country', c.cca2);
-    updateForm('phone', newCode + cleanPhone);
+    updateForm('phone', cleaned ? buildFullPhone(newCode, cleaned) : newCode);
     updateForm('state', '');
     updateForm('city', '');
     setSelectedStateCode('');
@@ -411,7 +414,7 @@ export default function ShopSettingsScreen({ onClose }: ShopSettingsScreenProps)
             <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <ThemedText style={styles.sectionLabel}>OWNER</ThemedText>
               <View style={styles.infoRow}><Ionicons name="person-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.owner_name || '—'}</ThemedText></View>
-              {display.phone && <View style={styles.infoRow}><Ionicons name="call-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{display.phone}</ThemedText></View>}
+              {display.phone && <View style={styles.infoRow}><Ionicons name="call-outline" size={16} color={theme.textSecondary} /><ThemedText style={styles.infoValue}>{formatPhoneForDisplay(display.phone)}</ThemedText></View>}
             </View>
 
             <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>

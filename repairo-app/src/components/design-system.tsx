@@ -416,10 +416,12 @@ export interface ChecklistItem {
 export function ServiceChecklist({
   items,
   onToggle,
+  onFail,
   onDetails,
 }: {
   items: ChecklistItem[];
   onToggle: (id: string) => void;
+  onFail?: (id: string) => void;
   onDetails?: (id: string) => void;
 }) {
   const theme = useTheme();
@@ -438,36 +440,30 @@ export function ServiceChecklist({
       {items.length === 0 && <Text style={s.empty}>No tasks recorded</Text>}
       {items.map((item, i) => (
         <View key={item.id} style={[s.row, i > 0 && s.divided]}>
-          <Pressable
-            onPress={() => onToggle(item.id)}
-            disabled={item.busy}
-            hitSlop={8}
-            style={({ pressed }) => [s.box, item.checked && s.boxChecked, pressed && { opacity: 0.75 }]}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.checked }}
-            accessibilityLabel={item.title}
-          >
-            {item.busy ? (
-              <ActivityIndicator size="small" color={theme.accent} />
-            ) : (
-              item.checked && <Ionicons name="checkmark" size={15} color={theme.accentForeground} />
-            )}
-          </Pressable>
-          <Pressable
-            onPress={() => onDetails?.(item.id)}
-            disabled={!onDetails}
-            style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={[s.itemTitle, item.checked && s.itemDone]} numberOfLines={2}>
-              {item.title}
-            </Text>
-            {!!item.detail && (
-              <Text style={s.itemDetail} numberOfLines={2}>
-                {item.detail}
-              </Text>
-            )}
-          </Pressable>
-          {onDetails && <Ionicons name="chevron-forward" size={15} color={theme.panelMuted} />}
+          <View style={s.taskHeading}>
+            <Text style={s.taskNumber}>{String(i + 1).padStart(2, '0')}</Text>
+            <Pressable onPress={() => onDetails?.(item.id)} disabled={!onDetails}
+              style={({ pressed }) => [s.taskContent, pressed && { opacity: 0.7 }]}>
+              <Text style={s.itemTitle}>{item.title}</Text>
+              {!!item.detail && <Text style={s.itemDetail}>{item.detail}</Text>}
+            </Pressable>
+            {onDetails && <Ionicons name="chevron-forward" size={18} color={theme.panelMuted} />}
+          </View>
+          <View style={s.actions}>
+            <Pressable onPress={() => onToggle(item.id)} disabled={item.busy}
+              style={({ pressed }) => [s.box, { borderColor: '#4ADE80' }, item.checked && s.boxChecked, (pressed || item.busy) && { opacity: 0.7 }]}
+              accessibilityRole="checkbox" accessibilityState={{ checked: item.checked, disabled: item.busy }}
+              accessibilityLabel={'Mark completed: ' + item.title}>
+              <Ionicons name="checkmark" size={19} color={item.checked ? '#052E16' : '#4ADE80'} />
+            </Pressable>
+            {onFail && <Pressable onPress={() => onFail(item.id)} disabled={item.busy}
+              style={({ pressed }) => [s.box, { borderColor: '#F87171', backgroundColor: item.failed ? '#F87171' : 'transparent' }, (pressed || item.busy) && { opacity: 0.7 }]}
+              accessibilityRole="checkbox" accessibilityState={{ checked: !!item.failed, disabled: item.busy }}
+              accessibilityLabel={'Mark not completed: ' + item.title}>
+              <Ionicons name="close" size={19} color={item.failed ? '#450A0A' : '#F87171'} />
+            </Pressable>}
+            {item.busy && <ActivityIndicator size="small" color={theme.panelMuted} accessibilityLabel="Saving task status" />}
+          </View>
         </View>
       ))}
     </View>
@@ -828,21 +824,24 @@ function makeChecklist(theme: ThemeColors) {
     countPill: { backgroundColor: theme.panelBorder, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
     countText: { fontSize: 12, fontWeight: '700', color: theme.panelText, fontVariant: ['tabular-nums'] },
     empty: { fontSize: Type.body, color: theme.panelMuted },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    row: { gap: 14, paddingVertical: 18 },
+    taskHeading: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    taskNumber: { fontSize: 12, lineHeight: 24, color: theme.panelMuted, minWidth: 22, fontVariant: ['tabular-nums'] },
+    taskContent: { flex: 1, minWidth: 0 },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingLeft: 32 },
     divided: { borderTopWidth: 1, borderTopColor: theme.panelBorder },
     box: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       borderWidth: 1.5,
       borderColor: theme.panelMuted,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    boxChecked: { backgroundColor: theme.accent, borderColor: theme.accent },
-    itemTitle: { fontSize: Type.body, fontWeight: '500', color: theme.panelText },
-    itemDone: { textDecorationLine: 'line-through', color: theme.panelMuted },
-    itemDetail: { fontSize: Type.meta, color: theme.panelMuted, marginTop: 1 },
+    boxChecked: { backgroundColor: '#4ADE80', borderColor: '#4ADE80' },
+    itemTitle: { fontSize: 16, lineHeight: 25, fontWeight: '500', color: theme.panelText, flexShrink: 1 },
+    itemDetail: { fontSize: 13, lineHeight: 21, color: theme.panelMuted, marginTop: 6 },
   });
 }
 

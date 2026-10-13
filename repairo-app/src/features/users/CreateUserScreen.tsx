@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/themed-view';
 import Toast from '@/components/ui/Toast';
 import InputField from '@/components/ui/InputField';
 import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
+import { stripCallingCode } from '@/utils/phone';
 import { getCallingCode } from '@/utils/preload-countries';
 import { getCurrentUser } from '@/services/auth.service';
 import { userService } from '@/features/users/services/user.service';
@@ -30,33 +31,30 @@ interface CreateUserScreenProps {
 
 type OverrideState = 'default' | 'inherited' | 'added' | 'excluded';
 
-const COMMON_COUNTRIES = [
-  { code: '+91', country: 'IN' },
-  { code: '+1', country: 'US' },
-  { code: '+44', country: 'GB' },
-  { code: '+86', country: 'CN' },
-  { code: '+971', country: 'AE' },
-  { code: '+966', country: 'SA' },
-  { code: '+61', country: 'AU' },
-  { code: '+49', country: 'DE' },
-  { code: '+33', country: 'FR' },
-  { code: '+39', country: 'IT' },
-  { code: '+7', country: 'RU' },
-  { code: '+81', country: 'JP' },
-  { code: '+82', country: 'KR' },
-  { code: '+65', country: 'SG' },
-  { code: '+60', country: 'MY' },
-  { code: '+63', country: 'PH' },
-  { code: '+64', country: 'NZ' },
-  { code: '+55', country: 'BR' },
-  { code: '+52', country: 'MX' },
-].sort((a, b) => b.code.length - a.code.length);
+const CODE_TO_COUNTRY: Record<string, string> = {
+  '+91': 'IN', '+1': 'US', '+44': 'GB', '+86': 'CN', '+971': 'AE', '+966': 'SA',
+  '+61': 'AU', '+49': 'DE', '+33': 'FR', '+39': 'IT', '+7': 'RU', '+81': 'JP',
+  '+82': 'KR', '+65': 'SG', '+60': 'MY', '+63': 'PH', '+64': 'NZ', '+55': 'BR',
+  '+52': 'MX',
+};
 
 function extractCallingCode(phone: string): { callingCode: string; digits: string; country: string } {
-  for (const cc of COMMON_COUNTRIES) {
-    if (phone.startsWith(cc.code)) {
-      return { callingCode: cc.code, digits: phone.slice(cc.code.length), country: cc.country };
+  const { code, localNumber } = stripCallingCode(phone);
+  if (code) {
+    const national = localNumber.startsWith('+') ? localNumber.slice(1).replace(/\D/g, '') : localNumber;
+    return { callingCode: code, digits: national, country: CODE_TO_COUNTRY[code] || 'IN' };
+  }
+  // No '+' prefix: try "+digits" form (handles "919876543210" without plus).
+  const digits = (phone || '').trim().replace(/\D/g, '');
+  if (digits) {
+    const reparsed = stripCallingCode(`+${digits}`);
+    if (reparsed.code) {
+      const national = reparsed.localNumber.startsWith('+')
+        ? reparsed.localNumber.slice(1).replace(/\D/g, '')
+        : reparsed.localNumber;
+      return { callingCode: reparsed.code, digits: national, country: CODE_TO_COUNTRY[reparsed.code] || 'IN' };
     }
+    return { callingCode: '', digits, country: 'IN' };
   }
   return { callingCode: '', digits: phone, country: 'IN' };
 }

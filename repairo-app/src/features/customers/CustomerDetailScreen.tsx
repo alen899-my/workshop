@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
+import { formatPhoneForDisplay, toTelUri } from '@/utils/phone';
 import { useRBAC } from '@/hooks/use-rbac';
 import type { Customer } from '@/features/customers/services/customer.service';
 import { customerService } from '@/features/customers/services/customer.service';
@@ -153,10 +154,10 @@ export default function CustomerDetailScreen({
                 {customer.phone && (
                   <Pressable
                     style={styles.phoneRow}
-                    onPress={() => Linking.openURL(`tel:${customer.phone!.replace(/\s/g, '')}`)}
+                    onPress={() => { const uri = toTelUri(customer.phone); if (uri) Linking.openURL(uri); }}
                   >
                     <Ionicons name="call" size={14} color={theme.primary} />
-                    <ThemedText style={styles.customerPhone}>{customer.phone}</ThemedText>
+                    <ThemedText style={styles.customerPhone}>{formatPhoneForDisplay(customer.phone)}</ThemedText>
                   </Pressable>
                 )}
               </View>

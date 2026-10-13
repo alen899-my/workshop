@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { AppScreen, PrimaryButton, LoadingState } from '@/components/design-system';
+import { AppScreen, PrimaryButton } from '@/components/design-system';
 import { ThemedText as Text } from '@/components/themed-text';
 import InputField from '@/components/ui/InputField';
 import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
@@ -13,15 +14,18 @@ import { useRBAC } from '@/hooks/use-rbac';
 import { inventoryService, type Product, type InventoryShop } from './inventory.service';
 import { taxService, type Tax } from '@/features/repairs/services/tax.service';
 import ProductDetail from './ProductDetail';
+import ScreenLayout from '@/components/ScreenLayout';
+import FAB from '@/components/FAB';
 
-interface Props { onClose?: () => void; shopId?: number; onSelect?: (product: Product) => void }
+interface Props { onClose?: () => void; shopId?: number; currencyCode?: string; onSelect?: (product: Product) => void }
 const blank = { name: '', sku: '', category: '', unit: 'piece', location: '', cost_price: '0', selling_price: '0', reorder_level: '0', opening_stock: '0', tax_id: '' };
 
-export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }: Props) {
+export default function InventoryScreen({ onClose, shopId: fixedShop, currencyCode, onSelect }: Props) {
   const theme = useTheme(), insets = useSafeAreaInsets();
   const { can, user } = useRBAC();
   const [shopId, setShopId] = useState(fixedShop || user?.shopId);
   const [shops, setShops] = useState<InventoryShop[]>([]);
+  const [query, setQuery] = useState('');
   const [search, setSearch] = useState(''), [filter, setFilter] = useState('active');
   const [products, setProducts] = useState<Product[]>([]), [more, setMore] = useState(false);
   const [loading, setLoading] = useState(false), [error, setError] = useState('');
@@ -33,9 +37,11 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const request = useRef(0), savingRef = useRef(false);
   const currentShop = shops.find(s => s.id === shopId);
-  const money = (value: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: currentShop?.currency || 'INR' }).format(Number(value));
+  const formatter = useMemo(() => new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode || currentShop?.currency || 'INR' }), [currencyCode, currentShop?.currency]);
+  const money = (value: number) => formatter.format(Number(value));
 
   useEffect(() => {
+    if (fixedShop && currencyCode) return;
     let alive = true;
     inventoryService.shops().then(res => {
       if (!alive) return;
@@ -45,27 +51,30 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       } else setError(res.error || 'Could not load workshops');
     });
     return () => { alive = false; };
-  }, []);
+  }, [fixedShop, currencyCode]);
 
-  const load = useCallback(async (offset = 0) => {
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 200);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const load = useCallback(async (offset = 0, refresh = false) => {
     if (!shopId) return;
+    if (refresh) inventoryService.invalidate();
     const seq = ++request.current;
     setLoading(true); setError('');
-    const res = await inventoryService.list(shopId, search, filter, offset);
+    const res = await inventoryService.list(shopId, query, filter, offset);
     if (seq !== request.current) return;
     if (res.success && res.data) {
       setProducts(previous => offset ? [...previous, ...res.data!] : res.data!); setMore(!!res.has_more);
     } else setError(res.error || 'Could not load products');
     setLoading(false);
-  }, [shopId, search, filter]);
-  useEffect(() => {
-    request.current++;
-    const timeout = setTimeout(() => {
-      setProducts([]); setMore(false);
-      void load();
-    }, 250);
-    return () => { clearTimeout(timeout); request.current++; };
-  }, [load]);
+  }, [shopId, query, filter]);
+  useFocusEffect(useCallback(() => {
+    setProducts([]); setMore(false);
+    void load();
+    return () => { request.current++; };
+  }, [load]));
 
   const edit = (product: Product | 'new') => {
     setError(''); setEditing(product); setImageAsset(null); setPhotoRemoved(false); setPickerOpen(false);
@@ -109,17 +118,22 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
     const res = await inventoryService.save({ ...form, shop_id: shopId, tax_id: form.tax_id ? Number(form.tax_id) : null,
       ...(editing !== 'new' ? { version: editing.version, is_active: editing.is_active } : {}),
     }, editing === 'new' ? undefined : editing.id);
-    savingRef.current = false; setSaving(false);
     if (res.success && res.data) {
       let saved = res.data;
+      let photoError = '';
       if (imageAsset) {
         const up = await inventoryService.image(saved.id, shopId, imageAsset);
         if (up.success && up.data) saved = up.data;
-        else setError(up.error || 'Product saved, but the photo could not be uploaded. Open the product to retry.');
+        else photoError = up.error || 'Product saved, but the photo could not be uploaded. Try again.';
       } else if (photoRemoved && editing !== 'new' && editing?.image_url) {
         const up = await inventoryService.removeImage(saved.id, shopId);
         if (up.success && up.data) saved = up.data;
-        else setError(up.error || 'Product saved, but the photo could not be removed.');
+        else photoError = up.error || 'Product saved, but the photo could not be removed.';
+      }
+      if (photoError) {
+        setEditing(saved); setError(photoError);
+        savingRef.current = false; setSaving(false);
+        return;
       }
       setImageAsset(null); setPhotoRemoved(false);
       // The save response has no joined tax columns — carry the picked tax for display.
@@ -134,10 +148,56 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
       void load();
     }
     else setError(res.error || 'Could not save product');
+    savingRef.current = false; setSaving(false);
   };
 
-  if (selected && !editing) return <ProductDetail product={selected} currency={currentShop?.currency || 'INR'} onClose={() => { setSelected(null); void load(); }} onEdit={() => edit(selected)} onUpdate={setSelected} />;
+  if (selected && !editing) return <ProductDetail product={selected} currency={currencyCode || currentShop?.currency || 'INR'} onClose={() => { setSelected(null); void load(); }} onEdit={() => edit(selected)} onUpdate={setSelected} />;
 
+  if (!editing) return <ScreenLayout
+    title={onSelect ? 'Add from inventory' : 'Inventory'}
+    description={onSelect ? 'Choose parts for this repair' : 'Manage products and workshop stock'}
+    rightAction={onClose ? <Pressable accessibilityLabel="Close inventory" onPress={onClose} style={styles.closeButton}><Ionicons name="close" size={24} color={theme.text} /></Pressable> : undefined}>
+    <FlatList
+      data={products} keyExtractor={item => String(item.id)}
+      keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+      initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + (onClose ? 32 : 120), gap: 12 }}
+      refreshing={loading && products.length > 0} onRefresh={() => { void load(0, true); }}
+      ListHeaderComponent={<View style={{ gap: 12, paddingBottom: 4 }}>
+        {!fixedShop && shops.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {shops.map(shop => <Pressable key={shop.id} onPress={() => setShopId(shop.id)} style={[styles.chip, { backgroundColor: shop.id === shopId ? theme.accent : theme.card }]}><Text>{shop.name}</Text></Pressable>)}
+        </ScrollView>}
+        <View style={[styles.searchRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <TextInput accessibilityLabel="Search inventory" placeholder="Search name, SKU or category..." placeholderTextColor={theme.textSecondary} value={search} onChangeText={setSearch} style={[styles.searchInput, { color: theme.text }]} />
+          {!!search && <Pressable accessibilityLabel="Clear search" onPress={() => setSearch('')}><Ionicons name="close-circle" size={20} color={theme.textSecondary} /></Pressable>}
+        </View>
+        <View style={styles.row}>{(onSelect ? ['active', 'low'] : ['active', 'low', 'archived']).map(value => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.chip, { backgroundColor: filter === value ? theme.accent : theme.card }]}><Text style={{ fontSize: 13 }}>{value === 'active' ? 'All products' : value === 'low' ? 'Low stock' : 'Archived'}</Text></Pressable>)}</View>
+        {!!error && <View style={{ gap: 8 }}><Text style={{ color: theme.destructive }}>{error}</Text><PrimaryButton title="Retry" variant="outline" onPress={() => { void load(0, true); }} /></View>}
+        {onSelect && <Text themeColor="textSecondary" style={{ fontSize: 12 }}>Stock updates when you save the bill.</Text>}
+      </View>}
+      renderItem={({ item: product }) => {
+        const unavailable = !!onSelect && Number(product.stock) <= 0;
+        const low = Number(product.stock) <= Number(product.reorder_level);
+        return <Pressable accessibilityRole="button" accessibilityLabel={onSelect ? 'Add ' + product.name : product.name} disabled={unavailable}
+          onPress={() => onSelect ? onSelect(product) : setSelected(product)}
+          style={({ pressed }) => [styles.productCard, { backgroundColor: theme.card, borderColor: theme.border, opacity: unavailable ? 0.55 : pressed ? 0.8 : 1 }]}>
+          <View style={styles.between}>
+            {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.thumb} contentFit="cover" recyclingKey={String(product.id)} /> : <View style={[styles.thumb, styles.iconPlaceholder, { backgroundColor: theme.backgroundElement }]}><Ionicons name="cube-outline" size={22} color={theme.textSecondary} /></View>}
+            <View style={{ flex: 1, gap: 3 }}><Text style={styles.product}>{product.name}</Text><Text themeColor="textSecondary" style={{ fontSize: 12 }}>{product.sku}{product.category ? ' ? ' + product.category : ''}</Text></View>
+            <Ionicons name={onSelect ? 'add-circle-outline' : 'chevron-forward'} size={onSelect ? 26 : 18} color={theme.primary} />
+          </View>
+          <View style={[styles.between, { flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
+            <Text style={{ fontSize: 13, color: low ? theme.destructive : theme.textSecondary }}>{Number(product.stock)} {product.unit}{low ? Number(product.stock) === 0 ? ' ? Out of stock' : ' ? Low stock' : ' available'}</Text>
+            <Text style={{ fontWeight: '600' }}>{money(product.selling_price)}</Text>
+          </View>
+        </Pressable>;
+      }}
+      ListEmptyComponent={loading ? <View style={styles.empty}><ActivityIndicator color={theme.primary} /><Text themeColor="textSecondary">Loading products?</Text></View> : !error ? <View style={styles.empty}><Ionicons name="cube-outline" size={32} color={theme.textSecondary} /><Text style={{ fontSize: 18 }}>No products found</Text><Text themeColor="textSecondary">Try another search or add your first product.</Text></View> : null}
+      ListFooterComponent={more ? <PrimaryButton title={loading ? 'Loading?' : 'Load more'} variant="outline" disabled={loading} onPress={() => { void load(products.length); }} /> : onSelect && can('manage:inventory') ? <PrimaryButton title="New product" variant="outline" icon="add" disabled={!shopId} onPress={() => edit('new')} /> : null}
+    />
+    {!onSelect && can('manage:inventory') && !!shopId && <View style={[styles.fab, { bottom: insets.bottom + (onClose ? 20 : 100) }]}><FAB label="New" onPress={() => edit('new')} /></View>}
+  </ScreenLayout>;
   return <AppScreen>
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       {onClose ? (
@@ -149,10 +209,11 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
     </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
       {!!error && <View style={[styles.card, { backgroundColor: theme.card }]}><Text style={{ color: theme.destructive }}>{error}</Text>{!editing && <PrimaryButton title="Retry" variant="outline" onPress={() => { void load(); }} />}</View>}
-      {editing ? <>
-        <Text themeColor="textSecondary">{currentShop?.name} · Prices in {currentShop?.currency || 'INR'}</Text>
+      {editing && <>
+        <Text themeColor="textSecondary">{currentShop?.name} · Prices in {currencyCode || currentShop?.currency || 'INR'}</Text>
         {(Object.keys(blank) as (keyof typeof blank)[]).filter(key => key !== 'tax_id' && (editing === 'new' || key !== 'opening_stock')).map(key => <InputField key={key}
           label={({ name: 'Product name', sku: 'SKU / part number', category: 'Category', unit: 'Unit (piece, litre, set)', location: 'Bin / shelf location', cost_price: 'Purchase cost', selling_price: 'Selling price', reorder_level: 'Low-stock threshold', opening_stock: 'Opening stock', tax_id: 'Tax' })[key]}
+          icon={({ name: 'package-variant-closed', sku: 'barcode', category: 'shape-outline', unit: 'ruler', location: 'map-marker-outline', cost_price: 'cash-minus', selling_price: 'tag-outline', reorder_level: 'alert-circle-outline', opening_stock: 'package-variant-plus', tax_id: 'percent-outline' } as const)[key]}
           value={form[key]} onChangeText={value => setForm(previous => ({ ...previous, [key]: value }))}
           editable={!saving && !(key === 'unit' && editing !== 'new')} />)}
         <Text themeColor="textSecondary">Tax (optional) — applied automatically when this part is billed</Text>
@@ -171,48 +232,23 @@ export default function InventoryScreen({ onClose, shopId: fixedShop, onSelect }
         </> : <PrimaryButton title="Add photo" icon="camera-outline" variant="outline" onPress={() => setPickerOpen(true)} disabled={saving} />}
         <PrimaryButton title={saving ? 'Saving…' : 'Save product'} disabled={saving} onPress={save} />
         <ImagePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} onCamera={() => { void takePhoto(); }} onGallery={() => { void pickFromGallery(); }} />
-      </> : <>
-        {!fixedShop && shops.length > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {shops.map(shop => <Pressable key={shop.id} onPress={() => setShopId(shop.id)} style={[styles.chip, { backgroundColor: shop.id === shopId ? theme.accent : theme.card }]}><Text>{shop.name}</Text></Pressable>)}
-        </ScrollView>}
-        <Text themeColor="textSecondary">{currentShop?.name || 'Select a workshop'} · Parts, fluids and accessories</Text>
-        <TextInput accessibilityLabel="Search inventory" placeholder="Search name, SKU or category" placeholderTextColor={theme.textSecondary} value={search} onChangeText={setSearch} style={[styles.search, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]} />
-        <View style={styles.row}>{(onSelect ? ['active', 'low'] : ['active', 'low', 'archived']).map(value => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.chip, { backgroundColor: filter === value ? theme.accent : theme.card }]}><Text>{value === 'active' ? 'All products' : value === 'low' ? 'Low stock' : 'Archived'}</Text></Pressable>)}</View>
-        {!onSelect && can('manage:inventory') && <PrimaryButton title="New product" icon="add" onPress={() => edit('new')} disabled={!shopId} />}
-        {onSelect && <Text themeColor="textSecondary">Items are added to the bill. Stock is deducted when you save billing details.</Text>}
-        {products.map(product => {
-          const outOfStock = Number(product.stock) <= 0;
-          const unpickable = !!onSelect && outOfStock;
-          return <Pressable key={product.id} disabled={unpickable} onPress={() => onSelect ? onSelect(product) : setSelected(product)} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, opacity: unpickable ? 0.55 : 1 }]}>
-          <View style={styles.between}>
-            {product.image_url ? <Image source={{ uri: product.image_url }} style={styles.thumb} contentFit="cover" /> : null}
-            <Text style={styles.product}>{product.name}</Text>
-            {onSelect
-              ? <Pressable accessibilityLabel={'Add ' + product.name + ' to bill'} disabled={unpickable} onPress={() => onSelect(product)} style={[styles.addBtn, { backgroundColor: unpickable ? theme.backgroundElement : theme.accent }]}>
-                  <Text style={[styles.addBtnText, { color: unpickable ? theme.textSecondary : theme.accentForeground }]}>{outOfStock ? 'No stock' : 'Add'}</Text>
-                </Pressable>
-              : <Ionicons name="chevron-forward" size={22} color={theme.primary} />}
-          </View>
-          <Text themeColor="textSecondary">{product.sku}{product.category ? ' · ' + product.category : ''}</Text>
-          {product.tax_rate != null && <Text themeColor="textSecondary">Tax: {product.tax_name} {Number(product.tax_rate)}% ({product.tax_inclusive ? 'incl.' : 'excl.'})</Text>}
-          <View style={styles.between}><Text>{Number(product.stock)} {product.unit} available</Text><Text>{money(product.selling_price)}</Text></View>
-          {Number(product.stock) <= Number(product.reorder_level) && <Text style={{ color: theme.destructive }}>{Number(product.stock) === 0 ? 'Out of stock' : 'Low stock'}</Text>}
-        </Pressable>;})}
-        {loading ? <LoadingState message="Loading inventory…" /> : !error && !products.length ? <>
-          <Text themeColor="textSecondary">No products found. {onSelect ? 'Create the part below to add it straight to this bill.' : 'Add your first product or change the filters.'}</Text>
-          {onSelect && can('manage:inventory') && <PrimaryButton title="New product" icon="add" onPress={() => edit('new')} disabled={!shopId} />}
-        </> : null}
-        {more && <PrimaryButton title="Load more" variant="outline" disabled={loading} onPress={() => { void load(products.length); }} />}
       </>}
-    </ScrollView>
+   </ScrollView>
   </AppScreen>;
 }
 const styles = StyleSheet.create({
+  closeButton: { padding: 10 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 13, fontSize: 14 },
+  productCard: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 12 },
+  iconPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  empty: { paddingVertical: 48, paddingHorizontal: 20, alignItems: 'center', gap: 12 },
+  fab: { position: 'absolute', right: 20 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 }, title: { fontSize: 24, fontWeight: '600', flex: 1 },
   content: { padding: 20, gap: 14, width: '100%', maxWidth: 840, alignSelf: 'center' },
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' }, between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   chip: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20 }, search: { padding: 16, borderWidth: 1, borderRadius: 16, fontSize: 15 },
-  card: { padding: 18, borderRadius: 24, borderWidth: 1, gap: 10 }, product: { fontSize: 18, fontWeight: '600', flex: 1 },
+  card: { padding: 18, borderRadius: 24, borderWidth: 1, gap: 10 }, product: { fontSize: 16, lineHeight: 23, fontWeight: '600' },
   thumb: { width: 46, height: 46, borderRadius: 12 }, photo: { width: '100%', height: 200, borderRadius: 16 },
   addBtn: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 16 },
   addBtnText: { fontSize: 14, fontWeight: '700' },

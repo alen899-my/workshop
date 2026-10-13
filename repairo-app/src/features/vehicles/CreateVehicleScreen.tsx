@@ -16,7 +16,7 @@ import PhoneInputWithCode from '@/components/ui/PhoneInputWithCode';
 import VehicleTypePicker from '@/features/repairs/components/VehicleTypePicker';
 import ImagePickerSheet from '@/components/ui/ImagePickerSheet';
 import Toast from '@/components/ui/Toast';
-import { stripCallingCode } from '@/utils/phone';
+import { buildFullPhone, stripCallingCode } from '@/utils/phone';
 import { vehicleService } from '@/features/vehicles/services/vehicle.service';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
 
@@ -113,7 +113,7 @@ export default function CreateVehicleScreen({
 
     setSubmitting(true);
     try {
-      const fullPhone = `${callingCode}${form.ownerPhone.trim()}`;
+      const fullPhone = buildFullPhone(callingCode, form.ownerPhone);
       const fd = new FormData();
       fd.append('vehicle_number', form.vehicleNumber.trim());
       fd.append('vehicle_type', form.vehicleType || 'Car');

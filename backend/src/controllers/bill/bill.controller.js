@@ -9,15 +9,15 @@ exports.getBill = async (req, res) => {
 
   try {
     // Check repair access
-    const repairRes = await db.query('SELECT shop_id FROM repairs WHERE id = $1', [repairId]);
+    const repairRes = await db.query('SELECT shop_id FROM repairs WHERE id = $1 AND deleted_at IS NULL', [repairId]);
     if (repairRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Repair not found' });
-    if (!isSuperAdmin && repairRes.rows[0].shop_id !== shopId) return res.status(403).json({ success: false, error: 'Access denied' });
+    if (!isSuperAdmin && Number(repairRes.rows[0].shop_id) !== Number(shopId)) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    const result = await db.query('SELECT * FROM repair_bills WHERE repair_id = $1 AND deleted_at IS NULL', [repairId]);
+    const result = await db.query('SELECT * FROM repair_bills WHERE repair_id = $1', [repairId]);
     
     // If no bill exists yet, return empty structured data
-    if (result.rows.length === 0) {
-      return res.status(200).json({ success: true, data: { repair_id: repairId, items: [], service_charge: 0, total_amount: 0, inventory_revision: 0 } });
+    if (result.rows.length === 0 || result.rows[0].deleted_at) {
+      return res.status(200).json({ success: true, data: { repair_id: repairId, items: [], service_charge: 0, total_amount: 0, inventory_revision: Number(result.rows[0]?.inventory_revision || 0) } });
     }
 
     res.status(200).json({ success: true, data: result.rows[0] });
@@ -37,19 +37,24 @@ exports.saveBill = async (req, res) => {
       const repair = repairRes.rows[0];
       if (req.user.role !== 'super-admin' && Number(repair.shop_id) !== Number(req.user.shopId)) fail('Access denied', 403);
       const existing = (await client.query('SELECT * FROM repair_bills WHERE repair_id=$1 FOR UPDATE', [repairId])).rows[0];
-      const previousItems = existing ? (typeof existing.items === "string" ? JSON.parse(existing.items) : existing.items) || [] : [];
+      // Archiving has already returned these parts. A replacement bill starts at zero usage.
+      const previousItems = existing && !existing.deleted_at ? (typeof existing.items === "string" ? JSON.parse(existing.items) : existing.items) || [] : [];
       if (!Array.isArray(req.body.items) || req.body.items.length > 500) fail('Enter up to 500 bill items');
-      const items = req.body.items.map(item => ({
+      const items = req.body.items.map(item => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) fail('Invalid bill item');
+        return {
         ...(item.id != null ? { id: String(item.id) } : {}),
         name: text(item.name, 'Item name', 200, true),
         qty: number(item.qty, 'Quantity', 3, 0.001),
         cost: number(item.cost, 'Unit price', 2),
         ...(item.product_id != null ? { product_id: id(item.product_id, 'Product') } : {}),
         ...(typeof item.image_url === 'string' && item.image_url ? { image_url: text(item.image_url, 'Image URL', 1000) } : {}),
-      }));
+        };
+      });
       const usesInventory = [...previousItems, ...items].some(item => item.product_id != null);
       const revision = Number(existing?.inventory_revision || 0);
-      if (usesInventory && (req.body.inventory_revision == null || Number(req.body.inventory_revision) !== revision)) {
+      if ((usesInventory && req.body.inventory_revision == null) ||
+          (req.body.inventory_revision != null && number(req.body.inventory_revision, 'Bill version', 0) !== revision)) {
         fail('This bill changed or needs to be reloaded. Reopen billing before saving inventory items.', 409);
       }
       if (usesInventory) await reconcileBillStock(client, repair, previousItems, items, req.user.id);
@@ -58,6 +63,7 @@ exports.saveBill = async (req, res) => {
       const partsTotal = round(items.reduce((sum, item) => sum + round(item.cost * item.qty), 0));
       if (!Array.isArray(req.body.tax_snapshot || [])) fail('Invalid taxes');
       const taxes = (req.body.tax_snapshot || []).map(tax => {
+        if (!tax || typeof tax !== 'object' || Array.isArray(tax)) fail('Invalid tax configuration');
         const rate = number(tax.rate, 'Tax rate', 4);
         if (rate > 100 || !['all', 'service', 'parts'].includes(tax.applies_to) || typeof tax.is_inclusive !== 'boolean') fail('Invalid tax configuration');
         const base = tax.applies_to === 'service' ? service : tax.applies_to === 'all' ? partsTotal + service : partsTotal;
@@ -142,7 +148,11 @@ exports.deleteBill = async (req, res) => {
 
   try {
     const data = await transaction(async client => {
-      // Lock bill + repair so concurrent billing cannot interleave with the return.
+      // Always take the repair lock before the bill lock, just like saveBill.
+      const owner = await client.query('SELECT repair_id FROM repair_bills WHERE id=$1', [billId]);
+      if (!owner.rows.length) fail('Bill not found', 404);
+      const lockedRepair = await client.query('SELECT shop_id FROM repairs WHERE id=$1 FOR UPDATE', [owner.rows[0].repair_id]);
+      if (!lockedRepair.rows.length || (!isSuperAdmin && Number(lockedRepair.rows[0].shop_id) !== Number(shopId))) fail('Bill not found', 404);
       const checkRes = await client.query(`
         SELECT rb.*, r.shop_id FROM repair_bills rb
         JOIN repairs r ON rb.repair_id = r.id

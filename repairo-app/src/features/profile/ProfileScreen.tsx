@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
+import { formatPhoneForDisplay } from '@/utils/phone';
 import { useRBAC } from '@/hooks/use-rbac';
 import { getCurrentUser, loadStoredUser } from '@/services/auth.service';
 import { authService } from '@/services/auth.service';
@@ -183,7 +184,7 @@ export default function ProfileScreen() {
             {userData?.phone && (
               <View style={styles.metaRow}>
                 <Ionicons name="call-outline" size={14} color={theme.textSecondary} />
-                <ThemedText style={styles.metaText}>{userData.phone}</ThemedText>
+                <ThemedText style={styles.metaText}>{formatPhoneForDisplay(userData.phone)}</ThemedText>
               </View>
             )}
           </View>

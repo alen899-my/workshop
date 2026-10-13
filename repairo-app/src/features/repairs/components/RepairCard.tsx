@@ -8,7 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatUTCToLocal } from '@/utils/date';
-import { formatPhoneForDisplay } from '@/utils/phone';
+import { formatPhoneForDisplay, toTelUri } from '@/utils/phone';
 import type { Repair } from '@/features/repairs/services/repair.service';
 
 function getImageUrl(image?: string): string | null {
@@ -19,7 +19,8 @@ function getImageUrl(image?: string): string | null {
 
 function handleCall(phone?: string) {
   if (!phone) return;
-  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  const uri = toTelUri(phone);
+  if (uri) Linking.openURL(uri);
 }
 
 function formatKm(km?: string): string {

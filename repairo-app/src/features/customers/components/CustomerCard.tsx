@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { formatPhoneForDisplay } from '@/utils/phone';
+import { formatPhoneForDisplay, toTelUri } from '@/utils/phone';
 import type { Customer } from '@/features/customers/services/customer.service';
 
 interface CustomerCardProps {
@@ -34,7 +34,7 @@ export default function CustomerCard({ customer, onPress }: CustomerCardProps) {
         <View style={styles.phoneRow}>
           {!!customer.phone && (
             <Pressable
-              onPress={() => Linking.openURL(`tel:${customer.phone!.replace(/\s/g, '')}`)}
+              onPress={() => { const uri = toTelUri(customer.phone); if (uri) Linking.openURL(uri); }}
               hitSlop={8}
             >
               <Ionicons name="call" size={14} color={theme.primary} />

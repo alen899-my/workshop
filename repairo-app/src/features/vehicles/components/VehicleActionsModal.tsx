@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import type { Vehicle } from '@/features/vehicles/services/vehicle.service';
+import { toTelUri } from '@/utils/phone';
 import { getCurrentUser } from '@/services/auth.service';
 
 interface VehicleActionsModalProps {
@@ -20,7 +21,8 @@ interface VehicleActionsModalProps {
 
 function handleCall(phone?: string) {
   if (!phone) return;
-  Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+  const uri = toTelUri(phone);
+  if (uri) Linking.openURL(uri);
 }
 
 export default function VehicleActionsModal({

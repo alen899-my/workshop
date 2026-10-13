@@ -7,7 +7,7 @@ function fail(message, status = 400) {
 }
 
 function number(value, label, decimals = 3, minimum = 0) {
-  if (value === null || value === undefined || value === '' || typeof value === 'boolean') fail(label + ' is required');
+  if (!['number', 'string'].includes(typeof value) || (typeof value === 'string' && !value.trim())) fail(label + ' is required');
   const n = Number(value);
   if (!Number.isFinite(n) || n < minimum || n > 999999999 || Math.abs(n * 10 ** decimals - Math.round(n * 10 ** decimals)) > 0.0001) {
     fail(label + ' must be a valid number with up to ' + decimals + ' decimal places');
@@ -23,7 +23,7 @@ function text(value, label, max, required = false) {
   return result;
 }
 function shopScope(user, requested) {
-  const shopId = id(requested || user.shopId, 'Shop');
+  const shopId = id(requested ?? user.shopId, 'Shop');
   if (user.role !== 'super-admin' && shopId !== Number(user.shopId)) fail('Access denied', 403);
   return shopId;
 }

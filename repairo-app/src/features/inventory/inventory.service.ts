@@ -15,18 +15,40 @@ export interface Movement {
 }
 export interface InventoryShop { id: number; name: string; currency: string }
 type Result<T> = { success: boolean; data?: T; error?: string; has_more?: boolean };
+const cache = new Map<string, { expires: number; value: Result<unknown> }>();
+const pending = new Map<string, Promise<Result<unknown>>>();
+let generation = 0;
+function invalidate() { generation++; cache.clear(); pending.clear(); }
 async function request<T>(path: string, method = 'GET', body?: unknown): Promise<Result<T>> {
   try {
     const token = await getStoredToken();
+    const cacheable = method === 'GET' && (path === '/shops' || path.startsWith('?'));
+    const key = token + ':' + path;
+    const cached = cache.get(key);
+    if (cacheable && cached && cached.expires > Date.now()) return cached.value as Result<T>;
+    if (cacheable && pending.has(key)) return await pending.get(key)! as Result<T>;
+    const currentGeneration = generation;
+    const operation = (async (): Promise<Result<T>> => {
     const response = await fetch(ENV.API_URL + '/inventory' + path, {
       method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     const result = await response.json();
-    return response.ok ? result : { success: false, error: result.error || 'Inventory request failed' };
+    const value = response.ok ? result : { success: false, error: result.error || 'Inventory request failed' };
+    if (value.success && method !== 'GET') invalidate();
+    if (cacheable && value.success && currentGeneration === generation) {
+      if (cache.size >= 30) cache.delete(cache.keys().next().value!);
+      cache.set(key, { expires: Date.now() + 15000, value });
+    }
+    return value;
+    })();
+    if (cacheable) pending.set(key, operation);
+    try { return await operation; }
+    finally { if (pending.get(key) === operation) pending.delete(key); }
   } catch { return { success: false, error: 'Could not connect. Please try again.' }; }
 }
 export const inventoryService = {
+  invalidate,
   shops: () => request<InventoryShop[]>('/shops'),
   list: (shopId: number, search = '', filter = 'active', offset = 0) => request<Product[]>('?' + new URLSearchParams({
     shop_id: String(shopId), search, archived: String(filter === 'archived'), low_stock: String(filter === 'low'), offset: String(offset),
@@ -61,6 +83,7 @@ async function uploadImage<T>(id: number, shopId: number, asset?: ImagePickerAss
       method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form,
     });
     const result = await response.json();
+    if (response.ok && result.success) invalidate();
     return response.ok ? result : { success: false, error: result.error || 'Photo upload failed' };
   } catch { return { success: false, error: 'Could not connect. Please try again.' }; }
 }
